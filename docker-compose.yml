@@ -1,0 +1,22 @@
+# Optional dev services. The Rails app itself runs on the host (bin/dev).
+# - postgres: use if you don't have a local Postgres
+# - sidecar: the HCS signing service (also runs fine on the host: cd sidecar && npm start)
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: printwright
+      POSTGRES_PASSWORD: printwright
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+
+  sidecar:
+    build: ./sidecar
+    env_file: .env
+    ports:
+      - "4021:4021"
+
+volumes:
+  pg-data:

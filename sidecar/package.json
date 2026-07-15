@@ -1,0 +1,15 @@
+{
+  "name": "printwright-hcs-sidecar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tiny HCS signing sidecar: the only process holding the Hedera operator key. Creates the license-certificate topic and submits certificate messages.",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test/"
+  },
+  "dependencies": {
+    "@hiero-ledger/sdk": "2.85.0",
+    "dotenv": "^17.4.2"
+  }
+}
