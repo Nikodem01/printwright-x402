@@ -5,6 +5,8 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       resources :models, only: %i[index show]
+      get "models/:model_id/download", to: "downloads#show", as: :model_download
+      get "files/:token", to: "files#show", as: :file
     end
   end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
