@@ -1,0 +1,89 @@
+<% content_for :title, "Certificate #{@license.cert_id} — Printwright" %>
+<% if @check.state == :minting %>
+  <% content_for :head do %><meta http-equiv="refresh" content="5"><% end %>
+<% end %>
+
+<div class="verify-page">
+  <% case @check.state %>
+  <% when :anchored %>
+    <div class="verify-banner banner-ok">
+      <strong>✓ Verified on Hedera</strong> — matches the on-chain record.
+      <span class="mono">consensus <%= @check.consensus_timestamp %></span>
+    </div>
+  <% when :minting %>
+    <div class="verify-banner banner-pending">
+      <strong>Minting…</strong> — the certificate is being anchored to the Hedera Consensus
+      Service. This page refreshes automatically (mirror-node lag is a few seconds).
+    </div>
+  <% when :mismatch %>
+    <div class="verify-banner banner-bad">
+      <strong>✗ Mismatch</strong> — the on-chain record differs from the marketplace copy in:
+      <span class="mono"><%= @check.mismatched_keys.join(", ") %></span>. Both copies shown below.
+    </div>
+  <% end %>
+
+  <div class="cert-card">
+    <header>
+      <span class="t-caption muted">License Certificate</span>
+      <div class="mono cert-id"><%= @license.cert_id %></div>
+    </header>
+
+    <div class="cert-model">
+      <% if (render_file = @model.render_file)&.file&.attached? %>
+        <%= image_tag render_file.file, alt: @model.title, class: "cert-thumb" %>
+      <% end %>
+      <div>
+        <h2 style="margin-bottom: var(--s-1)"><%= link_to @model.title, model_page_path(@model.slug), style: "color: inherit" %></h2>
+        <div class="t-small muted">by <%= @model.designer.display_name %></div>
+      </div>
+    </div>
+
+    <% if @cert.present? %>
+      <dl class="fact-grid">
+        <dt>License type</dt><dd><%= @cert["license_type"]&.humanize %></dd>
+        <dt>Unit serial</dt><dd class="mono">#<%= @cert["unit_serial"] %></dd>
+        <dt>Issued <span class="t-caption muted">(network consensus time)</span></dt>
+        <dd class="mono"><%= @check.consensus_timestamp ? Time.at(@check.consensus_timestamp.to_f).utc.iso8601 : @cert["issued_at"] %></dd>
+        <dt>Designer</dt><dd class="mono"><%= @cert["designer"] %></dd>
+        <dt>Buyer</dt><dd class="mono"><%= @cert["buyer_hint"] %></dd>
+        <dt>Model hash</dt>
+        <dd class="mono" data-controller="clipboard">
+          <span data-clipboard-target="source"><%= @cert["model_hash"]&.truncate(28) %></span>
+          <button class="copy-btn" type="button" data-action="clipboard#copy"
+                  data-clipboard-full-value="<%= @cert["model_hash"] %>">copy</button>
+        </dd>
+        <dt>Terms hash</dt><dd class="mono"><%= @cert["terms_hash"]&.truncate(28) %></dd>
+      </dl>
+    <% end %>
+
+    <% if @check.state == :mismatch %>
+      <h3>Marketplace copy vs on-chain copy</h3>
+      <table class="facts-table">
+        <tr><th>field</th><th>marketplace</th><th>on-chain</th></tr>
+        <% (@check.onchain.keys | @license.cert_json.keys).each do |key| %>
+          <tr class="<%= "mismatch-row" if @check.mismatched_keys.include?(key) %>">
+            <th scope="row"><%= key %></th>
+            <td class="mono"><%= @license.cert_json[key] %></td>
+            <td class="mono"><%= @check.onchain[key] %></td>
+          </tr>
+        <% end %>
+      </table>
+    <% end %>
+  </div>
+
+  <footer class="evidence-footer">
+    <% if @cert&.dig("payment_tx").present? %>
+      <a class="mono" href="https://hashscan.io/testnet/transaction/<%= @cert["payment_tx"] %>">payment tx ↗</a>
+    <% end %>
+    <% if @license.hcs_topic_id.present? %>
+      <a class="mono" href="https://hashscan.io/testnet/topic/<%= @license.hcs_topic_id %>">HCS topic ↗</a>
+    <% end %>
+    <% if @check.mirror_url.present? %>
+      <a class="mono" href="<%= @check.mirror_url %>">raw mirror message ↗</a>
+    <% end %>
+    <p class="t-caption muted">
+      How verification works: this page fetches the certificate from Hedera's public mirror node
+      and compares it, field by field, with the marketplace record. The chain copy wins.
+    </p>
+  </footer>
+</div>

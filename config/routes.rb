@@ -22,4 +22,5 @@ Rails.application.routes.draw do
 
   root "storefront#index"
   get "models/:slug", to: "storefront#show", as: :model_page
+  get "verify/:cert_id", to: "verify#show", as: :verify
 end

@@ -1,0 +1,7 @@
+<% content_for :title, "Certificate not found — Printwright" %>
+<div class="verify-page">
+  <div class="verify-banner banner-bad"><strong>Certificate not found</strong></div>
+  <p class="muted">No certificate with id <span class="mono"><%= params[:cert_id] %></span> exists here.
+    Check the id on your receipt, or browse the
+    <a href="https://hashscan.io/testnet/topic/<%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %>">public certificate topic</a>.</p>
+</div>
