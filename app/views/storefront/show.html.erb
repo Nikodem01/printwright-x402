@@ -56,11 +56,13 @@
   </div>
 
   <aside>
-    <div class="buy-panel">
+    <div class="buy-panel" data-controller="checkout"
+         data-checkout-download-url-value="<%= "/api/v1/models/#{@model.id}/download" %>">
       <h3>Buy a license</h3>
       <% @model.license_offers.each_with_index do |offer, index| %>
-        <label class="offer-row">
-          <input type="radio" name="license" value="<%= offer.kind %>" <%= "checked" if index.zero? %>>
+        <label class="offer-row" data-checkout-target="offer" data-price-cents="<%= offer.price_cents %>">
+          <input type="radio" name="license" value="<%= offer.kind %>" <%= "checked" if index.zero? %>
+                 data-action="change->checkout#updatePrice">
           <span>
             <strong><%= offer.kind.humanize %></strong>
             <span class="t-caption muted" style="display:block">
@@ -70,13 +72,17 @@
           <span class="price">$<%= format("%.2f", offer.price_cents / 100.0) %></span>
         </label>
       <% end %>
-      <button class="btn btn-primary" type="button" disabled>
+      <button class="btn btn-primary" type="button"
+              data-checkout-target="button" data-action="checkout#buy">
         Buy license · $<%= format("%.2f", @model.license_offers.first.price_cents / 100.0) %>
       </button>
+      <div data-checkout-target="status" aria-live="polite" tabindex="-1"
+           style="margin-top: var(--s-2); min-height: 24px"></div>
+      <div data-checkout-target="receipt" hidden tabindex="-1"></div>
       <p class="t-caption muted" style="margin-bottom:0">
-        Pays via x402 on Hedera testnet · HBAR or USDC.
-        Wallet checkout (HashPack) arrives next build; agents buy now via
-        <code>scripts/buy.mjs</code>.
+        Pays via x402 on Hedera testnet · HBAR or USDC. Signing uses the local
+        demo-wallet daemon (<code>scripts/demo-wallet.mjs</code>); HashPack
+        pairing is the planned drop-in upgrade.
       </p>
     </div>
   </aside>
