@@ -31,6 +31,25 @@ transfer, retries, and saves the STL plus `certificate.json` under `purchases/<s
 printing the HashScan transaction link and the HCS mirror-node link for the certificate.
 `--dry-run` stops after the 402 (no payment) — useful as a smoke test.
 
+## Mount it in an AI assistant (Scene 1b)
+
+The MCP server exposes the same door to any MCP client (Claude Code, Claude Desktop, ...):
+
+```bash
+cd mcp && npm install && cd ..
+claude mcp add printwright \
+  --env PRINTWRIGHT_URL=http://localhost:3000 \
+  --env BUYER_ACCOUNT_ID=0.0.xxxxxxx \
+  --env BUYER_PRIVATE_KEY=0x... \
+  --env MAX_SPEND_CENTS=500 \
+  -- node mcp/server.mjs
+```
+
+Four tools: `search_models`, `get_model`, `buy_license` (refuses without `confirm: true`,
+capped by `MAX_SPEND_CENTS`), and `verify_certificate` (fetches the on-chain HCS message from
+the public mirror node and diffs it against the marketplace copy). Then ask:
+*"find a printable beaver with a hat under $3 and buy a personal license."*
+
 ## Run the marketplace locally
 
 Prereqs: Ruby 3.3, Postgres, Node ≥ 20.
