@@ -1,3 +1,5 @@
+require "net/http"
+
 module X402
   # After a settle timeout the transaction may still have settled on-chain.
   # Look for a successful transfer matching (payTo, amount, asset) since the

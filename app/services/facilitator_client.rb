@@ -1,3 +1,5 @@
+require "net/http"
+
 # Thin HTTP client for the x402 facilitator (Blocky402 or self-hosted).
 # Any transport failure or 5xx raises Unavailable — the caller must treat
 # that as "outcome unknown", never as a payment failure (money may have moved).
