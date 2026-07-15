@@ -1,29 +1,48 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title><%= content_for(:title) || "Printwright X402" %></title>
+    <title><%= content_for(:title) || "Printwright — every print, licensed" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="application-name" content="Printwright X402">
-    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Printwright">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
     <%= yield :head %>
 
-    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
-    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
-
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
-    <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
   <body>
-    <%= yield %>
+    <header class="site-header">
+      <div class="container">
+        <%= link_to root_path, class: "wordmark" do %>
+          Printwright ⬡
+          <span class="tagline">Every print, licensed.</span>
+        <% end %>
+        <%= form_with url: root_path, method: :get, class: "search-form" do %>
+          <input type="search" name="q" value="<%= params[:q] %>" placeholder="Search models — try 'beaver'"
+                 aria-label="Search models">
+          <button class="btn" type="submit">Search</button>
+        <% end %>
+        <%= link_to "For designers", new_session_path, class: "t-small" %>
+      </div>
+    </header>
+
+    <main class="container">
+      <%= yield %>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        License certificates anchor to Hedera Consensus Service topic
+        <a class="mono" href="https://hashscan.io/testnet/topic/<%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %>"><%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %></a>
+        — publicly verifiable on the mirror node. Payments via x402 (Hedera testnet, HBAR/USDC).
+      </div>
+    </footer>
   </body>
 </html>

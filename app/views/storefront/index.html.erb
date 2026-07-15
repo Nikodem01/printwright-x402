@@ -1,0 +1,24 @@
+<% content_for :title, @query.present? ? "#{@query} — Printwright" : "Printwright — every print, licensed" %>
+
+<div class="filters" role="group" aria-label="Filters">
+  <%= link_to "Support-free",
+        url_for(request.query_parameters.merge(supports_free: params[:supports_free].present? ? nil : "1").compact),
+        class: "pill", "aria-pressed": params[:supports_free].present? %>
+  <%= link_to "PLA",
+        url_for(request.query_parameters.merge(material: params[:material] == "PLA" ? nil : "PLA").compact),
+        class: "pill", "aria-pressed": params[:material] == "PLA" %>
+  <%= link_to "≤ $3",
+        url_for(request.query_parameters.merge(max_price_cents: params[:max_price_cents].present? ? nil : 300).compact),
+        class: "pill", "aria-pressed": params[:max_price_cents].present? %>
+</div>
+
+<% if @models.any? %>
+  <div class="card-grid">
+    <%= render partial: "model_card", collection: @models, as: :model %>
+  </div>
+<% else %>
+  <div class="empty-state">
+    <h2>No matches</h2>
+    <p>Try <%= link_to "“beaver”", root_path(q: "beaver") %> — or clear the filters.</p>
+  </div>
+<% end %>

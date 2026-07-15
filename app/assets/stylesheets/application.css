@@ -1,10 +1,171 @@
-/*
- * This is a manifest file that'll be compiled into application.css.
- *
- * With Propshaft, assets are served efficiently without preprocessing steps. You can still include
- * application-wide styles in this file, but keep in mind that CSS precedence will follow the standard
- * cascading order, meaning styles declared later in the document or manifest will override earlier ones,
- * depending on specificity.
- *
- * Consider organizing styles into separate files for maintainability.
- */
+/* Printwright storefront — tokens are the only source of visual truth (plan 06).
+   No framework: this sheet is tokens + ~15 component classes. */
+
+:root {
+  /* global: color (light) */
+  --ink-900: #0f172a; --ink-700: #334155; --ink-500: #64748b; --ink-300: #cbd5e1;
+  --paper: #f8fafc; --surface: #ffffff; --border-c: #e2e8f0;
+  --teal-700: #0f766e; --teal-600: #0d9488; --teal-100: #ccfbf1;
+  --amber-500: #f59e0b; --amber-100: #fef3c7;
+  --green-700: #15803d; --green-100: #dcfce7;
+  --red-700: #b91c1c; --red-100: #fee2e2;
+
+  /* alias — components reference these, never raw values */
+  --bg: var(--paper); --bg-raised: var(--surface);
+  --text: var(--ink-900); --text-muted: var(--ink-500); --border: var(--border-c);
+  --action: var(--teal-700); --action-hover: var(--teal-600); --action-contrast: #ffffff;
+  --chain: var(--teal-700);
+  --ok-bg: var(--green-100); --ok-fg: var(--green-700);
+  --pending-bg: var(--amber-100); --pending-fg: #92400e;
+  --bad-bg: var(--red-100); --bad-fg: var(--red-700);
+
+  /* spacing / radius / elevation */
+  --s-1: 4px; --s-2: 8px; --s-3: 16px; --s-4: 24px; --s-5: 32px; --s-6: 48px; --s-7: 64px;
+  --radius-s: 6px; --radius-m: 10px; --radius-pill: 999px;
+  --shadow-1: 0 1px 2px rgb(15 23 42 / .06); --shadow-2: 0 4px 12px rgb(15 23 42 / .10);
+  --measure: 65ch; --container: 1200px;
+
+  /* type: system stack, 1.25 ratio */
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220; --bg-raised: #111a2e; --text: #e2e8f0; --text-muted: #94a3b8;
+    --border: #1e293b; --action: #2dd4bf; --action-contrast: #04241f;
+    --chain: #2dd4bf; --ok-fg: #4ade80; --pending-fg: #fbbf24; --bad-fg: #f87171;
+    --ok-bg: #14532d33; --pending-bg: #78350f33; --bad-bg: #7f1d1d33;
+    --shadow-1: 0 1px 2px rgb(0 0 0 / .4); --shadow-2: 0 4px 12px rgb(0 0 0 / .5);
+  }
+}
+
+/* base */
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 400 16px/1.5 var(--font-ui);
+}
+a { color: var(--action); }
+img { max-width: 100%; display: block; }
+
+h1, h2, h3 { margin: 0 0 var(--s-3); font-weight: 600; }
+h1 { font-size: 31px; line-height: 1.2; letter-spacing: -0.02em; font-weight: 700; }
+h2 { font-size: 25px; line-height: 1.25; }
+h3 { font-size: 20px; line-height: 1.3; }
+.t-small { font-size: 14px; line-height: 1.5; }
+.t-caption { font-size: 12px; line-height: 1.4; }
+.muted { color: var(--text-muted); }
+
+/* every on-chain fact: mono, chain-colored when linked (brand-critical rule) */
+.mono { font-family: var(--font-mono); font-size: 14px; }
+a.mono, .mono a { color: var(--chain); text-decoration: underline; }
+
+.container { max-width: var(--container); margin: 0 auto; padding: 0 var(--s-4); }
+
+/* shell */
+.site-header {
+  background: var(--bg-raised); border-bottom: 1px solid var(--border);
+  padding: var(--s-3) 0;
+}
+.site-header .container { display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+.wordmark { font-size: 20px; font-weight: 700; color: var(--text); text-decoration: none; }
+.wordmark .tagline { display: block; font-size: 12px; font-weight: 400; color: var(--text-muted); }
+.search-form { flex: 1; display: flex; gap: var(--s-2); min-width: 260px; }
+.search-form input[type="search"] {
+  flex: 1; padding: var(--s-2) var(--s-3); font: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius-s);
+  background: var(--bg); color: var(--text);
+}
+.site-footer {
+  border-top: 1px solid var(--border); margin-top: var(--s-7);
+  padding: var(--s-4) 0; color: var(--text-muted); font-size: 14px;
+}
+
+/* buttons */
+.btn {
+  display: inline-block; padding: 12px var(--s-4); min-height: 44px;
+  font: 600 16px/1.2 var(--font-ui); text-align: center; cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--radius-s);
+  background: var(--bg-raised); color: var(--text); text-decoration: none;
+}
+.btn-primary { background: var(--action); border-color: var(--action); color: var(--action-contrast); width: 100%; }
+.btn-primary:hover:not(:disabled) { background: var(--action-hover); border-color: var(--action-hover); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn:focus-visible, a:focus-visible, .pill:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+
+/* filter pills */
+.filters { display: flex; gap: var(--s-2); flex-wrap: wrap; margin: var(--s-4) 0; }
+.pill {
+  padding: 6px var(--s-3); border-radius: var(--radius-pill); text-decoration: none;
+  border: 1px solid var(--border); color: var(--text); background: var(--bg-raised); font-size: 14px;
+}
+.pill[aria-pressed="true"] { background: var(--teal-100); border-color: var(--action); color: var(--teal-700); }
+@media (prefers-color-scheme: dark) {
+  .pill[aria-pressed="true"] { background: #134e4a; color: #99f6e4; }
+}
+
+/* S1 card grid */
+.card-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--s-4); margin: var(--s-4) 0;
+}
+.model-card {
+  display: block; text-decoration: none; color: var(--text);
+  background: var(--bg-raised); border: 1px solid var(--border);
+  border-radius: var(--radius-m); box-shadow: var(--shadow-1); overflow: hidden;
+}
+.model-card:hover { box-shadow: var(--shadow-2); }
+.model-card img { aspect-ratio: 4 / 3; object-fit: cover; width: 100%; }
+.model-card .card-body { padding: var(--s-3); }
+.model-card h3 { margin-bottom: var(--s-1); }
+.card-price-row { display: flex; align-items: center; justify-content: space-between; margin-top: var(--s-2); }
+.price { font-weight: 700; }
+
+/* badges — always carry a word, never color alone */
+.badge {
+  display: inline-block; padding: 2px var(--s-2); border-radius: var(--radius-pill);
+  font-size: 12px; font-weight: 600;
+}
+.badge-kind { background: var(--teal-100); color: var(--teal-700); }
+.badge-ok { background: var(--ok-bg); color: var(--ok-fg); }
+.badge-pending { background: var(--pending-bg); color: var(--pending-fg); }
+.badge-bad { background: var(--bad-bg); color: var(--bad-fg); }
+@media (prefers-color-scheme: dark) { .badge-kind { background: #134e4a; color: #99f6e4; } }
+
+/* empty state */
+.empty-state { text-align: center; padding: var(--s-7) 0; color: var(--text-muted); }
+
+/* S2 model page */
+.model-page { display: grid; grid-template-columns: 7fr 5fr; gap: var(--s-5); margin-top: var(--s-5); }
+@media (max-width: 768px) { .model-page { grid-template-columns: 1fr; } }
+.gallery img { border-radius: var(--radius-m); box-shadow: var(--shadow-1); }
+.prose { max-width: var(--measure); }
+.facts-table { border-collapse: collapse; font-size: 14px; }
+.facts-table th, .facts-table td { text-align: left; padding: var(--s-2) var(--s-3) var(--s-2) 0; border-bottom: 1px solid var(--border); }
+.facts-table th { color: var(--text-muted); font-weight: 400; }
+
+.buy-panel {
+  position: sticky; top: var(--s-4);
+  background: var(--bg-raised); border: 1px solid var(--border);
+  border-radius: var(--radius-m); box-shadow: var(--shadow-2); padding: var(--s-4);
+}
+.offer-row {
+  display: flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-3); border: 1px solid var(--border); border-radius: var(--radius-s);
+  margin-bottom: var(--s-2); cursor: pointer;
+}
+.offer-row:has(input:checked) { border-color: var(--action); background: var(--teal-100); }
+@media (prefers-color-scheme: dark) { .offer-row:has(input:checked) { background: #134e4a; } }
+.offer-row .price { margin-left: auto; }
+
+.trust-strip {
+  display: flex; gap: var(--s-4); align-items: center; flex-wrap: wrap;
+  margin-top: var(--s-3); padding: var(--s-3); border: 1px solid var(--border);
+  border-radius: var(--radius-s); background: var(--bg-raised); font-size: 14px;
+}
+.copy-btn {
+  font: 600 12px/1 var(--font-ui); padding: 4px var(--s-2); cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--radius-s);
+  background: var(--bg); color: var(--text-muted);
+}

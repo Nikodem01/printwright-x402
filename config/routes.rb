@@ -20,6 +20,6 @@ Rails.application.routes.draw do
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
-  # Placeholder until the storefront ships; keeps after-sign-in redirects working.
-  root "sessions#new"
+  root "storefront#index"
+  get "models/:slug", to: "storefront#show", as: :model_page
 end

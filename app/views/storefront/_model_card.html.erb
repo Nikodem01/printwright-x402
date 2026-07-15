@@ -1,0 +1,21 @@
+<%= link_to model_page_path(model.slug), class: "model-card" do %>
+  <% if (render_file = model.render_file)&.file&.attached? %>
+    <%= image_tag render_file.file, alt: model.title %>
+  <% end %>
+  <div class="card-body">
+    <h3><%= model.title %></h3>
+    <div class="t-small muted"><%= model.designer.display_name %></div>
+    <div class="t-caption muted">
+      <% p = model.printability %>
+      <%= [ p["est_print_minutes"] && "⏱ #{p['est_print_minutes']}m",
+            p["materials"]&.join("/"),
+            p["supports"] == false ? "no supports" : nil ].compact.join(" · ") %>
+    </div>
+    <% if (offer = model.license_offers.min_by(&:price_cents)) %>
+      <div class="card-price-row">
+        <span class="price">$<%= format("%.2f", offer.price_cents / 100.0) %></span>
+        <span class="badge badge-kind"><%= offer.kind.humanize.downcase %></span>
+      </div>
+    <% end %>
+  </div>
+<% end %>
