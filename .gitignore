@@ -37,3 +37,6 @@
 # Ignore locally downloaded purchase artifacts (buyer scripts save files here).
 /purchases/
 
+# Node deps for the agent clients (scripts/, mcp/).
+/node_modules/
+

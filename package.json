@@ -1,0 +1,16 @@
+{
+  "name": "printwright-x402-agents",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent-side clients for the Printwright marketplace: bare x402 buyer script (scripts/buy.mjs)",
+  "scripts": {
+    "buy": "node scripts/buy.mjs"
+  },
+  "dependencies": {
+    "@hiero-ledger/sdk": "2.85.0",
+    "@x402/core": "2.18.0",
+    "@x402/hedera": "2.18.0",
+    "dotenv": "^17.4.2"
+  }
+}

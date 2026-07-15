@@ -46,6 +46,11 @@ class Api::V1::ModelsControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[beaver-with-hat woodland-lodge], body["models"].map { |m| m["slug"] }
   end
 
+  test "multi-word query requires every term and ranks the double title hit first" do
+    get api_v1_models_url(q: "beaver hat")
+    assert_equal %w[beaver-with-hat], response.parsed_body["models"].map { |m| m["slug"] }
+  end
+
   test "material filter matches inside printability jsonb" do
     get api_v1_models_url(material: "ABS")
     assert_equal %w[calibration-cube], response.parsed_body["models"].map { |m| m["slug"] }
