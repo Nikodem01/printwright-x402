@@ -10,6 +10,11 @@
 #   inflect.uncountable %w( fish sheep )
 # end
 
+# "models3d" avoids the Model name collision (PRODUCT naming); teach Rails the plural.
+ActiveSupport::Inflector.inflections(:en) do |inflect|
+  inflect.irregular "model3d", "models3d"
+end
+
 # These inflection rules are supported but not enabled by default:
 # ActiveSupport::Inflector.inflections(:en) do |inflect|
 #   inflect.acronym "RESTful"
