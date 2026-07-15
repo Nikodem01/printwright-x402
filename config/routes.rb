@@ -7,6 +7,7 @@ Rails.application.routes.draw do
       resources :models, only: %i[index show]
       get "models/:model_id/download", to: "downloads#show", as: :model_download
       get "files/:token", to: "files#show", as: :file
+      get "certificates/:cert_id", to: "certificates#show", as: :certificate
     end
   end
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html

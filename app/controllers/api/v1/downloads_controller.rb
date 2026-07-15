@@ -132,8 +132,9 @@ class Api::V1::DownloadsController < Api::V1::BaseController
   end
 
   def deliver(purchase, settlement)
-    License.allocate!(purchase) unless purchase.license
+    license = purchase.license || License.allocate!(purchase)
     purchase.transition_to!(:delivered)
+    CertMintJob.perform_later(license.id)
     response.set_header("PAYMENT-RESPONSE", Base64.strict_encode64(JSON.generate(settlement)))
     response.set_header("X-PAYMENT-RESPONSE", response.get_header("PAYMENT-RESPONSE"))
     render json: delivery_payload(purchase), status: :ok

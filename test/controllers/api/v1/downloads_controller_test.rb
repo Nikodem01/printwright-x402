@@ -82,7 +82,10 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     stub_verify_ok
     stub_settle(body: fixture("settle_ok.json"))
 
-    get download_path, headers: payment_headers(@payload)
+    # Cert minting is async by design: a sidecar outage must never block delivery.
+    assert_enqueued_with(job: CertMintJob) do
+      get download_path, headers: payment_headers(@payload)
+    end
     assert_response :success
 
     body = response.parsed_body
