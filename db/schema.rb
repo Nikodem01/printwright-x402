@@ -10,9 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_15_175506) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_16_120001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+  enable_extension "pg_trgm"
 
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
@@ -118,6 +119,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_15_175506) do
     t.index ["slug"], name: "index_models3d_on_slug", unique: true
     t.index ["status"], name: "index_models3d_on_status"
     t.index ["tags"], name: "index_models3d_on_tags", using: :gin
+    t.index ["title"], name: "index_models3d_on_title_trgm", opclass: :gin_trgm_ops, using: :gin
   end
 
   create_table "purchases", force: :cascade do |t|

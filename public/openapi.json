@@ -1,0 +1,156 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Printwright API",
+    "version": "1.0.0",
+    "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; every purchase mints a public HCS license certificate."
+  },
+  "servers": [{ "url": "/api/v1" }],
+  "paths": {
+    "/models": {
+      "get": {
+        "operationId": "searchModels",
+        "summary": "Search the catalog (keyword + trigram fuzzy matching)",
+        "parameters": [
+          { "name": "q", "in": "query", "schema": { "type": "string" }, "description": "keywords, e.g. 'beaver hat'" },
+          { "name": "material", "in": "query", "schema": { "type": "string" }, "description": "e.g. PLA" },
+          { "name": "supports", "in": "query", "schema": { "type": "string", "enum": ["true", "false"] } },
+          { "name": "max_price_cents", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ranked results",
+            "content": { "application/json": { "schema": {
+              "type": "object",
+              "properties": {
+                "count": { "type": "integer" },
+                "models": { "type": "array", "items": { "$ref": "#/components/schemas/ModelSummary" } }
+              }
+            } } }
+          }
+        }
+      }
+    },
+    "/models/{id}": {
+      "get": {
+        "operationId": "getModel",
+        "summary": "Full model metadata (offers, terms, file hash)",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Model detail", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ModelDetail" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/models/{id}/download": {
+      "get": {
+        "operationId": "downloadModel",
+        "summary": "The paid endpoint: x402 negotiation",
+        "description": "Without a payment header, responds 402 with PaymentRequirements (JSON body AND base64 PAYMENT-REQUIRED header). Retry the same request with the base64 PaymentPayload in the PAYMENT-SIGNATURE header (X-PAYMENT also accepted). The server verifies and settles through an x402 facilitator on Hedera testnet, then returns the file grant, license and certificate.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "license", "in": "query", "schema": { "type": "string", "enum": ["personal", "commercial_unit"], "default": "personal" } },
+          { "name": "PAYMENT-SIGNATURE", "in": "header", "schema": { "type": "string" }, "description": "base64 x402 PaymentPayload (v2)" }
+        ],
+        "responses": {
+          "402": {
+            "description": "Payment required — PaymentRequired object in body and PAYMENT-REQUIRED header",
+            "headers": { "PAYMENT-REQUIRED": { "schema": { "type": "string" }, "description": "base64 of the same PaymentRequired JSON" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaymentRequired" } } }
+          },
+          "200": {
+            "description": "Paid — delivery payload; settlement receipt in PAYMENT-RESPONSE header (X-PAYMENT-RESPONSE mirror)",
+            "headers": { "PAYMENT-RESPONSE": { "schema": { "type": "string" }, "description": "base64 settlement response incl. transaction id" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Delivery" } } }
+          },
+          "400": { "description": "Malformed payment header", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "description": "Replay of an already-presented payment; delivered purchases return the original delivery payload" },
+          "410": { "description": "Offer sold out", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "503": { "description": "Facilitator unavailable — retry with the same signed payment", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/certificates/{cert_id}": {
+      "get": {
+        "operationId": "getCertificate",
+        "summary": "Public license certificate + HCS anchoring links",
+        "parameters": [{ "name": "cert_id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "pw-000003" }],
+        "responses": {
+          "200": { "description": "Certificate with status anchored|minting and mirror/HashScan links" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/files/{token}": {
+      "get": {
+        "operationId": "redeemDownloadGrant",
+        "summary": "Redeem a download grant token (expiring, limited uses)",
+        "parameters": [{ "name": "token", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "302": { "description": "Redirect to the file blob" },
+          "410": { "description": "Grant expired or exhausted" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "NotFound": { "description": "Not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+    },
+    "schemas": {
+      "Error": { "type": "object", "properties": { "error": { "type": "string" } } },
+      "ModelSummary": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" }, "slug": { "type": "string" }, "title": { "type": "string" },
+          "designer": { "type": "object", "properties": { "name": { "type": "string" } } },
+          "printability": { "type": "object" },
+          "license_offers": { "type": "array", "items": { "type": "object", "properties": {
+            "kind": { "type": "string" }, "price_cents": { "type": "integer" }, "currency": { "type": "string" } } } },
+          "url": { "type": "string" }, "render_url": { "type": ["string", "null"] }
+        }
+      },
+      "ModelDetail": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ModelSummary" },
+          { "type": "object", "properties": {
+            "description": { "type": "string" }, "tags": { "type": "array", "items": { "type": "string" } },
+            "file_hash": { "type": "string" }, "download_url": { "type": "string" } } }
+        ]
+      },
+      "PaymentRequired": {
+        "type": "object",
+        "properties": {
+          "x402Version": { "type": "integer", "const": 2 },
+          "error": { "type": "string" },
+          "resource": { "type": "object", "properties": {
+            "url": { "type": "string" }, "description": { "type": "string" }, "mimeType": { "type": "string" } } },
+          "accepts": { "type": "array", "items": { "type": "object", "properties": {
+            "scheme": { "type": "string", "const": "exact" },
+            "network": { "type": "string", "const": "hedera:testnet" },
+            "amount": { "type": "string", "description": "base units as string (tinybars / token smallest unit)" },
+            "asset": { "type": "string", "description": "0.0.0 = HBAR, else HTS token id (USDC 0.0.429274)" },
+            "payTo": { "type": "string" },
+            "maxTimeoutSeconds": { "type": "integer" },
+            "extra": { "type": "object", "properties": { "feePayer": { "type": "string" } } }
+          } } }
+        }
+      },
+      "Delivery": {
+        "type": "object",
+        "properties": {
+          "files": { "type": "array", "items": { "type": "object", "properties": {
+            "kind": { "type": "string" }, "url": { "type": "string" }, "expires_at": { "type": "string" } } } },
+          "license": { "type": "object", "properties": {
+            "cert_id": { "type": "string" }, "serial": { "type": "integer" }, "kind": { "type": "string" } } },
+          "certificate": { "type": ["object", "null"] },
+          "verify_url": { "type": "string" },
+          "transaction_id": { "type": "string" },
+          "hashscan_url": { "type": "string" }
+        }
+      }
+    }
+  }
+}

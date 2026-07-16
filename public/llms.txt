@@ -1,0 +1,34 @@
+# Printwright
+
+> The agent-buyable marketplace for licensed 3D-printable models. Search, inspect, and BUY
+> print licenses over plain HTTP — payments use the x402 protocol (HTTP 402) settling on
+> Hedera testnet in HBAR or USDC. No account, no API key, no card. Every purchase mints a
+> tamper-evident license certificate on the Hedera Consensus Service, publicly verifiable
+> via the mirror node.
+
+API base: /api/v1 — full spec at /openapi.json
+
+## How to buy (the whole flow)
+
+1. GET /api/v1/models?q=beaver+hat — ranked search (fuzzy matching included)
+2. GET /api/v1/models/{id}/download?license=personal → 402 with PaymentRequirements
+   (amount in base units, asset 0.0.0=HBAR or 0.0.429274=USDC, payTo, extra.feePayer)
+3. Sign a Hedera TransferTransaction (transactionId.accountId = feePayer, buyer signature
+   only) and retry with the base64 PaymentPayload in the PAYMENT-SIGNATURE header
+4. 200 → file download grants, license serial, certificate id, HashScan transaction link
+
+Example 402 probe:
+curl -i "https://<host>/api/v1/models/1/download?license=personal"
+
+## Endpoints
+
+- /api/v1/models: search (q, material, supports, max_price_cents)
+- /api/v1/models/{id}: full metadata incl. license offers and terms
+- /api/v1/models/{id}/download: the paid endpoint (x402)
+- /api/v1/certificates/{cert_id}: public certificate + HCS mirror links
+- /verify/{cert_id}: human-readable certificate verification page
+
+## Reference clients
+
+- scripts/buy.mjs in the repo — one-command purchase
+- MCP server (mcp/server.mjs) — search_models, get_model, buy_license, verify_certificate
