@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_17_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_17_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -50,6 +50,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_000001) do
     t.string "email_address", null: false
     t.string "hedera_account_id"
     t.string "password_digest", null: false
+    t.datetime "payout_account_verified_at"
     t.datetime "updated_at", null: false
     t.boolean "verified", default: false, null: false
     t.index ["email_address"], name: "index_designers_on_email_address", unique: true
@@ -73,6 +74,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_000001) do
     t.datetime "created_at", null: false
     t.bigint "designer_id"
     t.string "entry_kind", null: false
+    t.string "held_by", default: "treasury", null: false
     t.bigint "purchase_id", null: false
     t.index ["designer_id"], name: "index_ledger_entries_on_designer_id"
     t.index ["purchase_id", "entry_kind"], name: "index_ledger_entries_on_purchase_id_and_entry_kind", unique: true

@@ -63,10 +63,19 @@ module X402
       {
         scheme: "exact",
         network: NETWORK,
-        payTo: ENV.fetch("X402_PAY_TO"),
+        payTo: pay_to,
         maxTimeoutSeconds: MAX_TIMEOUT_SECONDS,
         extra: { feePayer: FacilitatorClient.fee_payer(NETWORK) }
       }
+    end
+
+    # Money goes straight to the designer when their account passed the
+    # publish-time mirror check; otherwise treasury custody (owed balance
+    # tracked in the ledger via held_by).
+    def pay_to
+      designer = @model.designer
+      return designer.hedera_account_id if designer.payout_account_verified?
+      ENV.fetch("X402_PAY_TO")
     end
 
     # Fixed demo conversion (cents per 1 HBAR); real quoting is out of scope.

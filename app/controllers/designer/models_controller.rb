@@ -44,10 +44,24 @@ class Designer::ModelsController < Designer::BaseController
     digest = Digest::SHA256.new
     files.sort_by { |f| f.file.filename.to_s }.each { |f| digest.update(f.file.download) }
     @model.update!(file_hash: "sha256:#{digest.hexdigest}", status: "published")
-    redirect_to model_page_path(@model.slug), notice: "Published — live in the catalog and buyable by agents."
+    redirect_to model_page_path(@model.slug), notice: publish_notice
   end
 
   private
+
+  # Publish is the moment the payout destination gets decided, so the mirror
+  # check runs here — and the notice says plainly where the money will go.
+  def publish_notice
+    base = "Published — live in the catalog and buyable by agents."
+    return base if current_designer.hedera_account_id.blank?
+
+    if current_designer.verify_payout_account!
+      "#{base} Sales pay your Hedera account directly."
+    else
+      "#{base} Your Hedera account isn't ready to receive USDC yet — " \
+        "sales are held in marketplace custody until it verifies."
+    end
+  end
 
   def find_model
     current_designer.models3d.find(params[:id])

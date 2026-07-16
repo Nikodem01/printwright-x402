@@ -1,6 +1,16 @@
 require "test_helper"
+require "webmock/minitest"
 
 class DesignerFlowTest < ActionDispatch::IntegrationTest
+  setup do
+    # Publish runs the payout-account mirror check; this designer's account
+    # can receive USDC directly (unlimited auto-association).
+    stub_request(:get, %r{testnet\.mirrornode\.hedera\.com/api/v1/accounts/0\.0\.42/tokens})
+      .to_return(body: { tokens: [], links: {} }.to_json, headers: { "content-type" => "application/json" })
+    stub_request(:get, %r{testnet\.mirrornode\.hedera\.com/api/v1/accounts/0\.0\.42\z})
+      .to_return(body: { max_automatic_token_associations: -1 }.to_json, headers: { "content-type" => "application/json" })
+  end
+
   test "sign up -> upload -> publish makes the model live and API-buyable-shaped" do
     post designers_path, params: { designer: {
       display_name: "Flow Studio", email_address: "flow@example.com",

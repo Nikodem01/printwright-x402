@@ -2,6 +2,7 @@ require "test_helper"
 
 class LedgerEntryTest < ActiveSupport::TestCase
   setup do
+    ENV["X402_PAY_TO"] = "0.0.9584959"
     model = Model3d.create!(
       designer: designers(:one), title: "Ledger Test", slug: "ledger-test-#{SecureRandom.hex(4)}"
     )
@@ -53,6 +54,31 @@ class LedgerEntryTest < ActiveSupport::TestCase
     @purchase.update!(amount_base_units: nil)
     assert_raises(TypeError) { @purchase.transition_to!(:settled) }
     assert @purchase.reload.verified?, "status change must roll back with the ledger"
+  end
+
+  test "payTo=designer marks both legs held_by designer (fee becomes a receivable)" do
+    designer = @offer.model3d.designer
+    designer.update!(hedera_account_id: "0.0.9604186")
+    @purchase.update!(requirements_json: { "payTo" => "0.0.9604186" })
+    @purchase.transition_to!(:settled)
+
+    assert_equal %w[designer designer], LedgerEntry.where(purchase: @purchase).pluck(:held_by)
+  end
+
+  test "payTo=treasury marks both legs held_by treasury (share is owed)" do
+    @purchase.update!(requirements_json: { "payTo" => ENV.fetch("X402_PAY_TO", "0.0.9584959") })
+    @purchase.transition_to!(:settled)
+
+    assert_equal %w[treasury treasury], LedgerEntry.where(purchase: @purchase).pluck(:held_by)
+  end
+
+  test "a designer claiming the treasury id still books as treasury" do
+    treasury = ENV.fetch("X402_PAY_TO", "0.0.9584959")
+    @offer.model3d.designer.update!(hedera_account_id: treasury)
+    @purchase.update!(requirements_json: { "payTo" => treasury })
+    @purchase.transition_to!(:settled)
+
+    assert_equal %w[treasury treasury], LedgerEntry.where(purchase: @purchase).pluck(:held_by)
   end
 
   test "other transitions write nothing" do

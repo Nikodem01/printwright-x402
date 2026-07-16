@@ -7,20 +7,26 @@
 
 ASSETS = Rails.root.join("db/seed_assets")
 
-def demo_designer(email, name, bio)
+# Designers with their own funded testnet account (SEED_*_ACCOUNT_ID env)
+# receive sales directly once the publish-time mirror check passes; the rest
+# demonstrate treasury custody + owed balance. Never default to the treasury
+# account here — a designer "owning" the treasury id corrupts held_by.
+def demo_designer(email, name, bio, account_env: nil)
   Designer.find_or_create_by!(email_address: email) do |d|
     d.password = SecureRandom.base58(24)
     d.display_name = name
     d.bio = "#{bio} (Demo account; catalog is self-authored CC0 placeholder geometry.)"
-    d.hedera_account_id = ENV.fetch("X402_PAY_TO", "0.0.9584959")
+    d.hedera_account_id = account_env && ENV[account_env].presence
     d.verified = true
   end
 end
 
 studio = demo_designer("studio@printwright.demo", "Printwright Demo Studio",
-                       "In-house demo studio for functional prints.")
+                       "In-house demo studio for functional prints.",
+                       account_env: "SEED_STUDIO_ACCOUNT_ID")
 atelier = demo_designer("atelier@printwright.demo", "Hexa Atelier",
-                        "Decor and desk objects, tuned for clean FDM printing.")
+                        "Decor and desk objects, tuned for clean FDM printing.",
+                        account_env: "SEED_ATELIER_ACCOUNT_ID")
 workshop = demo_designer("workshop@printwright.demo", "Beaver Workshop",
                          "Toys and articulated figures that print support-free.")
 

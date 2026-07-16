@@ -290,6 +290,20 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "sold_out", response.parsed_body["error"]
   end
 
+  test "verified designer payout account becomes the 402's payTo; unverified stays treasury" do
+    get download_path
+    assert(response.parsed_body["accepts"].all? { |a| a["payTo"] == "0.0.9584959" })
+
+    designers(:one).update!(hedera_account_id: "0.0.9604186")
+    designers(:one).update!(payout_account_verified_at: Time.current)
+    get download_path
+    assert(response.parsed_body["accepts"].all? { |a| a["payTo"] == "0.0.9604186" })
+
+    designers(:one).update!(hedera_account_id: "0.0.7777777") # change resets verification
+    get download_path
+    assert(response.parsed_body["accepts"].all? { |a| a["payTo"] == "0.0.9584959" })
+  end
+
   test "an in-flight purchase reserves capacity: second payment is refused before money moves" do
     @offer.update!(max_units: 1)
     # No license allocated yet — the rival payment is mid-settle.
