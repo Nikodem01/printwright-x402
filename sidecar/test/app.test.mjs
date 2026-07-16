@@ -6,6 +6,7 @@ const TOKEN = "test-token";
 const calls = [];
 const fakeHedera = {
   network: "testnet",
+  treasuryConfigured: true,
   createTopic: async (memo) => {
     calls.push(["createTopic", memo]);
     return { topicId: "0.0.111", transactionId: "0.0.1@1.2" };
@@ -13,6 +14,10 @@ const fakeHedera = {
   submitMessage: async (topicId, message) => {
     calls.push(["submitMessage", topicId, message]);
     return { topicId, sequenceNumber: 7, transactionId: "0.0.1@3.4" };
+  },
+  payout: async ({ tokenId, transfers, memo }) => {
+    calls.push(["payout", tokenId, transfers, memo]);
+    return { transactionId: "0.0.1@5.6" };
   },
 };
 
@@ -113,4 +118,52 @@ test("malformed JSON body is a 400", async () => {
 test("unknown routes are 404", async () => {
   const res = await post("/delete-topic", {});
   assert.equal(res.status, 404);
+});
+
+test("payout requires auth", async () => {
+  const res = await post("/payout", { tokenId: "0.0.1", transfers: [] }, {});
+  assert.equal(res.status, 401);
+});
+
+test("payout validates token id, transfers, and amounts", async () => {
+  for (const body of [
+    { tokenId: "nope", transfers: [{ accountId: "0.0.5", amount: "1" }] },
+    { tokenId: "0.0.1", transfers: [] },
+    { tokenId: "0.0.1", transfers: [{ accountId: "eve", amount: "1" }] },
+    { tokenId: "0.0.1", transfers: [{ accountId: "0.0.5", amount: "-3" }] },
+    { tokenId: "0.0.1", transfers: [{ accountId: "0.0.5", amount: "0" }] },
+    { tokenId: "0.0.1", transfers: [{ accountId: "0.0.5", amount: 5 }] },
+  ]) {
+    const res = await post("/payout", body);
+    assert.equal(res.status, 400, JSON.stringify(body));
+  }
+});
+
+test("payout passes transfers through and returns the tx id", async () => {
+  const transfers = [
+    { accountId: "0.0.9604186", amount: "225000" },
+    { accountId: "0.0.9604185", amount: "90000" },
+  ];
+  const res = await post("/payout", { tokenId: "0.0.429274", transfers, memo: "test payout" });
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { transactionId: "0.0.1@5.6" });
+  assert.deepEqual(calls.at(-1), ["payout", "0.0.429274", transfers, "test payout"]);
+});
+
+test("payout without treasury key is 503", async () => {
+  const bare = createApp({
+    hedera: { ...fakeHedera, treasuryConfigured: false },
+    token: TOKEN,
+    topicId: () => "0.0.111",
+  });
+  await new Promise((resolve) => bare.listen(0, "127.0.0.1", resolve));
+  const port = bare.address().port;
+  const res = await fetch(`http://127.0.0.1:${port}/payout`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${TOKEN}` },
+    body: JSON.stringify({ tokenId: "0.0.1", transfers: [{ accountId: "0.0.5", amount: "1" }] }),
+  });
+  assert.equal(res.status, 503);
+  assert.equal((await res.json()).error, "treasury_not_configured");
+  bare.close();
 });

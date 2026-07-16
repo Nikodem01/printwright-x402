@@ -13,9 +13,28 @@ class SidecarClient
 
   # => { "topicId" => ..., "sequenceNumber" => ..., "transactionId" => ... }
   def submit_cert(cert)
-    req = Net::HTTP::Post.new("/submit-cert", "content-type" => "application/json")
+    post("/submit-cert", { cert: cert }) do |body|
+      # A missing topic is a fixable configuration state (operator hasn't
+      # restarted the sidecar after create-topic) — keep retrying. Real
+      # rejections (e.g. cert_too_large) fail loudly: retrying can't fix them.
+      raise Unavailable, body["error"] if body["error"] == "no_topic_configured"
+    end
+  end
+
+  # => { "transactionId" => ... } — a batched treasury -> designers transfer.
+  # Money moves on 200; the CALLER records it (nothing here is retried).
+  def payout(token_id:, transfers:, memo: nil)
+    post("/payout", { tokenId: token_id, transfers: transfers, memo: memo }) do |body|
+      raise Unavailable, body["error"] if body["error"] == "treasury_not_configured"
+    end
+  end
+
+  private
+
+  def post(path, payload)
+    req = Net::HTTP::Post.new(path, "content-type" => "application/json")
     req["Authorization"] = "Bearer #{ENV.fetch('SIDECAR_TOKEN')}"
-    req.body = JSON.generate(cert: cert)
+    req.body = JSON.generate(payload)
 
     response = Net::HTTP.start(
       @base.host, @base.port,
@@ -24,10 +43,7 @@ class SidecarClient
 
     body = JSON.parse(response.body)
     unless response.code.to_i == 200
-      # A missing topic is a fixable configuration state (operator hasn't
-      # restarted the sidecar after create-topic) — keep retrying. Real
-      # rejections (e.g. cert_too_large) fail loudly: retrying can't fix them.
-      raise Unavailable, body["error"] if body["error"] == "no_topic_configured"
+      yield body if block_given?
       raise Rejected, body["error"]
     end
     body

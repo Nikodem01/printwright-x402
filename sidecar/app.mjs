@@ -14,7 +14,7 @@ export function createApp({ hedera, token, topicId }) {
       return send(200, { ok: true, network: hedera.network, topicId: topicId() ?? null });
     }
 
-    if (req.method !== "POST" || !["/create-topic", "/submit-cert"].includes(req.url)) {
+    if (req.method !== "POST" || !["/create-topic", "/submit-cert", "/payout"].includes(req.url)) {
       return send(404, { error: "not_found" });
     }
     if (req.headers.authorization !== `Bearer ${token}`) {
@@ -38,6 +38,19 @@ export function createApp({ hedera, token, topicId }) {
         return send(200, await hedera.createTopic(memo));
       }
 
+      if (req.url === "/payout") {
+        if (!hedera.treasuryConfigured) {
+          return send(503, { error: "treasury_not_configured" });
+        }
+        const bad = validatePayout(body);
+        if (bad) return send(400, { error: bad });
+        return send(200, await hedera.payout({
+          tokenId: body.tokenId,
+          transfers: body.transfers,
+          memo: body.memo,
+        }));
+      }
+
       // /submit-cert
       if (!body.cert || typeof body.cert !== "object") {
         return send(400, { error: "missing_cert" });
@@ -56,6 +69,16 @@ export function createApp({ hedera, token, topicId }) {
       console.error(error);
       return send(502, { error: "hedera_error", detail: String(error) });
     }
+  }
+
+  function validatePayout(body) {
+    if (typeof body.tokenId !== "string" || !/^0\.0\.\d+$/.test(body.tokenId)) return "invalid_token_id";
+    if (!Array.isArray(body.transfers) || body.transfers.length === 0) return "missing_transfers";
+    for (const t of body.transfers) {
+      if (typeof t.accountId !== "string" || !/^0\.0\.\d+$/.test(t.accountId)) return "invalid_transfer_account";
+      if (typeof t.amount !== "string" || !/^[1-9]\d*$/.test(t.amount)) return "invalid_transfer_amount";
+    }
+    return null;
   }
 
   return http.createServer((req, res) => {

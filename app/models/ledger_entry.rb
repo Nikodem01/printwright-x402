@@ -4,7 +4,15 @@
 class LedgerEntry < ApplicationRecord
   PLATFORM_FEE_BPS = 1_000 # 10% MVP default, PRODUCT §10
 
-  KINDS = %w[designer_share platform_fee].freeze
+  KINDS = %w[designer_share platform_fee designer_payout].freeze
+
+  # designer_share still held in treasury custody and not yet covered by a
+  # designer_payout row for the same purchase. The unique
+  # [purchase_id, entry_kind] index makes double-payout structurally impossible.
+  scope :owed, -> {
+    where(entry_kind: "designer_share", held_by: "treasury")
+      .where.not(purchase_id: where(entry_kind: "designer_payout").select(:purchase_id))
+  }
 
   belongs_to :purchase
   belongs_to :designer, optional: true

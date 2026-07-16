@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_17_000002) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_17_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -76,6 +76,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_000002) do
     t.string "entry_kind", null: false
     t.string "held_by", default: "treasury", null: false
     t.bigint "purchase_id", null: false
+    t.string "tx_id"
     t.index ["designer_id"], name: "index_ledger_entries_on_designer_id"
     t.index ["purchase_id", "entry_kind"], name: "index_ledger_entries_on_purchase_id_and_entry_kind", unique: true
     t.index ["purchase_id"], name: "index_ledger_entries_on_purchase_id"

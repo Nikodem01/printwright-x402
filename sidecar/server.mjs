@@ -18,6 +18,10 @@ const hedera = buildHedera({
   network: process.env.HEDERA_NETWORK || "testnet",
   accountId: process.env.HEDERA_ACCOUNT_ID,
   privateKey: process.env.HEDERA_PRIVATE_KEY,
+  // Optional: enables POST /payout (treasury -> designer transfers).
+  treasury: process.env.TREASURY_ACCOUNT_ID && process.env.TREASURY_PRIVATE_KEY
+    ? { accountId: process.env.TREASURY_ACCOUNT_ID, privateKey: process.env.TREASURY_PRIVATE_KEY }
+    : null,
 });
 
 createApp({
