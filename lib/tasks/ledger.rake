@@ -23,4 +23,21 @@ namespace :ledger do
       end
     end
   end
+
+  desc "Refund a settled, undelivered purchase on-chain (PURCHASE_ID=n)"
+  task refund: :environment do
+    purchase = Purchase.find(ENV.fetch("PURCHASE_ID"))
+    tx_id = Ledger::Refunder.call(purchase)
+    puts "refunded purchase #{purchase.id} -> #{purchase.buyer_hint}"
+    puts "  tx: https://hashscan.io/testnet/transaction/#{tx_id}"
+  end
+end
+
+namespace :purchases do
+  desc "Reconcile stale in-flight purchases against the mirror (MINUTES=30)"
+  task reap: :environment do
+    results = Purchases::Reaper.call(older_than: Integer(ENV.fetch("MINUTES", "30")).minutes)
+    results.each { |r| puts "purchase #{r.purchase_id}: #{r.action}" }
+    puts "nothing stale" if results.empty?
+  end
 end
