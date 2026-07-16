@@ -109,6 +109,33 @@ cd sidecar && npm test    # sidecar suite (SDK faked)
 - Example settled purchase: [`0.0.7162784@1784141006.971945408`](https://hashscan.io/testnet/transaction/0.0.7162784@1784141006.971945408)
   with its certificate at [mirror message 4](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/4)
 
+## Why this needs Web3 (and Hedera specifically)
+
+A 3D model license is a *right* — designers need per-print royalties (often under $1), buyers
+increasingly are software (print servers, procurement agents), and both sides are global.
+Card rails can't do sub-$1 fees, can't pay at machine speed, and can't onboard a designer in
+minutes worldwide. x402-on-Hedera can: fixed sub-cent fees make micro-royalties viable, the
+facilitator model means neither party runs infrastructure, and a $0.0001 HCS message gives
+every license a public, tamper-evident receipt no Web2 service can match. Every purchase
+generates a settlement transaction plus a consensus message; every buyer and designer is a
+Hedera account.
+
+## Post-bounty roadmap
+
+- HashPack pairing as the browser signer (the demo-wallet daemon is the drop-in seam)
+- Print-server royalty hook (OctoPrint): one `commercial_unit` purchase per job start
+- On-chain royalty splits (designer + marketplace legs in one transfer)
+- Mainnet + listing in the x402 ecosystem directory / x402scan
+- Semantic search (pgvector) and a conversational shopkeeper over the same agent API
+
+## Status / usage so far
+
+Built solo during the Hedera x402 bounty week. Testnet receipts to date: 6 settled x402
+purchases (HBAR and USDC), 7 anchored license certificates on
+[topic 0.0.9585069](https://hashscan.io/testnet/topic/0.0.9585069), plus a fresh-clone
+reproducibility rehearsal that reached a real settlement using only this README. Feedback
+and issues welcome.
+
 ## License
 
 MIT — see [LICENSE](LICENSE). Demo seed models are self-authored placeholder solids (CC0).
