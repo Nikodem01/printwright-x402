@@ -6,6 +6,12 @@ royalty; buyers — human or AI agent — get the file plus a license, paid over
 purchase anchored as a tamper-evident **HCS license certificate** ("unit N of model X, licensed
 at time T") that anyone can verify against the public mirror node.
 
+DRM can't stop a printer, so Printwright doesn't sell copy protection. It makes **honesty
+frictionless** — a sub-$1 royalty paid at machine speed, in one HTTP round-trip — and
+**authorized units provable** — a $0.0001 public certificate per licensed unit, auditable by
+anyone without trusting the marketplace. Card rails can do neither; both are native to x402
+on Hedera.
+
 No accounts. No cards. A purchase is one HTTP negotiation:
 
 ```
