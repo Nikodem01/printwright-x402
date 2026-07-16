@@ -52,18 +52,34 @@ the public mirror node and diffs it against the marketplace copy). Then ask:
 
 ## Run the marketplace locally
 
-Prereqs: Ruby 3.3, Postgres, Node ≥ 20.
+Prereqs: Ruby 3.3, Postgres (with `pg_trgm`), Node ≥ 20, and a funded
+[Hedera testnet account](https://portal.hedera.com/dashboard) (the portal grants test HBAR;
+testnet USDC comes from the [Circle faucet](https://faucet.circle.com) — pick Hedera).
 
 ```bash
-cp .env.example .env          # fill in Hedera testnet account + topic (see comments)
-bin/setup --skip-server       # bundle + db:prepare
-bin/rails db:seed             # 3 demo models
-bin/dev                       # marketplace on :3000
-cd sidecar && npm install && npm start   # HCS signing sidecar on :4021
+cp .env.example .env                     # fill in the marked values
+echo "HEDERA_PRIVATE_KEY=0x..." > sidecar/.env   # operator key stays with the signer
+bin/setup --skip-server                  # bundle + db:prepare
+bin/rails db:seed                        # 12 demo models
+(cd sidecar && npm install && npm start) &        # HCS signing sidecar on :4021
+bin/dev                                  # marketplace on :3000
+```
+
+**First-time setup — create your certificate topic (once):**
+
+```bash
+curl -X POST localhost:4021/create-topic -H "Authorization: Bearer $SIDECAR_TOKEN"
+# -> {"topicId":"0.0.xxxxxxx"}  — put it in .env as HEDERA_HCS_TOPIC_ID, restart
 ```
 
 The x402 facilitator is hosted ([Blocky402 testnet](https://blocky402.com), open access) —
 nothing to run. `docker-compose up` starts Postgres + sidecar if you prefer containers.
+
+**Browser checkout:** the storefront's Buy button signs through a local demo-wallet daemon
+(`BUYER_ACCOUNT_ID=... BUYER_PRIVATE_KEY=0x... node scripts/demo-wallet.mjs`) — a separate
+key-holding process, the drop-in upgrade point for HashPack pairing.
+
+Agent discovery: [`/openapi.json`](public/openapi.json) · [`/llms.txt`](public/llms.txt).
 
 ## Architecture
 
