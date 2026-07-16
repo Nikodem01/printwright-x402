@@ -79,4 +79,11 @@ class CertMintJobTest < ActiveJob::TestCase
     assert_raises(SidecarClient::Rejected) { CertMintJob.perform_now(@license.id) }
     assert_not @license.reload.anchored?
   end
+
+  test "no_topic_configured is retryable — operator just hasn't restarted the sidecar" do
+    stub_request(:post, "#{SIDECAR}/submit-cert")
+      .to_return(status: 400, body: '{"error":"no_topic_configured"}')
+    assert_enqueued_with(job: CertMintJob) { CertMintJob.perform_now(@license.id) }
+    assert_not @license.reload.anchored?
+  end
 end

@@ -23,7 +23,13 @@ class SidecarClient
     ) { |http| http.request(req) }
 
     body = JSON.parse(response.body)
-    raise Rejected, body["error"] unless response.code.to_i == 200
+    unless response.code.to_i == 200
+      # A missing topic is a fixable configuration state (operator hasn't
+      # restarted the sidecar after create-topic) — keep retrying. Real
+      # rejections (e.g. cert_too_large) fail loudly: retrying can't fix them.
+      raise Unavailable, body["error"] if body["error"] == "no_topic_configured"
+      raise Rejected, body["error"]
+    end
     body
   rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED, Errno::ECONNRESET,
          SocketError, JSON::ParserError => e

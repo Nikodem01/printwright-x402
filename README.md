@@ -69,8 +69,12 @@ bin/dev                                  # marketplace on :3000
 
 ```bash
 curl -X POST localhost:4021/create-topic -H "Authorization: Bearer $SIDECAR_TOKEN"
-# -> {"topicId":"0.0.xxxxxxx"}  — put it in .env as HEDERA_HCS_TOPIC_ID, restart
+# -> {"topicId":"0.0.xxxxxxx"} — put it in .env as HEDERA_HCS_TOPIC_ID, then restart
+#    BOTH the app and the sidecar (each reads the topic id at boot)
 ```
+
+Troubleshooting: if your Postgres needs a password or a non-default socket, export
+`DATABASE_URL` (e.g. `postgresql://user:pass@localhost/printwright_x402_development`).
 
 The x402 facilitator is hosted ([Blocky402 testnet](https://blocky402.com), open access) —
 nothing to run. `docker-compose up` starts Postgres + sidecar if you prefer containers.
