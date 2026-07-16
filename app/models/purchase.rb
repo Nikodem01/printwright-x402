@@ -26,6 +26,11 @@ class Purchase < ApplicationRecord
     unless TRANSITIONS.fetch(status).include?(new_status)
       raise InvalidTransition, "cannot transition #{status} -> #{new_status}"
     end
-    update!(status: new_status)
+    transaction do
+      update!(status: new_status)
+      # settled = money moved; the revenue split is recorded in the same
+      # transaction so no settled purchase can exist without ledger rows.
+      LedgerEntry.record_settle!(self) if new_status == "settled"
+    end
   end
 end

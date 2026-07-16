@@ -290,6 +290,27 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "sold_out", response.parsed_body["error"]
   end
 
+  test "an in-flight purchase reserves capacity: second payment is refused before money moves" do
+    @offer.update!(max_units: 1)
+    # No license allocated yet — the rival payment is mid-settle.
+    Purchase.create!(license_offer: @offer, status: "verified", replay_key: SecureRandom.hex(32))
+
+    get download_path, headers: payment_headers(@payload)
+    assert_response :gone
+    assert_equal "sold_out", response.parsed_body["error"]
+    assert_equal 1, Purchase.count, "the refused payment must not create a purchase"
+  end
+
+  test "failed purchases release their reserved capacity" do
+    @offer.update!(max_units: 1)
+    Purchase.create!(license_offer: @offer, status: "failed_verification", replay_key: SecureRandom.hex(32))
+
+    stub_verify_ok
+    stub_settle(body: fixture("settle_ok.json"))
+    get download_path, headers: payment_headers(@payload)
+    assert_response :success
+  end
+
   private
 
   def download_path(id: nil)

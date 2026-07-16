@@ -8,6 +8,16 @@ class LicenseOffer < ApplicationRecord
   validates :price_cents, numericality: { only_integer: true, greater_than: 0 }
   validates :currency, inclusion: { in: %w[USDC HBAR] }
 
+  # Capacity counts every purchase that may still turn into a license, not
+  # just allocated licenses — so a unit can't be oversold while a payment is
+  # in flight. Authoritative only under the offer row lock (see the download
+  # controller's create step); unlocked callers get an advisory answer.
+  def sold_out?
+    max_units && purchases.where.not(status: FAILED_STATUSES).count >= max_units
+  end
+
+  FAILED_STATUSES = %w[failed_verification failed_settlement].freeze
+
   before_save :compute_terms_hash, if: :terms_md_changed?
 
   private

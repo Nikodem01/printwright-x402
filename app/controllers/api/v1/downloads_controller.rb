@@ -8,7 +8,7 @@ class Api::V1::DownloadsController < Api::V1::BaseController
 
     requirements = X402::Requirements.new(offer: offer, resource_url: request.original_url)
     if X402::PaymentHeader.raw(request).nil?
-      return render json: { error: "sold_out" }, status: :gone if sold_out?(offer)
+      return render json: { error: "sold_out" }, status: :gone if offer.sold_out?
       return payment_required(requirements)
     end
 
@@ -19,10 +19,10 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     # Replay detection must precede the sold-out gate: an already-paid
     # purchase keeps its recovery path even when the offer sells out.
     return replay(payload) if Purchase.exists?(replay_key: replay_key(payload))
-    return render json: { error: "sold_out" }, status: :gone if sold_out?(offer)
 
     purchase = create_purchase(offer, payload, matched)
     return replay(payload) if purchase.nil? # lost a same-tx race
+    return render json: { error: "sold_out" }, status: :gone if purchase == :sold_out
 
     verify_and_settle(purchase, payload, matched)
   rescue ActiveRecord::RecordNotFound
@@ -32,11 +32,6 @@ class Api::V1::DownloadsController < Api::V1::BaseController
   end
 
   private
-
-  def sold_out?(offer)
-    offer.max_units &&
-      License.joins(:purchase).where(purchases: { license_offer_id: offer.id }).count >= offer.max_units
-  end
 
   def payment_required(requirements, error: "payment required")
     body = requirements.payment_required(error: error)
@@ -48,14 +43,24 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     Digest::SHA256.hexdigest(payload.dig("payload", "transaction"))
   end
 
+  # Capacity is decided HERE, inside the offer row lock, before any money
+  # moves — so two in-flight payments can't both reserve the last unit and
+  # leave one buyer in the refundless sold-out-after-payment path (A5/E6).
+  # License.allocate! keeps its own max_units enforcement as the backstop.
   def create_purchase(offer, payload, matched)
-    Purchase.create!(
-      license_offer: offer,
-      asset: matched[:asset],
-      amount_base_units: matched[:amount],
-      replay_key: replay_key(payload),
-      requirements_json: matched.deep_stringify_keys
-    )
+    offer.with_lock do
+      if offer.sold_out?
+        :sold_out
+      else
+        Purchase.create!(
+          license_offer: offer,
+          asset: matched[:asset],
+          amount_base_units: matched[:amount],
+          replay_key: replay_key(payload),
+          requirements_json: matched.deep_stringify_keys
+        )
+      end
+    end
   rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
     nil
   end

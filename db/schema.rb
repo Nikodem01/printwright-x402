@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_16_120001) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_17_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -65,6 +65,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_16_120001) do
     t.integer "uses", default: 0, null: false
     t.index ["license_id"], name: "index_download_grants_on_license_id"
     t.index ["token"], name: "index_download_grants_on_token", unique: true
+  end
+
+  create_table "ledger_entries", force: :cascade do |t|
+    t.bigint "amount_base_units", null: false
+    t.string "asset", null: false
+    t.datetime "created_at", null: false
+    t.bigint "designer_id"
+    t.string "entry_kind", null: false
+    t.bigint "purchase_id", null: false
+    t.index ["designer_id"], name: "index_ledger_entries_on_designer_id"
+    t.index ["purchase_id", "entry_kind"], name: "index_ledger_entries_on_purchase_id_and_entry_kind", unique: true
+    t.index ["purchase_id"], name: "index_ledger_entries_on_purchase_id"
   end
 
   create_table "license_offers", force: :cascade do |t|
@@ -152,6 +164,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_16_120001) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "download_grants", "licenses"
+  add_foreign_key "ledger_entries", "designers"
+  add_foreign_key "ledger_entries", "purchases"
   add_foreign_key "license_offers", "models3d"
   add_foreign_key "licenses", "purchases"
   add_foreign_key "model_files", "models3d"

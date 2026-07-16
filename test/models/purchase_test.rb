@@ -9,7 +9,10 @@ class PurchaseTest < ActiveSupport::TestCase
   end
 
   def purchase(status: "pending")
-    Purchase.create!(license_offer: @offer, status: status, replay_key: SecureRandom.hex(32))
+    Purchase.create!(
+      license_offer: @offer, status: status, replay_key: SecureRandom.hex(32),
+      asset: "0.0.429274", amount_base_units: "250000"
+    )
   end
 
   test "happy path walks pending -> verified -> settled -> delivered" do
