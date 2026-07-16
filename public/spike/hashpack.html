@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Printwright V3 spike — HashPack foreign-feePayer signature</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; max-width: 720px; margin: 3rem auto; padding: 0 1rem; }
+    button { font: inherit; padding: .5rem 1rem; margin-right: .5rem; cursor: pointer; }
+    input { font: inherit; padding: .4rem; width: 100%; box-sizing: border-box; margin: .25rem 0 .75rem; }
+    pre { background: #f4f4f4; padding: 1rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+    .steps { color: #555; }
+  </style>
+</head>
+<body>
+  <h1>V3 spike — HashPack signs an x402 transaction</h1>
+  <p class="steps">
+    1. Paste a (free) WalletConnect project id · 2. Pair · 3. Request signature —
+    HashPack must sign a <em>foreign-feePayer</em> TransferTransaction and hand the bytes
+    back <strong>without submitting</strong>. Nothing is broadcast by this page.
+  </p>
+  <label>WalletConnect Cloud project id
+    <input id="projectId" placeholder="get one at cloud.reown.com (2 minutes, free)">
+  </label>
+  <p>
+    <button id="pair">1. Pair HashPack</button>
+    <button id="sign" disabled>2. Fetch 402 &amp; request signature</button>
+  </p>
+  <pre id="log"></pre>
+  <script src="/spike/hashpack.js"></script>
+</body>
+</html>

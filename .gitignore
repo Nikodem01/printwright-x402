@@ -40,3 +40,4 @@
 # Node deps for the agent clients (scripts/, mcp/).
 /node_modules/
 
+public/spike/*.js
