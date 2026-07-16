@@ -2,6 +2,8 @@ class Model3d < ApplicationRecord
   belongs_to :designer
   has_many :model_files, -> { order(:position) }, dependent: :destroy
   has_many :license_offers, dependent: :destroy
+  accepts_nested_attributes_for :license_offers, allow_destroy: true,
+                                reject_if: ->(attrs) { attrs["price_cents"].blank? }
 
   enum :status, %w[draft published retired].index_by(&:itself), default: "draft"
 

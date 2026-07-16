@@ -1,0 +1,20 @@
+<% content_for :title, "Become a Printwright designer" %>
+<div class="form-page">
+  <h1>Sell your models</h1>
+  <p class="muted">Set a per-print royalty. Get paid in USDC or HBAR, worldwide, in seconds.</p>
+
+  <%= form_with model: @designer, url: designers_path do |f| %>
+    <% if @designer.errors.any? %>
+      <div class="flash flash-bad"><%= @designer.errors.full_messages.to_sentence %></div>
+    <% end %>
+    <div class="field"><%= f.label :display_name, "Studio / display name" %><%= f.text_field :display_name, required: true %></div>
+    <div class="field"><%= f.label :email_address %><%= f.email_field :email_address, required: true %></div>
+    <div class="field"><%= f.label :password %><%= f.password_field :password, required: true, minlength: 8 %></div>
+    <div class="field">
+      <%= f.label :hedera_account_id, "Hedera account id (payout target)" %>
+      <%= f.text_field :hedera_account_id, placeholder: "0.0.12345", pattern: "0\\.0\\.\\d+" %>
+      <span class="t-caption muted">Testnet account — takes ~10 minutes at portal.hedera.com</span>
+    </div>
+    <%= f.submit "Create account", class: "btn btn-primary" %>
+  <% end %>
+</div>

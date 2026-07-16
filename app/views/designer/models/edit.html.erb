@@ -1,0 +1,8 @@
+<% content_for :title, "#{@model.title} — Printwright designer" %>
+<h1><%= @model.title %>
+  <span class="badge <%= @model.published? ? "badge-ok" : "badge-pending" %>"><%= @model.status %></span>
+</h1>
+<% if @model.file_hash.present? %>
+  <p class="mono t-small">bundle <%= @model.file_hash.truncate(28) %></p>
+<% end %>
+<%= render "form", model: @model %>

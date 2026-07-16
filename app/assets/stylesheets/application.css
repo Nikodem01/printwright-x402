@@ -194,6 +194,28 @@ a.mono, .mono a { color: var(--chain); text-decoration: underline; }
 .mismatch-row { background: var(--bad-bg); }
 .evidence-footer { margin-top: var(--s-4); display: flex; gap: var(--s-4); flex-wrap: wrap; align-items: baseline; }
 
+/* S4 designer dashboard + forms — deliberately plain, tokens keep it coherent */
+.dash { display: grid; grid-template-columns: 180px 1fr; gap: var(--s-5); margin-top: var(--s-5); }
+@media (max-width: 768px) { .dash { grid-template-columns: 1fr; } }
+.dash-nav { display: flex; flex-direction: column; gap: var(--s-2); align-items: flex-start; }
+.dash-nav a { text-decoration: none; }
+.linklike { background: none; border: none; padding: 0; color: var(--action); cursor: pointer; font: inherit; }
+.flash { padding: var(--s-2) var(--s-3); border-radius: var(--radius-s); margin-bottom: var(--s-3); }
+.flash-ok { background: var(--ok-bg); color: var(--ok-fg); }
+.flash-bad { background: var(--bad-bg); color: var(--bad-fg); }
+.form-page { max-width: var(--measure); margin: var(--s-5) auto 0; }
+.field { margin-bottom: var(--s-3); }
+.field label, .field legend { display: block; font-weight: 600; font-size: 14px; margin-bottom: var(--s-1); }
+.field input[type="text"], .field input[type="email"], .field input[type="password"],
+.field input[type="number"], .field textarea, .field select {
+  width: 100%; padding: var(--s-2) var(--s-3); font: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius-s);
+  background: var(--bg-raised); color: var(--text);
+}
+.field-row { display: flex; gap: var(--s-3); flex-wrap: wrap; }
+.field-row label { flex: 1; min-width: 140px; }
+fieldset.field { border: 1px solid var(--border); border-radius: var(--radius-s); padding: var(--s-3); }
+
 @media print {
   .site-header, .site-footer, .copy-btn, .evidence-footer p { display: none; }
   body { background: #fff; color: #000; }

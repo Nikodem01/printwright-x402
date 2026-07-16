@@ -1,0 +1,86 @@
+solid printwright
+  facet normal 0 0 0
+    outer loop
+      vertex 12.000 0.000 0.000
+      vertex -12.000 0.000 0.000
+      vertex 0.000 12.000 0.000
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex 12.000 0.000 17.000
+      vertex 0.000 12.000 17.000
+      vertex -12.000 0.000 17.000
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex 12.000 0.000 0.000
+      vertex -0.000 -12.000 0.000
+      vertex -12.000 0.000 0.000
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex 12.000 0.000 17.000
+      vertex -12.000 0.000 17.000
+      vertex -0.000 -12.000 17.000
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex 12.000 0.000 0.000
+      vertex 0.000 12.000 0.000
+      vertex 0.000 12.000 17.000
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex 12.000 0.000 0.000
+      vertex 0.000 12.000 17.000
+      vertex 12.000 0.000 17.000
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex 0.000 12.000 0.000
+      vertex -12.000 0.000 0.000
+      vertex -12.000 0.000 17.000
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex 0.000 12.000 0.000
+      vertex -12.000 0.000 17.000
+      vertex 0.000 12.000 17.000
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex -12.000 0.000 0.000
+      vertex -0.000 -12.000 0.000
+      vertex -0.000 -12.000 17.000
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex -12.000 0.000 0.000
+      vertex -0.000 -12.000 17.000
+      vertex -12.000 0.000 17.000
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex -0.000 -12.000 0.000
+      vertex 12.000 0.000 0.000
+      vertex 12.000 0.000 17.000
+    endloop
+  endfacet
+  facet normal 0 0 0
+    outer loop
+      vertex -0.000 -12.000 0.000
+      vertex 12.000 0.000 17.000
+      vertex -0.000 -12.000 17.000
+    endloop
+  endfacet
+endsolid printwright

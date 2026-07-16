@@ -1,6 +1,14 @@
 Rails.application.routes.draw do
   resource :session
   resources :passwords, param: :token
+  resources :designers, only: %i[new create]
+
+  namespace :designer do
+    resources :models, except: %i[destroy show] do
+      member { post :publish }
+    end
+    resources :sales, only: :index
+  end
 
   namespace :api do
     namespace :v1 do

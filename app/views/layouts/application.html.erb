@@ -34,7 +34,7 @@
     </header>
 
     <main class="container">
-      <%= yield %>
+      <%= content_for?(:content) ? yield(:content) : yield %>
     </main>
 
     <footer class="site-footer">

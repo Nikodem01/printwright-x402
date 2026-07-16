@@ -1,0 +1,70 @@
+<%= form_with model: model, scope: :model3d, html: { multipart: true },
+      url: model.persisted? ? designer_model_path(model) : designer_models_path do |f| %>
+  <% if model.errors.any? %>
+    <div class="flash flash-bad"><%= model.errors.full_messages.to_sentence %></div>
+  <% end %>
+
+  <div class="field"><%= f.label :title %><%= f.text_field :title, required: true %></div>
+  <div class="field"><%= f.label :description %><%= f.text_area :description, rows: 5 %></div>
+  <div class="field">
+    <%= f.label :tags_text, "Tags (comma-separated)" %>
+    <%= text_field_tag "model3d[tags_text]", model.tags.join(", ") %>
+  </div>
+
+  <fieldset class="field">
+    <legend>Printability</legend>
+    <% printability = model.printability || {} %>
+    <label class="t-small">
+      <%= check_box_tag "model3d[printability][supports]", "true", printability["supports"] %>
+      needs supports
+    </label>
+    <div class="field-row">
+      <label class="t-small">Materials
+        <%= text_field_tag "model3d[printability][materials_text]", Array(printability["materials"]).join(" ") %>
+      </label>
+      <label class="t-small">Est. print minutes
+        <%= number_field_tag "model3d[printability][est_print_minutes]", printability["est_print_minutes"] %>
+      </label>
+      <label class="t-small">Min bed (mm)
+        <%= number_field_tag "model3d[printability][bed_min_mm]", printability["bed_min_mm"] %>
+      </label>
+    </div>
+  </fieldset>
+
+  <fieldset class="field">
+    <legend>Files</legend>
+    <% if model.persisted? && model.model_files.any? %>
+      <ul class="t-small">
+        <% model.model_files.each do |file| %>
+          <li><span class="badge badge-kind"><%= file.kind %></span>
+              <%= file.file.attached? ? file.file.filename : "(empty)" %></li>
+        <% end %>
+      </ul>
+    <% end %>
+    <label class="t-small">Printable files (STL/3MF/STEP)
+      <%= file_field_tag "model3d[printable_files][]", multiple: true, accept: ".stl,.3mf,.step,.zip" %>
+    </label>
+    <label class="t-small">Render images
+      <%= file_field_tag "model3d[render_files][]", multiple: true, accept: "image/*" %>
+    </label>
+  </fieldset>
+
+  <fieldset class="field">
+    <legend>License offers</legend>
+    <%= f.fields_for :license_offers do |offer| %>
+      <div class="field-row">
+        <label class="t-small">Kind <%= offer.select :kind, LicenseOffer::KINDS %></label>
+        <label class="t-small">Price (US cents) <%= offer.number_field :price_cents, min: 1 %></label>
+        <label class="t-small">Max units <%= offer.number_field :max_units, placeholder: "unlimited" %></label>
+      </div>
+      <label class="t-small">Terms <%= offer.text_area :terms_md, rows: 2 %></label>
+    <% end %>
+  </fieldset>
+
+  <%= f.submit model.persisted? ? "Save changes" : "Save draft", class: "btn btn-primary", style: "width:auto" %>
+<% end %>
+
+<% if model.persisted? && !model.published? %>
+  <%= button_to "Publish — freeze the bundle hash and go live", publish_designer_model_path(model),
+        class: "btn", style: "margin-top: var(--s-3)" %>
+<% end %>
