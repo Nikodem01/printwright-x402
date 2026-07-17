@@ -6,11 +6,23 @@ class Api::V1::CertificatesController < Api::V1::BaseController
     render json: {
       certificate: license.cert_json.presence,
       status: license.anchored? ? "anchored" : "minting",
-      hcs: hcs_block(license)
+      hcs: hcs_block(license),
+      nft: nft_block(license)
     }
   end
 
   private
+
+  def nft_block(license)
+    return nil unless license.nft_serial.present?
+    {
+      token_id: license.nft_token_id,
+      serial: license.nft_serial,
+      claim_state: license.refresh_nft_claim_state!,
+      airdrop_tx_id: license.nft_airdrop_tx_id,
+      hashscan_url: "https://hashscan.io/testnet/token/#{license.nft_token_id}/#{license.nft_serial}"
+    }
+  end
 
   def hcs_block(license)
     return nil unless license.anchored?

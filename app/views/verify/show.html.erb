@@ -90,6 +90,20 @@
     <% if @check.mirror_url.present? %>
       <a class="mono" href="<%= @check.mirror_url %>">raw mirror message ↗</a>
     <% end %>
+    <% if @license.nft_serial.present? %>
+      <dl class="facts-table" style="margin-top: var(--s-3)">
+        <dt>License NFT</dt>
+        <dd>
+          <a class="mono" href="https://hashscan.io/testnet/token/<%= @license.nft_token_id %>/<%= @license.nft_serial %>">
+            <%= @license.nft_token_id %> · serial <%= @license.nft_serial %></a>
+          <% state = @license.refresh_nft_claim_state! %>
+          <span class="badge <%= state == "claimed" ? "badge-ok" : "badge-pending" %>"><%= state %></span>
+          <% if state == "pending" %>
+            <span class="t-caption muted">— airdropped, waiting for the buyer's wallet to claim it</span>
+          <% end %>
+        </dd>
+      </dl>
+    <% end %>
     <p class="t-small" style="margin-top: var(--s-3)">
       <%= link_to "Printable certificate", verify_certificate_path(@license.verify_slug) %> ·
       <%= link_to "Embeddable badge", badge_docs_path %>

@@ -11,7 +11,7 @@ class NftMintJobTest < ActiveSupport::TestCase
     model = Model3d.create!(designer: @designer, title: "NFT", slug: "nft-#{SecureRandom.hex(4)}")
     offer = model.license_offers.create!(kind: "personal", price_cents: 250)
     purchase = Purchase.create!(
-      license_offer: offer, status: "settled", buyer_hint: "0.0.9067781",
+      license_offer: offer, status: "settled", buyer_hint: "0.0.9613501",
       asset: "0.0.429274", amount_base_units: "250000",
       payment_tx_id: "0.0.7162784@1.2", replay_key: SecureRandom.hex(32)
     )
@@ -72,7 +72,7 @@ class NftMintJobTest < ActiveSupport::TestCase
     NftMintJob.perform_now(@license.id)
     assert_nil @license.reload.nft_serial
 
-    @license.purchase.update!(buyer_hint: "0.0.9067781")
+    @license.purchase.update!(buyer_hint: "0.0.9613501")
     @license.update!(hcs_sequence_number: nil)
     NftMintJob.perform_now(@license.id)
     assert_nil @license.reload.nft_serial

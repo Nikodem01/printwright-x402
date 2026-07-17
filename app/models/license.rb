@@ -1,3 +1,5 @@
+require "net/http"
+
 class License < ApplicationRecord
   class SoldOut < StandardError; end
 
@@ -30,5 +32,23 @@ class License < ApplicationRecord
 
   def anchored?
     hcs_sequence_number.present?
+  end
+
+  # A pending airdrop becomes claimed the moment the buyer's wallet claims it
+  # — an on-chain fact we learn lazily from the mirror when someone looks.
+  def refresh_nft_claim_state!
+    return nft_claim_state unless nft_claim_state == "pending"
+
+    mirror = ENV.fetch("MIRROR_NODE_URL", "https://testnet.mirrornode.hedera.com")
+    owner = purchase.buyer_hint
+    response = Net::HTTP.get_response(
+      URI("#{mirror}/api/v1/accounts/#{owner}/nfts?token.id=#{nft_token_id}&serialnumber=#{nft_serial}")
+    )
+    if response.code.to_i == 200 && JSON.parse(response.body)["nfts"].to_a.any?
+      update!(nft_claim_state: "claimed")
+    end
+    nft_claim_state
+  rescue StandardError
+    nft_claim_state # mirror hiccup: stay pending, check again next view
   end
 end
