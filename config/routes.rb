@@ -31,4 +31,6 @@ Rails.application.routes.draw do
   root "storefront#index"
   get "models/:slug", to: "storefront#show", as: :model_page
   get "verify/:cert_id", to: "verify#show", as: :verify
+  get "license/:version/:kind", to: "licenses#show", as: :license_document,
+      constraints: { version: /v\d+/, kind: /[a-z_]+/ }
 end

@@ -18,11 +18,31 @@ class LicenseOffer < ApplicationRecord
 
   FAILED_STATUSES = %w[failed_verification failed_settlement].freeze
 
-  before_save :compute_terms_hash, if: :terms_md_changed?
+  before_save :compute_terms_hash,
+    if: -> { new_record? || terms_version_changed? || terms_md_changed? }
+  validate :terms_document_exists, if: :terms_version
+
+  # The legal text this offer sells under: the canonical versioned document
+  # when terms_version is set (the norm), else the designer's legacy terms_md.
+  def terms_text
+    terms_version ? Licensing::Documents.text(terms_version, kind) : terms_md
+  end
 
   private
 
+  # terms_hash is what certificates anchor. Canonical documents hash the
+  # committed file bytes (recomputable from the /license permalink);
+  # legacy free-text offers hash their own terms_md.
   def compute_terms_hash
-    self.terms_hash = terms_md.nil? ? nil : "sha256:#{Digest::SHA256.hexdigest(terms_md)}"
+    self.terms_hash =
+      if terms_version
+        Licensing::Documents.hash(terms_version, kind)
+      else
+        terms_md.nil? ? nil : "sha256:#{Digest::SHA256.hexdigest(terms_md)}"
+      end
+  end
+
+  def terms_document_exists
+    errors.add(:terms_version, "has no #{kind} document") unless Licensing::Documents.exists?(terms_version, kind)
   end
 end

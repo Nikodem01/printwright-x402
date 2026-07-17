@@ -1,0 +1,19 @@
+<% content_for :title, "License #{@version} — #{@kind.humanize} — Printwright" %>
+
+<div class="container" style="max-width: 760px">
+  <h1>Printwright license · <%= @kind.humanize %> · <%= @version %></h1>
+
+  <p class="t-small muted">
+    Canonical text. Certificates anchor its hash on Hedera as
+    <code class="mono"><%= @hash %></code> — recompute it yourself:
+  </p>
+  <pre class="mono t-small" style="overflow-x:auto">curl -s <%= license_document_url(version: @version, kind: @kind, format: :txt) %> | sha256sum</pre>
+
+  <pre style="white-space: pre-wrap; margin-top: var(--s-4)"><%= @text %></pre>
+
+  <p class="t-caption muted">
+    Published versions are immutable — a changed text is a new version with a
+    new hash. Certificates minted before this version anchored the hash of the
+    offer's then-current terms; the anchored hash is always the contract.
+  </p>
+</div>

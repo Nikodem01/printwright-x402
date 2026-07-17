@@ -52,7 +52,16 @@
           <button class="copy-btn" type="button" data-action="clipboard#copy"
                   data-clipboard-full-value="<%= @cert["model_hash"] %>">copy</button>
         </dd>
-        <dt>Terms hash</dt><dd class="mono"><%= @cert["terms_hash"]&.truncate(28) %></dd>
+        <dt>Terms hash</dt>
+        <dd class="mono">
+          <%= @cert["terms_hash"]&.truncate(28) %>
+          <% offer = @license.purchase.license_offer %>
+          <% if offer.terms_version && Licensing::Documents.hash(offer.terms_version, offer.kind) == @cert["terms_hash"] %>
+            <%= link_to "read the licensed terms", license_document_path(version: offer.terms_version, kind: offer.kind), class: "t-small" %>
+          <% else %>
+            <span class="t-caption muted">(hash of the offer's terms as they stood at purchase — the anchored hash is the contract)</span>
+          <% end %>
+        </dd>
       </dl>
     <% end %>
 

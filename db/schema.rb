@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_17_000004) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_17_000005) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -91,6 +91,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_000004) do
     t.integer "price_cents", null: false
     t.string "terms_hash"
     t.text "terms_md"
+    t.string "terms_version", default: "v1"
     t.datetime "updated_at", null: false
     t.index ["model3d_id"], name: "index_license_offers_on_model3d_id"
   end
