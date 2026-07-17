@@ -2,6 +2,8 @@
 # Implements plan legs 1-4 and the full error table. Facilitator timeouts
 # NEVER fail a purchase — the tx may have settled; we reconcile via mirror.
 class Api::V1::DownloadsController < Api::V1::BaseController
+  rate_limit to: 30, within: 1.minute, store: RateLimitStore, with: :api_rate_limited
+
   def show
     model = Model3d.published.find(params[:model_id])
     offer = model.license_offers.find_by!(kind: params.fetch(:license, "personal"))

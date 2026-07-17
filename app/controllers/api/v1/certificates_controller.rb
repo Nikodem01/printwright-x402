@@ -1,6 +1,8 @@
 # Public certificate lookup: the cert JSON as submitted to HCS, plus where
 # to verify it independently (mirror node + HashScan).
 class Api::V1::CertificatesController < Api::V1::BaseController
+  rate_limit to: 120, within: 1.minute, store: RateLimitStore, with: :api_rate_limited
+
   def show
     license = License.find_by!(cert_id: params[:cert_id])
     render json: {

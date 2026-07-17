@@ -1,4 +1,6 @@
 class Api::V1::ModelsController < Api::V1::BaseController
+  rate_limit to: 120, within: 1.minute, store: RateLimitStore, with: :api_rate_limited
+
   def index
     models = Model3d.published.includes(:designer, :license_offers, model_files: { file_attachment: :blob })
     models = models.search(params[:q]) if params[:q].present?

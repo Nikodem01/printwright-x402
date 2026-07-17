@@ -1,4 +1,5 @@
 class Designer::ModelsController < Designer::BaseController
+  rate_limit to: 10, within: 1.minute, only: %i[create], store: RateLimitStore
   def index
     @models = current_designer.models3d.order(created_at: :desc)
   end

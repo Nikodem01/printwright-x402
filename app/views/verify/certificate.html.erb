@@ -19,7 +19,10 @@
   </style>
 </head>
 <body>
-  <button class="print-btn" onclick="window.print()">Print / save as PDF</button>
+  <button class="print-btn" id="print-btn">Print / save as PDF</button>
+  <%= javascript_tag nonce: true do %>
+    document.getElementById("print-btn").addEventListener("click", () => window.print());
+  <% end %>
   <div class="frame">
     <div class="qr"><%= raw @qr_svg %></div>
     <h1>License Certificate</h1>
