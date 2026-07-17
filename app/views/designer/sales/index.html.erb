@@ -1,17 +1,40 @@
-<% content_for :title, "Sales — Printwright designer" %>
-<h1>Sales</h1>
-<% if @purchases.any? %>
+<% content_for :title, "Statement — Printwright designer" %>
+<h1>Statement</h1>
+
+<% if @owed.any? %>
+  <p class="t-small">
+    Owed to you (marketplace custody, paid out in batches):
+    <% @owed.each do |asset, amount| %>
+      <strong class="price"><%= format_base_units(amount, asset) %></strong>
+    <% end %>
+    <% unless Current.designer.payout_account_verified? %>
+      <span class="muted">— add a Hedera account that can receive USDC to get paid directly.</span>
+    <% end %>
+  </p>
+<% end %>
+
+<% if @shares.any? %>
   <table class="facts-table" style="width:100%">
-    <tr><th>date</th><th>model</th><th>license</th><th>serial</th><th>amount</th><th>tx</th><th>cert</th></tr>
-    <% @purchases.each do |purchase| %>
+    <tr><th>date</th><th>model</th><th>license</th><th>your share</th><th>money</th><th>cert</th></tr>
+    <% @shares.each do |share| %>
+      <% purchase = share.purchase %>
       <tr>
-        <td class="t-small"><%= purchase.created_at.strftime("%b %-d %H:%M") %></td>
+        <td class="t-small"><%= share.created_at.strftime("%b %-d %H:%M") %></td>
         <td><%= purchase.license_offer.model3d.title %></td>
         <td><%= purchase.license_offer.kind %></td>
-        <td class="mono">#<%= purchase.license&.serial %></td>
-        <td class="price">$<%= format("%.2f", purchase.license_offer.price_cents / 100.0) %></td>
-        <td><a class="mono" href="https://hashscan.io/testnet/transaction/<%= purchase.payment_tx_id %>"><%= purchase.payment_tx_id&.truncate(22) %></a></td>
-        <td><%= link_to purchase.license&.cert_id, verify_path(purchase.license.verify_slug), class: "mono" if purchase.license %></td>
+        <td class="price"><%= format_base_units(share.amount_base_units, share.asset) %></td>
+        <td class="t-small">
+          <% if (refund = @refunds[share.purchase_id]) %>
+            refunded · <%= hashscan_tx_link(refund.tx_id) %>
+          <% elsif share.held_by == "designer" %>
+            paid direct · <%= hashscan_tx_link(purchase.payment_tx_id) %>
+          <% elsif (payout = @payouts[share.purchase_id]) %>
+            paid out · <%= hashscan_tx_link(payout.tx_id) %>
+          <% else %>
+            owed
+          <% end %>
+        </td>
+        <td><%= link_to purchase.license.cert_id, verify_path(purchase.license.verify_slug), class: "mono" if purchase.license %></td>
       </tr>
     <% end %>
   </table>
