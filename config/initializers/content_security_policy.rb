@@ -17,7 +17,7 @@ Rails.application.configure do
     policy.style_src   :self, :unsafe_inline
     policy.connect_src :self, ENV.fetch("DEMO_WALLET_URL", "http://localhost:4022")
     policy.frame_ancestors :none
-    policy.base_uri    :self
+    policy.base_uri :self
   end
 
   config.content_security_policy_nonce_generator =

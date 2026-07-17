@@ -1,0 +1,13 @@
+{
+  "ignored_warnings": [
+    {
+      "fingerprint": "460e7fdb305b319ecc11b4aa1d6d2c1fa84f92b203f780a5a73d7677f399ceca",
+      "note": "json_escape into a script tag is the correct JSON-LD escaping (loop-11 decision, <%== + json_escape)."
+    },
+    {
+      "fingerprint": "97c78cbc65109de34ddde2b301585f42e2c337892841728767fe36745e96eb3e",
+      "note": "Static CASE skeleton interpolated; every user value passes through sanitize_sql_like/sanitize_sql_array (model3d search ranking)."
+    }
+  ],
+  "brakeman_version": "8.0.5"
+}

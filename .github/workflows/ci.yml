@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  rails:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: [ "5432:5432" ]
+        options: >-
+          --health-cmd="pg_isready" --health-interval=10s
+          --health-timeout=5s --health-retries=5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/printwright_test
+      RAILS_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      - name: Prepare database
+        run: bin/rails db:test:prepare
+      - name: Lint (rubocop)
+        run: bin/rubocop
+      - name: Static security analysis (brakeman)
+        run: bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error --skip-files node_modules/,sidecar/node_modules/,mcp/node_modules/,scripts/spike/ -i config/brakeman.ignore
+      - name: Rails tests
+        run: bin/rails test
+      - name: Seeds boot
+        run: bin/rails db:seed:replant
+
+  sidecar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Sidecar tests
+        working-directory: sidecar
+        run: npm ci && npm test
+
+  mcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: MCP stdio smoke
+        working-directory: mcp
+        run: npm ci && npm test
+
+  secret-grep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No key material in the tree
+        run: |
+          set -e
+          # ECDSA hex keys, PEM blocks, or real-looking env assignments.
+          ! git grep -IE '(BEGIN (EC )?PRIVATE KEY|PRIVATE_KEY=[0-9a-fA-Fx]{32,}|[0-9a-f]{96,})' \
+              -- ':!*.lock' ':!*package-lock.json' \
+            || (echo 'possible secret material found' && exit 1)
