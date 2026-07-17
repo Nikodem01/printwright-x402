@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_17_000005) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_17_000006) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -131,6 +131,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_000005) do
     t.string "tags", default: [], null: false, array: true
     t.string "title", null: false
     t.datetime "updated_at", null: false
+    t.datetime "warranty_accepted_at"
     t.index ["designer_id"], name: "index_models3d_on_designer_id"
     t.index ["slug"], name: "index_models3d_on_slug", unique: true
     t.index ["status"], name: "index_models3d_on_status"

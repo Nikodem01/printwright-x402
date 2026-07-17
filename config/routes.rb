@@ -33,4 +33,7 @@ Rails.application.routes.draw do
   get "verify/:cert_id", to: "verify#show", as: :verify
   get "license/:version/:kind", to: "licenses#show", as: :license_document,
       constraints: { version: /v\d+/, kind: /[a-z_]+/ }
+  get "terms", to: "pages#terms", as: :terms
+  get "privacy", to: "pages#privacy", as: :privacy
+  get "takedown", to: "pages#takedown", as: :takedown
 end

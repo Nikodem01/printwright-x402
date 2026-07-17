@@ -1,0 +1,43 @@
+<% content_for :title, "Terms of Service — Printwright" %>
+<div class="container" style="max-width: 720px">
+  <h1>Marketplace Terms of Service</h1>
+  <p class="t-small muted"><strong>Template, not legal advice</strong> — this testnet
+    demonstration runs on template terms; reviewed text replaces them before any
+    mainnet launch. Last updated 2026-07-17.</p>
+
+  <h2>What Printwright is</h2>
+  <p>Printwright is a marketplace where designers sell print licenses for 3D models and
+    buyers — human or software agent — pay per license over the x402 protocol on Hedera.
+    Printwright is not a party to the license between designer and buyer; the license
+    terms are the versioned documents linked from every offer.</p>
+
+  <h2>Designers</h2>
+  <ul>
+    <li>You warrant, at publish time, that each model is your own work or work you are
+      licensed to sell, and that it prints as described. The warranty acceptance is
+      recorded.</li>
+    <li>You set prices; the marketplace retains a 10% platform fee per sale
+      (the split is recorded in an immutable ledger and visible on your statement).</li>
+    <li>Payouts go to your Hedera account when it can receive USDC; otherwise sales are
+      held in marketplace custody until it can.</li>
+  </ul>
+
+  <h2>Buyers</h2>
+  <ul>
+    <li>A purchase buys a license — the file plus the grant in the offer's license text.
+      The certificate anchored on Hedera is the durable proof of that grant.</li>
+    <li>Payments are on-chain and final; refunds are limited to purchases where delivery
+      failed (see the certificate/verify page for your transaction id).</li>
+  </ul>
+
+  <h2>The marketplace</h2>
+  <ul>
+    <li>We may remove content that violates rights — see the <%= link_to "takedown process", takedown_path %>.</li>
+    <li>Testnet only: everything here settles in testnet tokens with no monetary value.</li>
+    <li>The service is provided as-is; our liability is capped at fees we actually
+      received from you in the preceding 12 months.</li>
+  </ul>
+
+  <h2>Governing law</h2>
+  <p><em>Placeholder</em> — to be set with reviewed counsel before mainnet.</p>
+</div>

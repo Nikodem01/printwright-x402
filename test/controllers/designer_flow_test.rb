@@ -34,7 +34,7 @@ class DesignerFlowTest < ActionDispatch::IntegrationTest
     assert_equal false, model.printability["supports"]
     assert model.model_files.count == 2
 
-    post publish_designer_model_path(model)
+    post publish_designer_model_path(model), params: { warranty: "1" }
     model.reload
     assert model.published?
     assert_match(/\Asha256:[0-9a-f]{64}\z/, model.file_hash)

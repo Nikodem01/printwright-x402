@@ -42,6 +42,11 @@
         License certificates anchor to Hedera Consensus Service topic
         <a class="mono" href="https://hashscan.io/testnet/topic/<%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %>"><%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %></a>
         — publicly verifiable on the mirror node. Payments via x402 (Hedera testnet, HBAR/USDC).
+        <span class="t-small" style="display:block; margin-top: var(--s-1)">
+          <%= link_to "Terms", terms_path %> · <%= link_to "Privacy", privacy_path %> ·
+          <%= link_to "Takedown", takedown_path %> ·
+          <%= link_to "License texts", license_document_path(version: "v1", kind: "personal") %>
+        </span>
       </div>
     </footer>
   </body>

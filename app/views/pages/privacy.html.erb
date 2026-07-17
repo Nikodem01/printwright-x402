@@ -1,0 +1,28 @@
+<% content_for :title, "Privacy — Printwright" %>
+<div class="container" style="max-width: 720px">
+  <h1>Privacy</h1>
+  <p class="t-small muted"><strong>Template, not legal advice.</strong> Last updated 2026-07-17.</p>
+
+  <h2>What we store</h2>
+  <ul>
+    <li><strong>Designers:</strong> email address, display name, password hash, and the
+      Hedera account id you give us for payouts.</li>
+    <li><strong>Buyers:</strong> no account. A purchase stores the paying Hedera account
+      id (public on-chain anyway), the payment transaction id, and the license issued.</li>
+    <li><strong>On-chain:</strong> license certificates (model hash, license type, unit
+      serial, buyer account hint, payment tx, terms hash) are published permanently to a
+      public Hedera Consensus Service topic — that is the product. Do not buy a license
+      from an account you do not want publicly associated with the purchase.</li>
+  </ul>
+
+  <h2>What we don't do</h2>
+  <ul>
+    <li>No advertising, no tracking pixels, no sale of data.</li>
+    <li>No analytics beyond server logs (rotated) needed to run the service.</li>
+    <li>Private keys never touch our servers — payments are signed client-side.</li>
+  </ul>
+
+  <h2>Removal</h2>
+  <p>Email us to delete a designer account; database records go, on-chain certificates
+    are permanent by design. Questions: see the repository README for contact.</p>
+</div>

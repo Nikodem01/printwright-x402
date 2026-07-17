@@ -72,6 +72,17 @@
           <span class="price"><%= offer_price(offer) %></span>
         </label>
       <% end %>
+      <div style="margin: var(--s-2) 0">
+        <% @model.license_offers.each do |offer| %>
+          <details class="t-small">
+            <summary>License terms — <%= offer.kind.humanize.downcase %><%= " (#{offer.terms_version})" if offer.terms_version %></summary>
+            <pre style="white-space: pre-wrap; max-height: 16em; overflow-y: auto"><%= offer.terms_text %></pre>
+            <% if offer.terms_version %>
+              <%= link_to "permalink + hash recipe", license_document_path(version: offer.terms_version, kind: offer.kind), class: "t-caption" %>
+            <% end %>
+          </details>
+        <% end %>
+      </div>
       <button class="btn btn-primary" type="button"
               data-checkout-target="button" data-action="checkout#buy">
         Buy license · <%= offer_price(@model.license_offers.first) %>

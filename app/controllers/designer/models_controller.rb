@@ -40,10 +40,15 @@ class Designer::ModelsController < Designer::BaseController
     files = @model.printable_files.select { |f| f.file.attached? }
     return redirect_to edit_designer_model_path(@model), alert: "Attach at least one printable file first." if files.empty?
     return redirect_to edit_designer_model_path(@model), alert: "Add at least one license offer first." if @model.license_offers.none?
+    unless params[:warranty] == "1"
+      return redirect_to edit_designer_model_path(@model),
+        alert: "Publishing requires the ownership warranty — every sold license names it."
+    end
 
     digest = Digest::SHA256.new
     files.sort_by { |f| f.file.filename.to_s }.each { |f| digest.update(f.file.download) }
-    @model.update!(file_hash: "sha256:#{digest.hexdigest}", status: "published")
+    @model.update!(file_hash: "sha256:#{digest.hexdigest}", status: "published",
+                   warranty_accepted_at: Time.current)
     redirect_to model_page_path(@model.slug), notice: publish_notice
   end
 

@@ -50,7 +50,12 @@ class Api::V1::ModelsController < Api::V1::BaseController
           price_cents: offer.price_cents,
           currency: offer.currency,
           max_units: offer.max_units,
-          terms_md: offer.terms_md
+          terms: {
+            version: offer.terms_version,
+            hash: offer.terms_hash,
+            url: offer.terms_version ? license_document_url(version: offer.terms_version, kind: offer.kind) : nil,
+            text: offer.terms_text
+          }
         }
       end,
       download_url: "#{api_v1_model_url(model)}/download?license={kind}",
