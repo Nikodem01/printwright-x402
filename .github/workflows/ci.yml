@@ -35,6 +35,8 @@ jobs:
         run: bin/rails test
       - name: Seeds boot
         run: bin/rails db:seed:replant
+      - name: Log hygiene
+        run: bin/log-hygiene-check
 
   sidecar:
     runs-on: ubuntu-latest
