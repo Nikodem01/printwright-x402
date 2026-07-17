@@ -65,8 +65,8 @@ group :test do
   gem "selenium-webdriver"
 end
 
-gem "dotenv-rails", "~> 3.2", :groups => [:development, :test]
+gem "dotenv-rails", "~> 3.2", groups: [ :development, :test ]
 
-gem "webmock", "~> 3.26", :group => :test
+gem "webmock", "~> 3.26", group: :test
 
 gem "rqrcode", "~> 3.2"

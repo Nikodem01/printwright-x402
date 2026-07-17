@@ -98,6 +98,5 @@ module X402
       return designer.hedera_account_id if designer.payout_account_verified?
       ENV.fetch("X402_PAY_TO")
     end
-
   end
 end

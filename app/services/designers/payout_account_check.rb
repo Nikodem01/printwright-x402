@@ -7,7 +7,6 @@ module Designers
   # here but failing at settle would strand a real payment, so the semantics
   # must not drift from @x402/hedera's isPayToAssociated.
   class PayoutAccountCheck
-
     def self.call(account_id)
       return false if account_id.blank? || account_id !~ /\A0\.0\.\d+\z/
 
