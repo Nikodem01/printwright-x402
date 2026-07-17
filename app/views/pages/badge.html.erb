@@ -1,0 +1,21 @@
+<% content_for :title, "License badge — Printwright" %>
+<div class="container" style="max-width: 720px">
+  <h1>Embed your license badge</h1>
+  <p>Every license gets an embeddable badge that links to its live on-chain check.
+    Put it on your product page, your shop listing, anywhere — a buyer one click away
+    from public proof beats a claim.</p>
+
+  <p><img src="<%= verify_badge_path(cert_id: "pw-000001", format: :svg) %>" alt="example Printwright license badge" width="200" height="36"></p>
+
+  <h2>Snippet</h2>
+  <p class="t-small muted">Replace <code>pw-000001</code> with your certificate id (it's on your receipt and the verify page).</p>
+  <pre class="mono t-small" style="overflow-x:auto"><code>&lt;a href="<%= verify_url("pw-000001") %>"&gt;
+  &lt;img src="<%= verify_badge_url("pw-000001", format: :svg) %>"
+       alt="Printwright licensed unit pw-000001" width="200" height="36"&gt;
+&lt;/a&gt;</code></pre>
+
+  <h2>What it proves</h2>
+  <p class="t-small">The badge itself proves nothing — the page it links to does: a live,
+    field-by-field comparison against the public Hedera mirror node. A printable
+    certificate is available from the same page.</p>
+</div>

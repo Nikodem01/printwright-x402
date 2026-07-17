@@ -90,6 +90,10 @@
     <% if @check.mirror_url.present? %>
       <a class="mono" href="<%= @check.mirror_url %>">raw mirror message ↗</a>
     <% end %>
+    <p class="t-small" style="margin-top: var(--s-3)">
+      <%= link_to "Printable certificate", verify_certificate_path(@license.verify_slug) %> ·
+      <%= link_to "Embeddable badge", badge_docs_path %>
+    </p>
     <p class="t-caption muted">
       How verification works: this page fetches the certificate from Hedera's public mirror node
       and compares it, field by field, with the marketplace record. The chain copy wins.

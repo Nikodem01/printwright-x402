@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>License certificate <%= @license.cert_id %> — Printwright</title>
+  <style>
+    @page { size: A4; margin: 18mm; }
+    body { font: 13px/1.6 Georgia, serif; color: #16181d; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    .frame { border: 3px double #16181d; padding: 2rem 2.2rem; }
+    h1 { font-size: 21px; letter-spacing: .04em; margin: 0 0 .25rem; }
+    .sub { color: #555; font-size: 12px; margin-bottom: 1.4rem; }
+    dl { display: grid; grid-template-columns: 11em 1fr; gap: .35rem 1rem; margin: 1.2rem 0; }
+    dt { color: #555; } dd { margin: 0; font-family: ui-monospace, monospace; font-size: 12px; word-break: break-all; }
+    .qr { float: right; width: 108px; margin: 0 0 .8rem 1rem; }
+    .urls { font-size: 10.5px; color: #444; border-top: 1px solid #ccc; padding-top: .8rem; margin-top: 1.2rem; }
+    .urls div { word-break: break-all; font-family: ui-monospace, monospace; }
+    .print-btn { position: fixed; top: 12px; right: 12px; }
+    @media print { .print-btn { display: none } body { margin: 0 } }
+  </style>
+</head>
+<body>
+  <button class="print-btn" onclick="window.print()">Print / save as PDF</button>
+  <div class="frame">
+    <div class="qr"><%= raw @qr_svg %></div>
+    <h1>License Certificate</h1>
+    <div class="sub">Printwright ⬡ — every print, licensed. Publicly anchored on Hedera.</div>
+
+    <p>
+      This certifies that unit <strong>#<%= @license.serial %></strong> of
+      <strong><%= @model.title %></strong> is licensed under a
+      <strong><%= @license.purchase.license_offer.kind.humanize.downcase %></strong> license
+      granted by <strong><%= @model.designer.display_name %></strong>.
+    </p>
+
+    <dl>
+      <dt>Certificate</dt><dd><%= @license.cert_id %></dd>
+      <dt>Model hash</dt><dd><%= @cert["model_hash"] %></dd>
+      <dt>Payment tx</dt><dd><%= @cert["payment_tx"] %></dd>
+      <dt>Terms hash</dt><dd><%= @cert["terms_hash"] %></dd>
+      <dt>Issued</dt><dd><%= @cert["issued_at"] %></dd>
+      <% if @license.anchored? %>
+        <dt>HCS anchor</dt><dd>topic <%= @license.hcs_topic_id %> · sequence <%= @license.hcs_sequence_number %></dd>
+      <% end %>
+    </dl>
+
+    <div class="urls">
+      Verify independently — none of these require trusting Printwright:
+      <div>live check: <%= verify_url(@license.verify_slug) %></div>
+      <% if @license.anchored? %>
+        <div>mirror node: https://testnet.mirrornode.hedera.com/api/v1/topics/<%= @license.hcs_topic_id %>/messages/<%= @license.hcs_sequence_number %></div>
+        <div>hashscan: https://hashscan.io/testnet/topic/<%= @license.hcs_topic_id %></div>
+      <% end %>
+    </div>
+  </div>
+</body>
+</html>

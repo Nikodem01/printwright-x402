@@ -31,6 +31,9 @@ Rails.application.routes.draw do
   root "storefront#index"
   get "models/:slug", to: "storefront#show", as: :model_page
   get "verify/:cert_id", to: "verify#show", as: :verify
+  get "verify/:cert_id/badge", to: "verify#badge", as: :verify_badge, defaults: { format: :svg }
+  get "verify/:cert_id/certificate", to: "verify#certificate", as: :verify_certificate
+  get "badge", to: "pages#badge", as: :badge_docs
   get "license/:version/:kind", to: "licenses#show", as: :license_document,
       constraints: { version: /v\d+/, kind: /[a-z_]+/ }
   get "terms", to: "pages#terms", as: :terms
