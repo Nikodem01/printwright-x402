@@ -28,20 +28,29 @@ module X402
       }
     end
 
+    # HBAR quotes drift with the live rate; a payment signed against a quote
+    # that moved before the retry landed must still verify. The floor bounds
+    # the platform's worst case to 3% on HBAR offers; overpaying is always
+    # accepted. USDC stays exact.
+    HBAR_TOLERANCE_FLOOR = Rational(97, 100)
+
     def accepts
-      options = [ usdc_option, hbar_option ]
+      options = [ usdc_option, hbar_option ].compact
       options.reverse! if @offer.currency == "HBAR"
       options
     end
 
-    # The client must return one of our requirement objects verbatim;
-    # anything else (tampered amount, wrong payTo, ...) is a mismatch.
+    # The client must return one of our requirement objects — verbatim for
+    # stable assets; HBAR amounts may drift within tolerance (the client's
+    # amount becomes the requirement, since the signed tx must match it).
     def match(accepted)
       return nil unless accepted.is_a?(Hash)
-      accepts.find do |option|
-        MATCH_KEYS.all? { |key| option[key.to_sym].to_s == accepted[key].to_s } &&
-          option.dig(:extra, :feePayer) == accepted.dig("extra", "feePayer")
+      option = accepts.find do |candidate|
+        (MATCH_KEYS - %w[amount]).all? { |key| candidate[key.to_sym].to_s == accepted[key].to_s } &&
+          candidate.dig(:extra, :feePayer) == accepted.dig("extra", "feePayer") &&
+          amount_acceptable?(candidate, accepted)
       end
+      option && option.merge(amount: accepted["amount"].to_s)
     end
 
     private
@@ -54,9 +63,19 @@ module X402
       base_option.merge(amount: (@offer.price_cents * USDC_BASE_UNITS_PER_CENT).to_s, asset: USDC_ASSET)
     end
 
+    # Live-quoted; omitted entirely when no rate is available (never guess a
+    # price). USDC remains, so the offer stays buyable.
     def hbar_option
-      tinybars = (@offer.price_cents * 100_000_000) / demo_hbar_price_cents
-      base_option.merge(amount: tinybars.to_s, asset: HBAR_ASSET)
+      tinybars = Hedera::ExchangeRate.tinybars_for_cents(@offer.price_cents)
+      tinybars && base_option.merge(amount: tinybars.to_s, asset: HBAR_ASSET)
+    end
+
+    def amount_acceptable?(option, accepted)
+      ours = option[:amount].to_i
+      theirs = accepted["amount"].to_s
+      return false unless theirs.match?(/\A[1-9]\d*\z/)
+      return theirs.to_i == ours unless option[:asset] == HBAR_ASSET
+      theirs.to_i >= ours * HBAR_TOLERANCE_FLOOR
     end
 
     def base_option
@@ -78,9 +97,5 @@ module X402
       ENV.fetch("X402_PAY_TO")
     end
 
-    # Fixed demo conversion (cents per 1 HBAR); real quoting is out of scope.
-    def demo_hbar_price_cents
-      Integer(ENV.fetch("X402_DEMO_HBAR_PRICE_CENTS", "25"))
-    end
   end
 end

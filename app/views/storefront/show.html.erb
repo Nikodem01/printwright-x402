@@ -69,12 +69,12 @@
               <%= offer.kind == "personal" ? "print for yourself, unlimited copies" : "one licensed sale per unit" %>
             </span>
           </span>
-          <span class="price">$<%= format("%.2f", offer.price_cents / 100.0) %></span>
+          <span class="price"><%= offer_price(offer) %></span>
         </label>
       <% end %>
       <button class="btn btn-primary" type="button"
               data-checkout-target="button" data-action="checkout#buy">
-        Buy license · $<%= format("%.2f", @model.license_offers.first.price_cents / 100.0) %>
+        Buy license · <%= offer_price(@model.license_offers.first) %>
       </button>
       <div data-checkout-target="status" aria-live="polite" tabindex="-1"
            style="margin-top: var(--s-2); min-height: 24px"></div>

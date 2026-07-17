@@ -13,7 +13,7 @@
     </div>
     <% if (offer = model.license_offers.min_by(&:price_cents)) %>
       <div class="card-price-row">
-        <span class="price">$<%= format("%.2f", offer.price_cents / 100.0) %></span>
+        <span class="price"><%= offer_price(offer) %></span>
         <span class="badge badge-kind"><%= offer.kind.humanize.downcase %></span>
       </div>
     <% end %>
