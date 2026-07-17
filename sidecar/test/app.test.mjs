@@ -19,6 +19,14 @@ const fakeHedera = {
     calls.push(["payout", tokenId, transfers, memo]);
     return { transactionId: "0.0.1@5.6" };
   },
+  createLicenseCollection: async (args) => {
+    calls.push(["createLicenseCollection", args]);
+    return { tokenId: "0.0.777", transactionId: "0.0.1@7.7" };
+  },
+  mintAndAirdrop: async (args) => {
+    calls.push(["mintAndAirdrop", args]);
+    return { serial: 1, mintTransactionId: "0.0.1@8.8", airdropTransactionId: "0.0.1@9.9", pending: true };
+  },
 };
 
 let server;
@@ -166,4 +174,34 @@ test("payout without treasury key is 503", async () => {
   assert.equal(res.status, 503);
   assert.equal((await res.json()).error, "treasury_not_configured");
   bare.close();
+});
+
+test("create-collection validates and passes through", async () => {
+  for (const body of [
+    { name: "", royaltyCollector: "0.0.5", royaltyPercent: 10 },
+    { name: "X", royaltyCollector: "eve", royaltyPercent: 10 },
+    { name: "X", royaltyCollector: "0.0.5", royaltyPercent: 99 },
+  ]) {
+    assert.equal((await post("/create-collection", body)).status, 400, JSON.stringify(body));
+  }
+  const res = await post("/create-collection", { name: "Printwright Licenses — A", royaltyCollector: "0.0.9604185", royaltyPercent: 10 });
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { tokenId: "0.0.777", transactionId: "0.0.1@7.7" });
+  assert.equal(calls.at(-1)[0], "createLicenseCollection");
+});
+
+test("mint-airdrop validates and returns pending state", async () => {
+  for (const body of [
+    { tokenId: "bad", metadata: "pw-1", recipient: "0.0.5" },
+    { tokenId: "0.0.777", metadata: "", recipient: "0.0.5" },
+    { tokenId: "0.0.777", metadata: "x".repeat(101), recipient: "0.0.5" },
+    { tokenId: "0.0.777", metadata: "pw-1", recipient: "nope" },
+  ]) {
+    assert.equal((await post("/mint-airdrop", body)).status, 400, JSON.stringify(body));
+  }
+  const res = await post("/mint-airdrop", { tokenId: "0.0.777", metadata: "pw-000001", recipient: "0.0.9067781" });
+  assert.equal(res.status, 200);
+  const out = await res.json();
+  assert.equal(out.serial, 1);
+  assert.equal(out.pending, true);
 });

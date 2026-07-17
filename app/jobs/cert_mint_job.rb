@@ -16,5 +16,7 @@ class CertMintJob < ApplicationJob
       hcs_topic_id: receipt["topicId"],
       hcs_sequence_number: receipt["sequenceNumber"]
     )
+    # The anchored cert is the record; the NFT is the holdable proof of it.
+    NftMintJob.perform_later(license.id)
   end
 end

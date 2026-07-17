@@ -29,6 +29,17 @@ class SidecarClient
     end
   end
 
+  # => { "tokenId" => ..., "transactionId" => ... }
+  def create_collection(name:, symbol:, royalty_collector:, royalty_percent:)
+    post("/create-collection", { name: name, symbol: symbol,
+      royaltyCollector: royalty_collector, royaltyPercent: royalty_percent })
+  end
+
+  # => { "serial" => ..., "airdropTransactionId" => ..., "pending" => bool }
+  def mint_airdrop(token_id:, metadata:, recipient:)
+    post("/mint-airdrop", { tokenId: token_id, metadata: metadata, recipient: recipient })
+  end
+
   private
 
   def post(path, payload)

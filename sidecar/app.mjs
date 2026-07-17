@@ -14,7 +14,8 @@ export function createApp({ hedera, token, topicId }) {
       return send(200, { ok: true, network: hedera.network, topicId: topicId() ?? null });
     }
 
-    if (req.method !== "POST" || !["/create-topic", "/submit-cert", "/payout"].includes(req.url)) {
+    const routes = ["/create-topic", "/submit-cert", "/payout", "/create-collection", "/mint-airdrop"];
+    if (req.method !== "POST" || !routes.includes(req.url)) {
       return send(404, { error: "not_found" });
     }
     if (req.headers.authorization !== `Bearer ${token}`) {
@@ -36,6 +37,42 @@ export function createApp({ hedera, token, topicId }) {
       if (req.url === "/create-topic") {
         const memo = body.memo || "printwright license certificates v1";
         return send(200, await hedera.createTopic(memo));
+      }
+
+      if (req.url === "/create-collection") {
+        if (typeof body.name !== "string" || body.name.length === 0 || body.name.length > 100) {
+          return send(400, { error: "invalid_name" });
+        }
+        if (typeof body.royaltyCollector !== "string" || !/^0\.0\.\d+$/.test(body.royaltyCollector)) {
+          return send(400, { error: "invalid_royalty_collector" });
+        }
+        const pct = Number(body.royaltyPercent);
+        if (!Number.isInteger(pct) || pct < 0 || pct > 50) {
+          return send(400, { error: "invalid_royalty_percent" });
+        }
+        return send(200, await hedera.createLicenseCollection({
+          name: body.name,
+          symbol: (body.symbol || "PWL").slice(0, 10),
+          royaltyCollector: body.royaltyCollector,
+          royaltyPercent: pct,
+        }));
+      }
+
+      if (req.url === "/mint-airdrop") {
+        if (typeof body.tokenId !== "string" || !/^0\.0\.\d+$/.test(body.tokenId)) {
+          return send(400, { error: "invalid_token_id" });
+        }
+        if (typeof body.recipient !== "string" || !/^0\.0\.\d+$/.test(body.recipient)) {
+          return send(400, { error: "invalid_recipient" });
+        }
+        if (typeof body.metadata !== "string" || body.metadata.length === 0 || Buffer.byteLength(body.metadata) > 100) {
+          return send(400, { error: "invalid_metadata" }); // HTS metadata cap
+        }
+        return send(200, await hedera.mintAndAirdrop({
+          tokenId: body.tokenId,
+          metadata: body.metadata,
+          recipient: body.recipient,
+        }));
       }
 
       if (req.url === "/payout") {

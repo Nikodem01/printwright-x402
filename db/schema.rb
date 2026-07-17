@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_17_000006) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_17_000007) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -49,6 +49,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_000006) do
     t.string "display_name", null: false
     t.string "email_address", null: false
     t.string "hedera_account_id"
+    t.string "nft_collection_id"
     t.string "password_digest", null: false
     t.datetime "payout_account_verified_at"
     t.datetime "updated_at", null: false
@@ -102,6 +103,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_000006) do
     t.datetime "created_at", null: false
     t.bigint "hcs_sequence_number"
     t.string "hcs_topic_id"
+    t.string "nft_airdrop_tx_id"
+    t.string "nft_claim_state"
+    t.integer "nft_serial"
+    t.string "nft_token_id"
     t.bigint "purchase_id", null: false
     t.integer "serial", null: false
     t.datetime "updated_at", null: false

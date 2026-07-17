@@ -4,9 +4,15 @@
 import {
   AccountId,
   Client,
+  CustomRoyaltyFee,
   Hbar,
   PrivateKey,
+  TokenAirdropTransaction,
+  TokenCreateTransaction,
   TokenId,
+  TokenMintTransaction,
+  TokenSupplyType,
+  TokenType,
   TopicCreateTransaction,
   TopicMessageSubmitTransaction,
   TransferTransaction,
@@ -44,6 +50,52 @@ export function buildHedera({ network, accountId, privateKey, treasury }) {
         topicId,
         sequenceNumber: Number(receipt.topicSequenceNumber),
         transactionId: response.transactionId.toString(),
+      };
+    },
+
+    // One NFT collection per designer: Hedera royalties are collection-wide,
+    // so per-designer collections are what makes "royalty pays the designer"
+    // true on-chain. NO fallback fee — the network rejects airdrops of
+    // fallback-royalty NFTs (TOKEN_AIRDROP_WITH_FALLBACK_ROYALTY, spike-proven).
+    async createLicenseCollection({ name, symbol, royaltyCollector, royaltyPercent }) {
+      const royalty = new CustomRoyaltyFee()
+        .setFeeCollectorAccountId(AccountId.fromString(royaltyCollector))
+        .setNumerator(Math.round(royaltyPercent))
+        .setDenominator(100);
+      const response = await new TokenCreateTransaction()
+        .setTokenName(name)
+        .setTokenSymbol(symbol)
+        .setTokenType(TokenType.NonFungibleUnique)
+        .setSupplyType(TokenSupplyType.Infinite)
+        .setTreasuryAccountId(AccountId.fromString(accountId))
+        .setSupplyKey(operatorKey)
+        .setCustomFees([royalty])
+        .setMaxTransactionFee(new Hbar(40)) // token creation costs ~$1; the client default is too low
+        .execute(client);
+      const receipt = await response.getReceipt(client);
+      return { tokenId: receipt.tokenId.toString(), transactionId: response.transactionId.toString() };
+    },
+
+    // Mint one license serial and airdrop it to the buyer. 0-slot buyers get
+    // a PENDING airdrop they claim from their wallet; auto-assoc buyers own
+    // it immediately. Returns pending:true when a claim is still required.
+    async mintAndAirdrop({ tokenId, metadata, recipient }) {
+      const mintResponse = await new TokenMintTransaction()
+        .setTokenId(TokenId.fromString(tokenId))
+        .addMetadata(Buffer.from(metadata))
+        .execute(client);
+      const { serials } = await mintResponse.getReceipt(client);
+      const serial = Number(serials[0]);
+
+      const airdropResponse = await new TokenAirdropTransaction()
+        .addNftTransfer(TokenId.fromString(tokenId), serial, AccountId.fromString(accountId), AccountId.fromString(recipient))
+        .execute(client);
+      const record = await airdropResponse.getRecord(client);
+      return {
+        serial,
+        mintTransactionId: mintResponse.transactionId.toString(),
+        airdropTransactionId: airdropResponse.transactionId.toString(),
+        pending: (record.newPendingAirdrops?.length ?? 0) > 0,
       };
     },
 
