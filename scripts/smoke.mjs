@@ -39,9 +39,10 @@ if (!health.topicId) fail("sidecar has no HCS topic configured (HEDERA_HCS_TOPIC
 ok(`sidecar up (network ${health.network}, topic ${health.topicId})`);
 
 const supported = await getJson(`${FACILITATOR}/supported`, "facilitator");
-const kind = (supported.kinds || []).find((k) => k.scheme === "exact" && k.network === "hedera:testnet");
-if (!kind) fail(`facilitator does not list exact/hedera:testnet: ${JSON.stringify(supported.kinds)}`);
-ok(`facilitator supports exact/hedera:testnet (feePayer ${kind.extra?.feePayer ?? "n/a"})`);
+const NET = process.env.HEDERA_NETWORK === "mainnet" ? "mainnet" : "testnet";
+const kind = (supported.kinds || []).find((k) => k.scheme === "exact" && k.network === `hedera:${NET}`);
+if (!kind) fail(`facilitator does not list exact/hedera:${NET}: ${JSON.stringify(supported.kinds)}`);
+ok(`facilitator supports exact/hedera:${NET} (feePayer ${kind.extra?.feePayer ?? "n/a"})`);
 
 // ---- 2. one real settle via the demo buyer ---------------------------------
 console.log(`\n-- settling for real: buy.mjs --query "${QUERY}" --license ${LICENSE}\n`);

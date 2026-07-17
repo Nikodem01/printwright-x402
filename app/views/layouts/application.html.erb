@@ -40,8 +40,8 @@
     <footer class="site-footer">
       <div class="container">
         License certificates anchor to Hedera Consensus Service topic
-        <a class="mono" href="https://hashscan.io/testnet/topic/<%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %>"><%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %></a>
-        — publicly verifiable on the mirror node. Payments via x402 (Hedera testnet, HBAR/USDC).
+        <a class="mono" href="<%= Hedera::Network.hashscan_base %>/topic/<%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %>"><%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %></a>
+        — publicly verifiable on the mirror node. Payments via x402 (Hedera <%= Hedera::Network.name %>, HBAR/USDC).
         <span class="t-small" style="display:block; margin-top: var(--s-1)">
           <%= link_to "Terms", terms_path %> · <%= link_to "Privacy", privacy_path %> ·
           <%= link_to "Takedown", takedown_path %> ·

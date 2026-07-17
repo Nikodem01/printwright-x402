@@ -47,8 +47,8 @@
       Verify independently — none of these require trusting Printwright:
       <div>live check: <%= verify_url(@license.verify_slug) %></div>
       <% if @license.anchored? %>
-        <div>mirror node: https://testnet.mirrornode.hedera.com/api/v1/topics/<%= @license.hcs_topic_id %>/messages/<%= @license.hcs_sequence_number %></div>
-        <div>hashscan: https://hashscan.io/testnet/topic/<%= @license.hcs_topic_id %></div>
+        <div>mirror node: <%= Hedera::Network.mirror_base %>/api/v1/topics/<%= @license.hcs_topic_id %>/messages/<%= @license.hcs_sequence_number %></div>
+        <div>hashscan: <%= Hedera::Network.hashscan_base %>/topic/<%= @license.hcs_topic_id %></div>
       <% end %>
     </div>
   </div>

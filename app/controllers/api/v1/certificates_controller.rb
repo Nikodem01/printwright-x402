@@ -20,17 +20,17 @@ class Api::V1::CertificatesController < Api::V1::BaseController
       serial: license.nft_serial,
       claim_state: license.refresh_nft_claim_state!,
       airdrop_tx_id: license.nft_airdrop_tx_id,
-      hashscan_url: "https://hashscan.io/testnet/token/#{license.nft_token_id}/#{license.nft_serial}"
+      hashscan_url: "#{Hedera::Network.hashscan_base}/token/#{license.nft_token_id}/#{license.nft_serial}"
     }
   end
 
   def hcs_block(license)
     return nil unless license.anchored?
-    mirror = ENV.fetch("MIRROR_NODE_URL", "https://testnet.mirrornode.hedera.com")
+    mirror = Hedera::Network.mirror_base
     {
       topic_id: license.hcs_topic_id,
       sequence_number: license.hcs_sequence_number,
-      hashscan_url: "https://hashscan.io/testnet/topic/#{license.hcs_topic_id}",
+      hashscan_url: "#{Hedera::Network.hashscan_base}/topic/#{license.hcs_topic_id}",
       mirror_url: "#{mirror}/api/v1/topics/#{license.hcs_topic_id}/messages/#{license.hcs_sequence_number}"
     }
   end

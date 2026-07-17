@@ -39,7 +39,7 @@ class License < ApplicationRecord
   def refresh_nft_claim_state!
     return nft_claim_state unless nft_claim_state == "pending"
 
-    mirror = ENV.fetch("MIRROR_NODE_URL", "https://testnet.mirrornode.hedera.com")
+    mirror = Hedera::Network.mirror_base
     owner = purchase.buyer_hint
     response = Net::HTTP.get_response(
       URI("#{mirror}/api/v1/accounts/#{owner}/nfts?token.id=#{nft_token_id}&serialnumber=#{nft_serial}")

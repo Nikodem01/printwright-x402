@@ -1,7 +1,7 @@
 module ApplicationHelper
   def hashscan_tx_link(tx_id)
     return "" if tx_id.blank?
-    link_to tx_id.truncate(22), "https://hashscan.io/testnet/transaction/#{tx_id}", class: "mono"
+    link_to tx_id.truncate(22), "#{Hedera::Network.hashscan_base}/transaction/#{tx_id}", class: "mono"
   end
 
   # Ledger amounts are asset base units: USDC has 6 decimals, HBAR 8.

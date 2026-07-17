@@ -69,6 +69,37 @@ bin/rails runner 'CertMintJob.perform_now(License.find_by!(cert_id: "pw-000011")
 
 (`perform_now`, not `perform_later` — a runner's in-process queue dies with it.)
 
+## Mainnet path
+
+One switch: `HEDERA_NETWORK=mainnet` (app, sidecar, and buyer-script env).
+Everything network-dependent derives from it — CAIP-2 network id, native USDC
+(`0.0.456858` mainnet / `0.0.429274` testnet, both 6 decimals, per
+docs.hedera.com), mirror node, and HashScan links. `MIRROR_NODE_URL` still
+overrides the mirror if needed.
+
+Also required for a real mainnet launch:
+- a mainnet operator + treasury account (fund with real HBAR), keys in
+  `sidecar/.env` exactly as on testnet;
+- an `X402_FACILITATOR_URL` that supports `hedera:mainnet` (check
+  `/supported`);
+- a fresh HCS topic (`/create-topic` via the sidecar, then restart it);
+- reviewed legal text replacing the template ToS/privacy pages.
+
+Boot check without spending: start the app with `HEDERA_NETWORK=mainnet` and
+`curl /up`, then GET any model's download URL — the 402 must quote
+`hedera:mainnet` and `0.0.456858`. Nothing settles until a buyer signs.
+
+### What operations cost (approximate, USD-pegged network fees)
+
+| operation | fee | when |
+|---|---|---|
+| HCS message (the certificate) | $0.0001 | every purchase |
+| token transfer (settle leg) | $0.0001–0.001 | every purchase (facilitator pays) |
+| NFT mint + airdrop | ~$0.03–0.10 | every purchase with an account buyer |
+| NFT collection create | ~$1 | once per designer |
+| account create (demo/testing) | $0.05 | rare |
+| HCS topic create | $0.01 | once |
+
 ## Key custody map
 
 | key | lives in | used for |

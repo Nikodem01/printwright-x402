@@ -2,9 +2,11 @@ module X402
   # Builds the PaymentRequired object for an offer (both assets, lead currency
   # first) and matches a client's `accepted` object against it.
   class Requirements
-    NETWORK = "hedera:testnet".freeze
     HBAR_ASSET = "0.0.0".freeze
-    USDC_ASSET = "0.0.429274".freeze
+
+    def self.network = Hedera::Network.caip2
+
+    def self.usdc_asset = Hedera::Network.usdc_asset
     USDC_BASE_UNITS_PER_CENT = 10_000 # 6 decimals: $0.01 = 10_000 units
     MAX_TIMEOUT_SECONDS = 180
     MATCH_KEYS = %w[scheme network amount asset payTo].freeze
@@ -60,7 +62,7 @@ module X402
     end
 
     def usdc_option
-      base_option.merge(amount: (@offer.price_cents * USDC_BASE_UNITS_PER_CENT).to_s, asset: USDC_ASSET)
+      base_option.merge(amount: (@offer.price_cents * USDC_BASE_UNITS_PER_CENT).to_s, asset: self.class.usdc_asset)
     end
 
     # Live-quoted; omitted entirely when no rate is available (never guess a
@@ -81,10 +83,10 @@ module X402
     def base_option
       {
         scheme: "exact",
-        network: NETWORK,
+        network: self.class.network,
         payTo: pay_to,
         maxTimeoutSeconds: MAX_TIMEOUT_SECONDS,
-        extra: { feePayer: FacilitatorClient.fee_payer(NETWORK) }
+        extra: { feePayer: FacilitatorClient.fee_payer(self.class.network) }
       }
     end
 

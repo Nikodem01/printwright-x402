@@ -74,7 +74,7 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     when "delivered"
       render json: delivery_payload(purchase), status: :conflict
     when "settled" # paid but delivery previously crashed — finish the job
-      deliver(purchase, { "transaction" => purchase.payment_tx_id, "network" => X402::Requirements::NETWORK })
+      deliver(purchase, { "transaction" => purchase.payment_tx_id, "network" => X402::Requirements.network })
     when "verified"
       reconcile(purchase, payload)
     when "pending"
@@ -93,7 +93,7 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     if (tx_id = X402::MirrorReconciler.call(purchase))
       purchase.update!(payment_tx_id: tx_id)
       purchase.transition_to!(:settled)
-      deliver(purchase, { "transaction" => tx_id, "network" => X402::Requirements::NETWORK })
+      deliver(purchase, { "transaction" => tx_id, "network" => X402::Requirements.network })
     else
       settle(purchase, payload, purchase.requirements_json)
     end
@@ -162,7 +162,7 @@ class Api::V1::DownloadsController < Api::V1::BaseController
       certificate: license.cert_json.presence,
       verify_url: "#{request.base_url}/verify/#{license.verify_slug}",
       transaction_id: purchase.payment_tx_id,
-      hashscan_url: "https://hashscan.io/testnet/transaction/#{purchase.payment_tx_id}"
+      hashscan_url: "#{Hedera::Network.hashscan_base}/transaction/#{purchase.payment_tx_id}"
     }
   end
 end

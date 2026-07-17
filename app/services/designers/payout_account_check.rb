@@ -7,7 +7,6 @@ module Designers
   # here but failing at settle would strand a real payment, so the semantics
   # must not drift from @x402/hedera's isPayToAssociated.
   class PayoutAccountCheck
-    USDC = X402::Requirements::USDC_ASSET
 
     def self.call(account_id)
       return false if account_id.blank? || account_id !~ /\A0\.0\.\d+\z/
@@ -26,7 +25,7 @@ module Designers
     end
 
     def self.associated_with_usdc?(account_id)
-      body = fetch_json("/api/v1/accounts/#{account_id}/tokens?token.id=#{USDC}")
+      body = fetch_json("/api/v1/accounts/#{account_id}/tokens?token.id=#{Hedera::Network.usdc_asset}")
       body.present? && body["tokens"].to_a.any?
     end
 
@@ -43,7 +42,7 @@ module Designers
     end
 
     def self.fetch_json(path)
-      base = ENV.fetch("MIRROR_NODE_URL", "https://testnet.mirrornode.hedera.com")
+      base = Hedera::Network.mirror_base
       response = Net::HTTP.get_response(URI("#{base}#{path}"))
       response.code.to_i == 200 ? JSON.parse(response.body) : nil
     rescue StandardError

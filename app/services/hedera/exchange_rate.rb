@@ -33,7 +33,7 @@ module Hedera
       private
 
       def refresh
-        base = ENV.fetch("MIRROR_NODE_URL", "https://testnet.mirrornode.hedera.com")
+        base = Hedera::Network.mirror_base
         response = Net::HTTP.get_response(URI("#{base}/api/v1/network/exchangerate"))
         raise "exchange rate fetch failed: #{response.code}" unless response.code.to_i == 200
 

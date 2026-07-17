@@ -16,7 +16,8 @@ import {
   TokenAssociateTransaction,
 } from "@hiero-ledger/sdk";
 
-const USDC = "0.0.429274";
+const NET = process.env.HEDERA_NETWORK === "mainnet" ? "mainnet" : "testnet";
+const USDC = NET === "mainnet" ? "0.0.456858" : "0.0.429274"; // native USDC per network
 const ASSET_IDS = { usdc: USDC, hbar: "0.0.0" };
 
 const args = parseArgs(process.argv.slice(2));
@@ -139,11 +140,11 @@ async function getJson(url) {
 }
 
 async function ensureAssociated() {
-  const mirror = `https://testnet.mirrornode.hedera.com/api/v1/accounts/${ACCOUNT_ID}/tokens?token.id=${USDC}`;
+  const mirror = `https://${NET}.mirrornode.hedera.com/api/v1/accounts/${ACCOUNT_ID}/tokens?token.id=${USDC}`;
   const { tokens } = await getJson(mirror);
   if (tokens?.length) return;
   step(`associating ${ACCOUNT_ID} with testnet USDC (one-time)`);
-  const client = HederaClient.forTestnet().setOperator(ACCOUNT_ID, PrivateKey.fromStringECDSA(PRIVATE_KEY));
+  const client = HederaClient.forName(NET).setOperator(ACCOUNT_ID, PrivateKey.fromStringECDSA(PRIVATE_KEY));
   const response = await new TokenAssociateTransaction()
     .setAccountId(ACCOUNT_ID).setTokenIds([USDC]).execute(client);
   await response.getReceipt(client);

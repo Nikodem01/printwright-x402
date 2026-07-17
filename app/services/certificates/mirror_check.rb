@@ -32,7 +32,7 @@ module Certificates
     end
 
     def self.mirror_base
-      ENV.fetch("MIRROR_NODE_URL", "https://testnet.mirrornode.hedera.com")
+      Hedera::Network.mirror_base
     end
   end
 end

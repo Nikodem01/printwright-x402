@@ -44,7 +44,7 @@ module Purchases
     # One cheap probe: if the mirror itself is down, MirrorReconciler's nil
     # means "unknown", not "no payment" — and failing on unknown loses money.
     def self.mirror_reachable?
-      base = ENV.fetch("MIRROR_NODE_URL", "https://testnet.mirrornode.hedera.com")
+      base = Hedera::Network.mirror_base
       Net::HTTP.get_response(URI("#{base}/api/v1/network/nodes?limit=1")).code.to_i == 200
     rescue StandardError
       false

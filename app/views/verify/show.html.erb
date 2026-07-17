@@ -82,10 +82,10 @@
 
   <footer class="evidence-footer">
     <% if @cert&.dig("payment_tx").present? %>
-      <a class="mono" href="https://hashscan.io/testnet/transaction/<%= @cert["payment_tx"] %>">payment tx ↗</a>
+      <a class="mono" href="<%= Hedera::Network.hashscan_base %>/transaction/<%= @cert["payment_tx"] %>">payment tx ↗</a>
     <% end %>
     <% if @license.hcs_topic_id.present? %>
-      <a class="mono" href="https://hashscan.io/testnet/topic/<%= @license.hcs_topic_id %>">HCS topic ↗</a>
+      <a class="mono" href="<%= Hedera::Network.hashscan_base %>/topic/<%= @license.hcs_topic_id %>">HCS topic ↗</a>
     <% end %>
     <% if @check.mirror_url.present? %>
       <a class="mono" href="<%= @check.mirror_url %>">raw mirror message ↗</a>
@@ -94,7 +94,7 @@
       <dl class="facts-table" style="margin-top: var(--s-3)">
         <dt>License NFT</dt>
         <dd>
-          <a class="mono" href="https://hashscan.io/testnet/token/<%= @license.nft_token_id %>/<%= @license.nft_serial %>">
+          <a class="mono" href="<%= Hedera::Network.hashscan_base %>/token/<%= @license.nft_token_id %>/<%= @license.nft_serial %>">
             <%= @license.nft_token_id %> · serial <%= @license.nft_serial %></a>
           <% state = @license.refresh_nft_claim_state! %>
           <span class="badge <%= state == "claimed" ? "badge-ok" : "badge-pending" %>"><%= state %></span>
