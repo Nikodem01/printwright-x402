@@ -98,16 +98,28 @@ class Designer::ModelsController < Designer::BaseController
     permitted
   end
 
+  # Every upload is content-checked (bytes, not filename) before it is
+  # attached; rejects surface to the designer and never create records.
   def attach_uploads
+    rejected = []
     Array(params.dig(:model3d, :printable_files)).reject(&:blank?).each do |upload|
-      kind = upload.original_filename.split(".").last.to_s.downcase
-      file = @model.model_files.create!(kind: ModelFile::KINDS.include?(kind) ? kind : "stl",
-                                        position: @model.model_files.count)
+      ext = upload.original_filename.split(".").last.to_s.downcase
+      kind = ModelFile::KINDS.include?(ext) ? ext : "stl"
+      if (reason = Uploads::Validator.reason_to_reject(upload, kind: kind))
+        rejected << reason
+        next
+      end
+      file = @model.model_files.create!(kind: kind, position: @model.model_files.count)
       file.file.attach(upload)
     end
     Array(params.dig(:model3d, :render_files)).reject(&:blank?).each do |upload|
+      if (reason = Uploads::Validator.reason_to_reject(upload, kind: "render"))
+        rejected << reason
+        next
+      end
       file = @model.model_files.create!(kind: "render", position: @model.model_files.count)
       file.file.attach(upload)
     end
+    flash[:alert] = "Rejected: #{rejected.join('; ')}" if rejected.any?
   end
 end

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Greps logs for material that must never appear there: hex private keys,
+# bearer tokens, payment signature headers. Exits 1 on any hit (CI gate, V19).
+set -u
+hits=0
+for pattern in '30300201[0-9a-f]{20,}' '0x[0-9a-f]{64}' 'PAYMENT-SIGNATURE: [A-Za-z0-9+/=]{40,}' 'Bearer [A-Za-z0-9._-]{16,}'; do
+  if grep -rIEq "$pattern" log/*.log 2>/dev/null; then
+    echo "HYGIENE FAIL: pattern '$pattern' found in logs"
+    grep -rIElm1 "$pattern" log/*.log
+    hits=1
+  fi
+done
+[ "$hits" = 0 ] && echo "log hygiene ok — no key/token/signature material in logs"
+exit $hits
