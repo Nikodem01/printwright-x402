@@ -1,7 +1,7 @@
 Rails.application.routes.draw do
   resource :session
   resources :passwords, param: :token
-  resources :designers, only: %i[new create]
+  resources :designers, only: %i[new create show]
 
   namespace :designer do
     resources :models, except: %i[destroy show] do

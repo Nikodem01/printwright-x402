@@ -45,14 +45,14 @@ class CheckoutTest < ApplicationSystemTestCase
     settled_tx = JSON.parse(fixture("settle_ok.json"))["transaction"]
 
     visit model_page_path(@model.slug)
-    click_button "Buy license · $0.25"
+    click_button "Buy license · 0.10 ℏ · $0.25"
 
     assert_selector ".badge-ok", text: "licensed"
     assert_text "Licensed — unit #1"
     assert_selector "a", text: settled_tx
     assert_selector "a", text: /\Apw-\d{6,}\z/
     assert_link "Download files"
-    assert_no_button "Buy license · $0.25"
+    assert_no_button "Buy license · 0.10 ℏ · $0.25"
 
     purchase = Purchase.last
     assert_equal "delivered", purchase.status
@@ -60,28 +60,81 @@ class CheckoutTest < ApplicationSystemTestCase
     assert_equal settled_tx, purchase.payment_tx_id
   end
 
-  test "facilitator rejection surfaces the failed state with a retry button" do
+  test "facilitator rejection surfaces the failed state with a human message, retry button, and the raw reason" do
     stub_request(:post, "#{FACILITATOR}/verify")
       .to_return(body: fixture("verify_invalid.json"), headers: { "content-type" => "application/json" })
 
     visit model_page_path(@model.slug)
-    click_button "Buy license · $0.25"
+    click_button "Buy license · 0.10 ℏ · $0.25"
 
     assert_selector ".badge-bad", text: "failed"
+    assert_text "The payment could not be completed."
     assert_text "invalid_signature"
     assert_button "Try again"
     assert_equal "failed_verification", Purchase.last.status
   end
 
-  test "wallet refusal fails without ever creating a purchase" do
+  test "wallet refusal explains the decline in plain language, keeps the raw reason, and invites a retry" do
     ENV["TEST_WALLET_MODE"] = "refuse"
 
     visit model_page_path(@model.slug)
     assert_no_changes -> { Purchase.count } do
-      click_button "Buy license · $0.25"
+      click_button "Buy license · 0.10 ℏ · $0.25"
       assert_selector ".badge-bad", text: "failed"
+      assert_text "You declined the payment request in your wallet."
       assert_text "wallet refused: signing refused"
+      assert_button "Try again"
     end
+  end
+
+  test "a sold-out offer fails immediately with a non-retryable message, before any wallet prompt" do
+    @model.license_offers.sole.update!(max_units: 0)
+
+    visit model_page_path(@model.slug)
+    assert_no_changes -> { Purchase.count } do
+      click_button "Buy license · 0.10 ℏ · $0.25"
+      assert_selector ".badge-bad", text: "failed"
+      assert_text "This edition is sold out — there are no units left to license."
+      assert_selector "button[disabled]", text: "Sold out"
+      assert_no_button "Try again"
+    end
+  end
+
+  # A terminal failure belongs to the offer that produced it, not to the model.
+  # Regression: disabling the button on terminal states left it stuck disabled
+  # when the buyer then picked a different, still-buyable offer.
+  test "switching to another offer clears a terminal failure and re-enables buying" do
+    @model.license_offers.sole.update!(max_units: 0)
+    @model.license_offers.create!(kind: "commercial_unit", price_cents: 50, currency: "HBAR", terms_md: "T.")
+
+    visit model_page_path(@model.slug)
+    click_button "Buy license · 0.10 ℏ · $0.25"
+    assert_selector "button[disabled]", text: "Sold out"
+
+    find("input[type=radio][value=commercial_unit]").click
+
+    assert_no_selector "button[disabled]"
+    assert_button "Buy license · 0.20 ℏ · $0.50"
+    assert_no_selector ".badge-bad"
+  end
+
+  test "retrying a rejected payment surfaces duplicate_payment as a terminal, non-retryable state" do
+    stub_request(:post, "#{FACILITATOR}/verify")
+      .to_return(body: fixture("verify_invalid.json"), headers: { "content-type" => "application/json" })
+
+    visit model_page_path(@model.slug)
+    click_button "Buy license · 0.10 ℏ · $0.25"
+    assert_selector ".badge-bad", text: "failed"
+    assert_button "Try again"
+
+    click_button "Try again"
+
+    assert_selector ".badge-bad", text: "failed"
+    assert_text "This payment was already submitted and is being handled — retrying here won't help."
+    assert_text "duplicate_payment"
+    assert_selector "button[disabled]", text: "Already submitted"
+    assert_no_button "Try again"
+    assert_equal 1, Purchase.count
   end
 
   private

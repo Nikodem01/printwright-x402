@@ -247,6 +247,9 @@ fieldset.field { border: 1px solid var(--border); border-radius: var(--radius-s)
   font-size: 12px; font-weight: 700;
 }
 
+/* Public designer profile — same top breathing room as the model page's title. */
+.designer-page { margin-top: var(--s-5); }
+
 @media print {
   .site-header, .site-footer, .copy-btn, .evidence-footer p { display: none; }
   body { background: #fff; color: #000; }

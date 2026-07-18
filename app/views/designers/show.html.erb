@@ -1,0 +1,22 @@
+<% content_for :title, "#{@designer.display_name} — Printwright" %>
+<div class="designer-page">
+  <h1><%= @designer.display_name %><%= " ✓" if @designer.verified %></h1>
+  <% if @designer.bio.present? %>
+    <div class="prose"><%= simple_format(@designer.bio) %></div>
+  <% end %>
+  <% if @designer.hedera_account_id.present? %>
+    <p class="t-small muted">On-chain payout account: <span class="mono"><%= @designer.hedera_account_id %></span></p>
+  <% end %>
+
+  <% if @models.any? %>
+    <h2 style="margin-top: var(--s-5)"><%= pluralize(@models.size, "published model") %></h2>
+    <div class="card-grid">
+      <%= render partial: "storefront/model_card", collection: @models, as: :model %>
+    </div>
+  <% else %>
+    <div class="empty-state">
+      <h2>No published models yet</h2>
+      <p><%= @designer.display_name %> hasn't published any models yet — check back soon.</p>
+    </div>
+  <% end %>
+</div>

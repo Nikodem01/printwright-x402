@@ -18,6 +18,7 @@ const SIDECAR = (process.env.HEDERA_SIDECAR_URL || "http://localhost:4021").repl
 const FACILITATOR = (process.env.X402_FACILITATOR_URL || "https://api.testnet.blocky402.com").replace(/\/$/, "");
 const QUERY = process.env.SMOKE_QUERY || "snap cable clip";
 const LICENSE = process.env.SMOKE_LICENSE || "commercial_unit";
+const USDC_ID = process.env.HEDERA_NETWORK === "mainnet" ? "0.0.456858" : "0.0.429274"; // native USDC per network
 const DEADLINE_MS = 120_000;
 const BUY_SCRIPT = fileURLToPath(new URL("./buy.mjs", import.meta.url));
 
@@ -44,6 +45,13 @@ const kind = (supported.kinds || []).find((k) => k.scheme === "exact" && k.netwo
 if (!kind) fail(`facilitator does not list exact/hedera:${NET}: ${JSON.stringify(supported.kinds)}`);
 ok(`facilitator supports exact/hedera:${NET} (feePayer ${kind.extra?.feePayer ?? "n/a"})`);
 
+// ---- 1b. can the buyer actually pay? ---------------------------------------
+// An underfunded buyer fails deep inside the facilitator as
+// `invalid_exact_hedera_payload_preflight_failed`, which reads like a protocol
+// bug and costs real time to diagnose — on demo day, exactly the wrong panic.
+// Check the balance here and say plainly what is short.
+await checkBuyerFunds();
+
 // ---- 2. one real settle via the demo buyer ---------------------------------
 console.log(`\n-- settling for real: buy.mjs --query "${QUERY}" --license ${LICENSE}\n`);
 const buy = await runBuy(["--query", QUERY, "--license", LICENSE]);
@@ -67,6 +75,32 @@ console.log(`  mirror:     ${cert.hcs.mirror_url}`);
 process.exit(0);
 
 // ---- helpers ----------------------------------------------------------------
+
+// The cheapest offer the smoke will actually buy, priced in the asset it leads
+// with, compared against what the buyer holds. Advisory: a mirror hiccup must
+// never turn a healthy demo path red, so anything unexpected here just warns.
+async function checkBuyerFunds() {
+  const mirrorBase = process.env.MIRROR_NODE_URL || `https://${NET}.mirrornode.hedera.com`;
+  let account;
+  try {
+    const res = await fetch(`${mirrorBase}/api/v1/accounts/${process.env.BUYER_ACCOUNT_ID}`);
+    if (!res.ok) throw new Error(`mirror returned ${res.status}`);
+    account = await res.json();
+  } catch (e) {
+    console.log(`   (skipped buyer balance check: ${e.message})`);
+    return;
+  }
+  const hbar = account.balance?.balance ?? 0;
+  const usdc = (account.balance?.tokens || []).find((t) => t.token_id === USDC_ID)?.balance ?? 0;
+  ok(`buyer ${process.env.BUYER_ACCOUNT_ID} holds ${(hbar / 1e8).toFixed(2)} ℏ · $${(usdc / 1e6).toFixed(2)} USDC`);
+
+  // Both rails are thin enough that the next settle probably fails. Say so with
+  // the number, rather than letting the facilitator's opaque preflight error do it.
+  if (hbar < 4e8 && usdc < 500_000) {
+    fail(`buyer is nearly out of funds (${(hbar / 1e8).toFixed(2)} ℏ, $${(usdc / 1e6).toFixed(2)} USDC) — ` +
+      `top up at https://portal.hedera.com/dashboard before demoing`);
+  }
+}
 
 async function get(url) {
   try {

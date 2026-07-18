@@ -35,7 +35,7 @@
                 data-action="clipboard#copy" data-clipboard-full-value="<%= @model.file_hash %>">copy</button>
       </span>
       <span class="muted"><%= pluralize(@licenses_issued, "license") %> issued</span>
-      <span>by <strong><%= @model.designer.display_name %></strong><%= " ✓" if @model.designer.verified %></span>
+      <span>by <strong><%= link_to @model.designer.display_name, designer_path(@model.designer), style: "color: inherit" %></strong><%= " ✓" if @model.designer.verified %></span>
     </div>
 
     <h1 style="margin-top: var(--s-5)"><%= @model.title %></h1>
@@ -45,8 +45,8 @@
     <table class="facts-table">
       <% @model.printability.each do |key, value| %>
         <tr>
-          <th scope="row"><%= key.humanize %></th>
-          <td><%= value.is_a?(Array) ? value.join(", ") : value.to_s %></td>
+          <th scope="row"><%= printability_label(key) %></th>
+          <td><%= printability_value(key, value) %></td>
         </tr>
       <% end %>
       <% if @model.tags.any? %>
@@ -63,7 +63,10 @@
          <% if (wallet_url = ENV["DEMO_WALLET_URL"].presence) %>data-checkout-wallet-url-value="<%= wallet_url %>"<% end %>>
       <h3>Buy a license</h3>
       <% @model.license_offers.each_with_index do |offer, index| %>
-        <label class="offer-row" data-checkout-target="offer" data-price-cents="<%= offer.price_cents %>">
+        <%# price-display carries the server-formatted price (ℏ · $ for HBAR-lead offers, live
+            rate) so the controller can relabel the button without flattening it to bare USD. %>
+        <label class="offer-row" data-checkout-target="offer" data-price-cents="<%= offer.price_cents %>"
+               data-price-display="<%= offer_price(offer) %>">
           <input type="radio" name="license" value="<%= offer.kind %>" <%= "checked" if index.zero? %>
                  data-action="change->checkout#updatePrice">
           <span>

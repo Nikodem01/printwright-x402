@@ -1,5 +1,28 @@
 import { Controller } from "@hotwired/stimulus"
 
+// Human copy + retry affordance for each API error code (plan 06 error table,
+// api/v1/downloads_controller.rb). Codes not listed here (e.g. a facilitator
+// invalidReason like "invalid_signature") fall back to a generic message and
+// are treated as retryable — a fresh quote + signature is a real fix for those.
+const FAILURE_COPY = {
+  sold_out: () => "This edition is sold out — there are no units left to license.",
+  facilitator_unavailable: (retryAfter) =>
+    `The payment processor is temporarily unavailable. Try again in about ${retryAfter || 5} seconds.`,
+  rate_limited: (retryAfter) =>
+    `Too many purchase attempts right now. Wait about ${retryAfter || 60} seconds, then try again.`,
+  duplicate_payment: () =>
+    "This payment was already submitted and is being handled — retrying here won't help.",
+  invalid_payload: () =>
+    "The payment could not be read by the server. Retrying this exact request won't help.",
+  wallet_refused: () => "You declined the payment request in your wallet.",
+}
+
+// These are terminal for the purchase attempt: no retry button. Everything
+// else (facilitator_unavailable, rate_limited, wallet_refused, and unmapped
+// codes) keeps the "Try again" affordance.
+const TERMINAL_ERRORS = new Set(["sold_out", "duplicate_payment", "invalid_payload"])
+const TERMINAL_LABELS = { sold_out: "Sold out", duplicate_payment: "Already submitted", invalid_payload: "Unavailable" }
+
 // S3 checkout state machine (plan 06): idle -> quoting -> wallet -> settling
 // -> success | failed. The signer is a local demo-wallet daemon; the states,
 // copy and receipt are exactly what a HashPack-backed signer would use.
@@ -13,9 +36,20 @@ export default class extends Controller {
 
   updatePrice() {
     const offer = this.selectedOffer()
-    if (this.hasButtonTarget && offer) {
-      this.buttonTarget.textContent = `Buy license · $${(offer.dataset.priceCents / 100).toFixed(2)}`
+    if (!this.hasButtonTarget || !offer) return
+    // A failure belongs to the offer that produced it. Picking a different one
+    // clears it — otherwise a terminal state (sold out, already submitted)
+    // leaves the button disabled for an offer that is still buyable. In-flight
+    // states are left alone: their disabled button is not stale.
+    if (this.element.dataset.checkoutState === "failed") {
+      this.element.dataset.checkoutState = ""
+      this.buttonTarget.disabled = false
+      this.statusTarget.innerHTML = ""
     }
+    // Prefer the server-rendered price: HBAR-lead offers show "ℏ · $" at the
+    // live rate, which a client-side cents-to-dollars format would discard.
+    const display = offer.dataset.priceDisplay || `$${(offer.dataset.priceCents / 100).toFixed(2)}`
+    this.buttonTarget.textContent = `Buy license · ${display}`
   }
 
   selectedOffer() {
@@ -28,7 +62,10 @@ export default class extends Controller {
     try {
       this.setState("quoting", "Fetching payment terms…")
       const leg1 = await fetch(url, { headers: { accept: "application/json" } })
-      if (leg1.status !== 402) throw new Error(`expected a 402 quote, got ${leg1.status}`)
+      if (leg1.status !== 402) {
+        const body = await leg1.json().catch(() => ({}))
+        return this.fail(body.error, `expected a 402 quote, got ${leg1.status}`, body.retry_after)
+      }
       const quote = await leg1.json()
       const accept = quote.accepts[0]
 
@@ -39,26 +76,45 @@ export default class extends Controller {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ paymentRequired: quote }),
       })
-      if (!signed.ok) throw new Error(`wallet refused: ${(await signed.json()).error || signed.status}`)
+      if (!signed.ok) {
+        const body = await signed.json().catch(() => ({}))
+        return this.fail("wallet_refused", `wallet refused: ${body.error || signed.status}`)
+      }
       const { headers } = await signed.json()
 
       this.setState("settling", "Submitting to Hedera…")
       const leg2 = await fetch(url, { headers: { accept: "application/json", ...headers } })
       const body = await leg2.json()
-      if (leg2.status !== 200) throw new Error(body.error || `settlement failed (${leg2.status})`)
+      if (leg2.status !== 200) {
+        return this.fail(body.error, body.error || `settlement failed (${leg2.status})`, body.retry_after)
+      }
 
       this.success(body)
     } catch (error) {
-      this.setState("failed", error.message)
+      this.fail(null, error.message)
     }
   }
 
   setState(state, message) {
     this.element.dataset.checkoutState = state
-    this.buttonTarget.disabled = state !== "failed"
-    if (state === "failed") this.buttonTarget.textContent = "Try again"
-    const badge = { quoting: "badge-pending", wallet: "badge-pending", settling: "badge-pending", failed: "badge-bad" }[state]
+    this.buttonTarget.disabled = true
+    const badge = { quoting: "badge-pending", wallet: "badge-pending", settling: "badge-pending" }[state]
     this.statusTarget.innerHTML = `<span class="badge ${badge}">${state}</span> <span class="t-small">${this.escape(message)}</span>`
+    this.statusTarget.focus()
+  }
+
+  // A purchase attempt didn't complete. `code` is the server error string
+  // (or a client-side reason like "wallet_refused"); terminal codes get a
+  // disabled button instead of a retry invite. `detail` is the raw technical
+  // string, kept visible but secondary for operators/judges.
+  fail(code, detail, retryAfter) {
+    const terminal = TERMINAL_ERRORS.has(code)
+    this.element.dataset.checkoutState = "failed"
+    this.buttonTarget.disabled = terminal
+    this.buttonTarget.textContent = terminal ? (TERMINAL_LABELS[code] || "Unavailable") : "Try again"
+    const message = (FAILURE_COPY[code] && FAILURE_COPY[code](retryAfter)) || "The payment could not be completed."
+    this.statusTarget.innerHTML = `<span class="badge badge-bad">failed</span> <span class="t-small">${this.escape(message)}</span>` +
+      (detail ? `<span class="t-caption muted" style="display:block">${this.escape(detail)}</span>` : "")
     this.statusTarget.focus()
   }
 

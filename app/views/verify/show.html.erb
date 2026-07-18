@@ -34,7 +34,7 @@
       <% end %>
       <div>
         <h2 style="margin-bottom: var(--s-1)"><%= link_to @model.title, model_page_path(@model.slug), style: "color: inherit" %></h2>
-        <div class="t-small muted">by <%= @model.designer.display_name %></div>
+        <div class="t-small muted">by <%= link_to @model.designer.display_name, designer_path(@model.designer) %></div>
       </div>
     </div>
 
@@ -43,8 +43,23 @@
         <dt>License type</dt><dd><%= @cert["license_type"]&.humanize %></dd>
         <dt>Unit serial</dt><dd class="mono">#<%= @cert["unit_serial"] %></dd>
         <dt>Issued <span class="t-caption muted">(network consensus time)</span></dt>
-        <dd class="mono"><%= @check.consensus_timestamp ? Time.at(@check.consensus_timestamp.to_f).utc.iso8601 : @cert["issued_at"] %></dd>
-        <dt>Designer</dt><dd class="mono"><%= @cert["designer"] %></dd>
+        <dd class="mono">
+          <% if @check.consensus_timestamp %>
+            <% issued_at = Time.at(@check.consensus_timestamp.to_r).utc %>
+            <time datetime="<%= issued_at.iso8601(9) %>"><%= issued_at.strftime("%-d %B %Y, %H:%M UTC") %></time>
+          <% elsif (issued_at = (Time.iso8601(@cert["issued_at"]) rescue nil)) %>
+            <time datetime="<%= @cert["issued_at"] %>"><%= issued_at.utc.strftime("%-d %B %Y, %H:%M UTC") %></time>
+          <% else %>
+            <%= @cert["issued_at"] %>
+          <% end %>
+        </dd>
+        <dt>Designer</dt>
+        <dd>
+          <span class="mono"><%= @cert["designer"] %></span>
+          <% if @model.designer&.hedera_account_id.present? && @model.designer.hedera_account_id == @cert["designer"] %>
+            — <%= link_to @model.designer.display_name, designer_path(@model.designer) %>
+          <% end %>
+        </dd>
         <dt>Buyer</dt><dd class="mono"><%= @cert["buyer_hint"] %></dd>
         <dt>Model hash</dt>
         <dd class="mono" data-controller="clipboard">
