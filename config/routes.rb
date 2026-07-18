@@ -51,4 +51,6 @@ Rails.application.routes.draw do
   get "docs", to: "pages#docs", as: :docs
   get "about", to: "pages#about", as: :about
   get "pricing", to: "pages#pricing", as: :pricing
+  get "chat", to: "chat#show", as: :chat
+  post "chat", to: "chat#create"
 end

@@ -1,0 +1,11 @@
+<%= turbo_stream.remove "chat_empty_state" %>
+
+<% if @new_turns.present? %>
+  <%= turbo_stream.append "chat_messages" do %>
+    <%= render partial: "chat/turn", collection: @new_turns, as: :turn %>
+  <% end %>
+<% end %>
+
+<%= turbo_stream.replace "chat_form" do %>
+  <%= render "chat/form" %>
+<% end %>

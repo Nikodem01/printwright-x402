@@ -1,0 +1,10 @@
+<% case chat_turn_kind(turn) %>
+<% when :tool_call %>
+  <p class="chat-trace t-caption muted">
+    → called <code class="mono"><%= chat_tool_call_label(turn) %></code>
+  </p>
+<% when :user_message %>
+  <div class="chat-msg chat-msg-user"><p><%= chat_turn_text(turn) %></p></div>
+<% when :assistant_message %>
+  <div class="chat-msg chat-msg-assistant"><%= simple_format(chat_turn_text(turn)) %></div>
+<% end %>

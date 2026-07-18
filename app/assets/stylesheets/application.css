@@ -254,6 +254,25 @@ fieldset.field { border: 1px solid var(--border); border-radius: var(--radius-s)
    this a table wider than a phone drags the whole page sideways. */
 .table-scroll { overflow-x: auto; }
 
+/* Shopkeeper chat (V30 part 1) — door 3. Bubbles + a muted tool trace so the
+   conversation visibly proves it's calling the same public API an agent would. */
+.chat-page { max-width: var(--measure); margin: var(--s-5) auto 0; }
+.chat-messages {
+  display: flex; flex-direction: column; gap: var(--s-3);
+  min-height: 200px; margin: var(--s-4) 0;
+}
+.chat-msg { padding: var(--s-2) var(--s-3); border-radius: var(--radius-m); max-width: 85%; }
+.chat-msg p { margin: 0; }
+.chat-msg-user { align-self: flex-end; background: var(--action); color: var(--action-contrast); }
+.chat-msg-assistant { align-self: flex-start; background: var(--bg-raised); border: 1px solid var(--border); }
+.chat-trace { align-self: flex-start; margin: 0; }
+.chat-form { display: flex; gap: var(--s-2); }
+.chat-form input[type="text"] {
+  flex: 1; min-width: 0; padding: var(--s-2) var(--s-3); font: inherit;
+  border: 1px solid var(--border); border-radius: var(--radius-s);
+  background: var(--bg-raised); color: var(--text);
+}
+
 @media print {
   .site-header, .site-footer, .copy-btn, .evidence-footer p { display: none; }
   body { background: #fff; color: #000; }
