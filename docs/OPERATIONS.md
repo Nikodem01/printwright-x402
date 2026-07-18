@@ -69,6 +69,23 @@ bin/rails runner 'CertMintJob.perform_now(License.find_by!(cert_id: "pw-000011")
 
 (`perform_now`, not `perform_later` — a runner's in-process queue dies with it.)
 
+## Demo buyer out of funds
+
+Testnet accounts drain after a run of demos. `smoke.mjs` checks the buyer's
+balance before it tries to settle, so this surfaces as a named shortfall rather
+than the facilitator's opaque `invalid_exact_hedera_payload_preflight_failed`.
+Top up from the operator account:
+
+```bash
+node scripts/fund-buyer.mjs --dry-run    # shows both balances, sends nothing
+node scripts/fund-buyer.mjs              # default: 200 ℏ + $20 USDC
+```
+
+The buyer must already be associated with USDC to receive it (`buy.mjs`
+associates automatically on its first USDC purchase). Check headroom before a
+recording session — each purchase costs the offer price plus a fraction of a
+cent in network fees.
+
 ## Facilitator outage (hosted endpoint down)
 
 The circuit breaker opens after 3 consecutive failures and 402s stop being
