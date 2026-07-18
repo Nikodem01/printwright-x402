@@ -17,10 +17,11 @@ speaks, so switching is a **single environment variable**.
 cd selfhost-facilitator
 npm install
 cp .env.example .env      # set HEDERA_ACCOUNT_ID + HEDERA_PRIVATE_KEY (ECDSA fee-payer)
-node server.mjs           # -> self-host x402 facilitator on http://localhost:4022
+node server.mjs           # -> self-host x402 facilitator on http://localhost:4023
 ```
 
-`GET http://localhost:4022/supported` should advertise your fee-payer:
+Port 4023 by default — the browser demo-wallet daemon already owns 4022, and you may want both
+running at once. `GET http://localhost:4023/supported` should advertise your fee-payer:
 
 ```json
 { "kinds": [ { "x402Version": 2, "scheme": "exact", "network": "hedera:testnet",
@@ -30,7 +31,7 @@ node server.mjs           # -> self-host x402 facilitator on http://localhost:40
 ## Point Printwright at it
 
 ```bash
-X402_FACILITATOR_URL=http://localhost:4022 bin/rails server
+X402_FACILITATOR_URL=http://localhost:4023 bin/rails server
 ```
 
 That is the whole switch. The app discovers the fee-payer from `/supported`, injects it into
@@ -59,7 +60,7 @@ per asset. In each, the mirror confirms the value moved buyer → designer and t
 
 | asset | settle tx | value moved | fee-payer paid | cert |
 |---|---|---|---|---|
-| HBAR | [`0.0.9067781@1784389253.317353114`](https://hashscan.io/testnet/transaction/0.0.9067781@1784389253.317353114) | `0.0.9613501` −1358695652 tℏ → `0.0.9604186` +1358695652 tℏ | 301932 tℏ fee only | `pw-000034` (seq 35) |
+| HBAR | [`0.0.9067781@1784389444.403626092`](https://hashscan.io/testnet/transaction/0.0.9067781@1784389444.403626092) | `0.0.9613501` −1358695652 tℏ → `0.0.9604186` +1358695652 tℏ | 301932 tℏ fee only | `pw-000036` (seq 37) |
 | USDC | [`0.0.9067781@1784389148.249562065`](https://hashscan.io/testnet/transaction/0.0.9067781@1784389148.249562065) | `0.0.9613501` −0.90 → `0.0.9604186` +0.90 (`0.0.429274`) | 1660627 tℏ fee only | `pw-000033` (seq 34) |
 
 Certificates anchored on topic [`0.0.9585069`](https://hashscan.io/testnet/topic/0.0.9585069).

@@ -78,10 +78,10 @@ fallback and repoint the app — no code change, no redeploy of anything else:
 ```bash
 cd selfhost-facilitator && npm install
 cp .env.example .env    # funded ECDSA fee-payer; NOT any buyer or payTo account
-node server.mjs         # -> :4022, advertises its feePayer on GET /supported
+node server.mjs         # -> :4023, advertises its feePayer on GET /supported
 ```
 
-Then restart the app with `X402_FACILITATOR_URL=http://localhost:4022`. The
+Then restart the app with `X402_FACILITATOR_URL=http://localhost:4023`. The
 fee-payer in every new `402` comes from `/supported`, so in-flight payments
 signed against the old fee-payer must be re-quoted — reap them
 (`MINUTES=0 bin/rails purchases:reap`) rather than leaving capacity held.

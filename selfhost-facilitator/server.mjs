@@ -3,7 +3,7 @@
 // reference facilitator (examples/typescript/facilitator/advanced/all_networks.ts),
 // standalone on the published @x402/core + @x402/hedera packages. It speaks the
 // exact /supported /verify /settle contract Printwright's FacilitatorClient uses,
-// so switching to it is a single env var: X402_FACILITATOR_URL=http://host:4022.
+// so switching to it is a single env var: X402_FACILITATOR_URL=http://host:4023.
 //
 // Run:  HEDERA_ACCOUNT_ID=0.0.x HEDERA_PRIVATE_KEY=<ecdsa> node server.mjs
 // The account is the fee-payer: it sponsors network fees and submits the buyer's
@@ -22,7 +22,7 @@ import {
 import { ExactHederaScheme } from "@x402/hedera/exact/facilitator";
 import express from "express";
 
-const PORT = Number.parseInt(process.env.PORT || "4022", 10);
+const PORT = Number.parseInt(process.env.PORT || "4023", 10);
 const NETWORK_NAME = process.env.HEDERA_NETWORK || "testnet";
 const accountId = process.env.HEDERA_ACCOUNT_ID;
 const privateKey = process.env.HEDERA_PRIVATE_KEY;
