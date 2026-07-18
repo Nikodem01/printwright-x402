@@ -6,7 +6,7 @@
 > tamper-evident license certificate on the Hedera Consensus Service, publicly verifiable
 > via the mirror node.
 
-API base: /api/v1 — full spec at /openapi.json
+API base: /api/v1 — full spec at /openapi.json — human docs at /docs
 
 ## How to buy (the whole flow)
 
@@ -20,12 +20,23 @@ API base: /api/v1 — full spec at /openapi.json
 Example 402 probe:
 curl -i "https://<host>/api/v1/models/1/download?license=personal"
 
+No funded account? `node scripts/buy.mjs --query "..." --dry-run` runs steps 1-2 and prints
+the PaymentRequirements without paying — no keys needed.
+
+## Rate limits
+
+Every endpoint returns 429 {"error":"rate_limited","retry_after":60} (and a `Retry-After: 60`
+header) once its per-minute limit is exceeded: /models and /models/{id} and
+/certificates/{cert_id} allow 120/min, /models/{id}/download allows 30/min, /files/{token}
+allows 60/min. Back off and retry after the given number of seconds.
+
 ## Endpoints
 
 - /api/v1/models: search (q, material, supports, max_price_cents)
 - /api/v1/models/{id}: full metadata incl. license offers and terms
 - /api/v1/models/{id}/download: the paid endpoint (x402)
-- /api/v1/certificates/{cert_id}: public certificate + HCS mirror links
+- /api/v1/certificates/{cert_id}: public certificate + HCS mirror links + nft (license NFT
+  claim state, once minted)
 - /verify/{cert_id}: human-readable certificate verification page
 
 ## Reference clients

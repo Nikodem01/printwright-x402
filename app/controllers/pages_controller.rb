@@ -7,4 +7,10 @@ class PagesController < ApplicationController
   def privacy; end
   def takedown; end
   def badge; end
+
+  # Endpoint reference is rendered from the spec at request time, not
+  # hand-duplicated, so the page and public/openapi.json can't drift apart.
+  def docs
+    @openapi = JSON.parse(Rails.root.join("public/openapi.json").read)
+  end
 end

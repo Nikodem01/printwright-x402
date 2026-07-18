@@ -21,4 +21,21 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "/openapi.json"
     assert_includes response.body, "PAYMENT-SIGNATURE"
   end
+
+  # Staleness guard: derives the route list from Rails.application.routes
+  # (never hardcoded) so a new /api/v1 endpoint without docs fails the suite.
+  test "openapi.json documents every /api/v1 route the app actually has" do
+    spec = JSON.parse(Rails.root.join("public/openapi.json").read)
+    documented = spec["paths"].keys.map { |path| path.gsub(/\{[^}]+\}/, ":param") }
+
+    actual_routes = Rails.application.routes.routes.filter_map do |route|
+      controller = route.defaults[:controller].to_s
+      next unless controller.start_with?("api/v1/")
+      path = route.path.spec.to_s.sub("(.:format)", "").sub(%r{\A/api/v1}, "")
+      path.gsub(/:\w+/, ":param")
+    end.uniq
+
+    missing = actual_routes - documented
+    assert_empty missing, "public/openapi.json is missing route(s): #{missing.join(', ')}"
+  end
 end

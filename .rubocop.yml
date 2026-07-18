@@ -12,6 +12,7 @@ AllCops:
     - "sidecar/node_modules/**/*"
     - "scripts/**/*"
     - "mcp/node_modules/**/*"
+    - "selfhost-facilitator/node_modules/**/*"
     - "node_modules/**/*"
     - "vendor/**/*"
     - "db/schema.rb"

@@ -1,0 +1,149 @@
+<% content_for :title, "API docs — Printwright" %>
+<div class="container">
+  <h1>API docs</h1>
+  <p class="t-small muted">Everything below is either rendered live from <%= link_to "/openapi.json", "/openapi.json" %>
+    or grep-verified against this running app — nothing here can quietly drift from the real
+    contract. Machine-readable summary: <%= link_to "/llms.txt", "/llms.txt" %>.</p>
+
+  <h2>Quickstart</h2>
+  <p class="t-small">A purchase is one HTTP negotiation: probe, get a <code>402</code>, sign a
+    Hedera transaction client-side, retry, get the file. Signing can't be done in curl — that
+    step needs a Hedera key, so the one-command version is
+    <code>node scripts/buy.mjs --query "..." --max-price 300</code> (<code>--help</code> lists
+    the flags). What follows is the real trace, endpoint and headers included.</p>
+  <p class="t-small">No funded account yet? Add <code>--dry-run</code> to stop at the
+    <code>402</code> and print the payment requirements — the whole negotiation, no keys and no
+    money. That is the fastest way to see the contract before you fund anything.</p>
+  <pre class="mono t-small" style="overflow-x:auto"># 1. Probe: call the paid endpoint with no payment attached
+curl -i "http://localhost:3000/api/v1/models/5/download?license=personal"
+#   HTTP/1.1 402 Payment Required
+#   payment-required: eyJ4NDAyVmVyc2lvbiI6Mi...        (base64 of the JSON body below)
+#   {"x402Version":2,"error":"payment required","resource":{"url":"...","description":"..."},
+#    "accepts":[
+#      {"scheme":"exact","network":"hedera:testnet","payTo":"0.0.9604186","amount":"900000",
+#       "asset":"0.0.429274","extra":{"feePayer":"0.0.7162784"},"maxTimeoutSeconds":180},
+#      {"scheme":"exact","network":"hedera:testnet","payTo":"0.0.9604186","amount":"1358695652",
+#       "asset":"0.0.0","extra":{"feePayer":"0.0.7162784"},"maxTimeoutSeconds":180}]}
+
+# 2. Pick one `accepts` entry (asset 0.0.0 = HBAR tinybars, 0.0.429274 = testnet USDC).
+#    Sign a Hedera TransferTransaction with transactionId.accountId = extra.feePayer
+#    (buyer signature only — the fee payer sponsors network fees and submits).
+#    This step is not curl-able; scripts/buy.mjs does it for you.
+
+# 3. Retry the identical URL with the base64 PaymentPayload in PAYMENT-SIGNATURE:
+curl -i "http://localhost:3000/api/v1/models/5/download?license=personal" \
+  -H "PAYMENT-SIGNATURE: &lt;base64 PaymentPayload&gt;"
+#   HTTP/1.1 200 OK
+#   payment-response: eyJ0cmFuc2FjdGlvbiI6Ii4uLiJ9    (base64 settlement receipt)
+#   { "files": [...], "license": {"cert_id": "pw-000036", "serial": 3, "kind": "personal"},
+#     "certificate": {...}, "transaction_id": "...", "hashscan_url": "https://hashscan.io/..." }</pre>
+
+  <h2>Endpoint reference</h2>
+  <p class="t-small muted">Generated from <%= link_to "/openapi.json", "/openapi.json" %> at request
+    time — the tables below are that file, not a hand-kept copy.</p>
+
+  <% @openapi["paths"].each do |path, methods| %>
+    <% methods.each do |verb, op| %>
+      <h3><code class="mono"><%= verb.upcase %> <%= @openapi.dig("servers", 0, "url") %><%= path %></code></h3>
+      <p class="t-small"><%= op["summary"] %></p>
+      <% if op["description"].present? %>
+        <p class="t-small muted"><%= op["description"] %></p>
+      <% end %>
+
+      <% if op["parameters"].present? %>
+        <table class="facts-table">
+          <thead><tr><th>Param</th><th>In</th><th>Type</th><th>Notes</th></tr></thead>
+          <tbody>
+            <% op["parameters"].each do |param| %>
+              <tr>
+                <td><code class="mono"><%= param["name"] %></code></td>
+                <td><%= param["in"] %></td>
+                <td><%= param.dig("schema", "type") %></td>
+                <td class="t-small muted"><%= param["description"] %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
+
+      <table class="facts-table">
+        <thead><tr><th>Status</th><th>Description</th></tr></thead>
+        <tbody>
+          <% op["responses"].each do |code, resp| %>
+            <% resp = openapi_deref(@openapi, resp) %>
+            <tr>
+              <td><%= code %></td>
+              <td class="t-small">
+                <%= resp["description"] %>
+                <% if resp["headers"].present? %>
+                  <br><span class="muted">headers: <%= resp["headers"].keys.join(", ") %></span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+  <% end %>
+
+  <h2>Error contract</h2>
+  <table class="facts-table">
+    <thead><tr><th>Status</th><th>error</th><th>Where</th></tr></thead>
+    <tbody>
+      <tr><td>400</td><td><code class="mono">invalid_payload</code></td><td>download — PAYMENT-SIGNATURE not decodable</td></tr>
+      <tr><td>402</td><td><code class="mono">payment required</code></td><td>download — no payment attached</td></tr>
+      <tr><td>402</td><td><code class="mono">invalid_payment_requirements</code></td><td>download — attached payment matches no <code class="mono">accepts</code> entry</td></tr>
+      <tr><td>404</td><td><code class="mono">not_found</code></td><td>any resource missing</td></tr>
+      <tr><td>409</td><td><code class="mono">duplicate_payment</code> (+ <code class="mono">status</code>)</td><td>download — replayed payment (a replay of an already-delivered purchase instead returns the original delivery payload, not this error)</td></tr>
+      <tr><td>410</td><td><code class="mono">sold_out</code></td><td>download — offer <code class="mono">max_units</code> exhausted (may include <code class="mono">transaction_id</code> when it sold out after payment)</td></tr>
+      <tr><td>410</td><td><code class="mono">grant_expired</code></td><td>files — download grant no longer usable</td></tr>
+      <tr><td>429</td><td><code class="mono">rate_limited</code> (+ <code class="mono">retry_after: 60</code>)</td><td>all API endpoints; also sets <code class="mono">Retry-After: 60</code></td></tr>
+      <tr><td>503</td><td><code class="mono">facilitator_unavailable</code> (+ <code class="mono">retry_after: 5</code>)</td><td>download — facilitator down / circuit breaker open</td></tr>
+    </tbody>
+  </table>
+
+  <p class="t-small">Per-endpoint rate limits, all on a 1-minute window (so a 429's
+    <code class="mono">Retry-After</code> is always 60): <code class="mono">/models</code> and
+    <code class="mono">/models/{id}</code> and <code class="mono">/certificates/{cert_id}</code>
+    120/min, <code class="mono">/models/{id}/download</code> 30/min,
+    <code class="mono">/files/{token}</code> 60/min.</p>
+
+  <h2>MCP</h2>
+  <p class="t-small">The MCP server exposes the same door to any MCP client (Claude Code, Claude
+    Desktop, ...):</p>
+  <pre class="mono t-small" style="overflow-x:auto">cd mcp && npm install && cd ..
+claude mcp add printwright \
+  --env PRINTWRIGHT_URL=http://localhost:3000 \
+  --env BUYER_ACCOUNT_ID=0.0.xxxxxxx \
+  --env BUYER_PRIVATE_KEY=0x... \
+  --env MAX_SPEND_CENTS=500 \
+  -- node mcp/server.mjs</pre>
+  <p class="t-small">Four tools: <code class="mono">search_models</code>,
+    <code class="mono">get_model</code>, <code class="mono">buy_license</code> (refuses without
+    <code class="mono">confirm: true</code>, capped by <code class="mono">MAX_SPEND_CENTS</code>),
+    and <code class="mono">verify_certificate</code> (reads the HCS message from the public
+    mirror and diffs it against the marketplace copy).</p>
+
+  <h2>Networks</h2>
+  <p class="t-small">One switch, <code class="mono">HEDERA_NETWORK</code>, flips every
+    network-dependent value below.</p>
+  <table class="facts-table">
+    <thead><tr><th>Item</th><th>testnet</th><th>mainnet</th></tr></thead>
+    <tbody>
+      <tr><th scope="row">CAIP-2 network id</th><td><code class="mono">hedera:testnet</code></td><td><code class="mono">hedera:mainnet</code></td></tr>
+      <tr><th scope="row">USDC token id</th><td><code class="mono">0.0.429274</code></td><td><code class="mono">0.0.456858</code></td></tr>
+      <tr><th scope="row">USDC decimals</th><td>6</td><td>6</td></tr>
+      <tr><th scope="row">HBAR asset id</th><td colspan="2"><code class="mono">0.0.0</code> — always, on either network</td></tr>
+      <tr><th scope="row">Mirror node</th><td colspan="2"><code class="mono">https://&lt;network&gt;.mirrornode.hedera.com</code>, overridable with <code class="mono">MIRROR_NODE_URL</code></td></tr>
+      <tr><th scope="row">HashScan</th><td colspan="2"><code class="mono">https://hashscan.io/&lt;network&gt;</code></td></tr>
+    </tbody>
+  </table>
+
+  <h2>More</h2>
+  <ul class="t-small">
+    <li><%= link_to "/openapi.json", "/openapi.json" %> — the full machine-readable spec</li>
+    <li><%= link_to "/llms.txt", "/llms.txt" %> — a short brief for LLM agents</li>
+    <li><%= link_to "Verify a certificate", verify_path(cert_id: "pw-000036") %> — human-readable
+      example certificate check against the public mirror node</li>
+  </ul>
+</div>

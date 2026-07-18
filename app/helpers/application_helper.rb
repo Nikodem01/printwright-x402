@@ -24,4 +24,12 @@ module ApplicationHelper
     return usd if tinybars.nil?
     "#{format('%.2f', tinybars / 100_000_000.0)} ℏ · #{usd}"
   end
+
+  # /docs renders openapi.json's response objects directly; some are shared
+  # via $ref (NotFound, RateLimited) rather than inlined, so resolve those
+  # before reading description/headers off them.
+  def openapi_deref(spec, node)
+    return node unless node.is_a?(Hash) && node["$ref"]
+    spec.dig("components", "responses", node["$ref"].split("/").last)
+  end
 end

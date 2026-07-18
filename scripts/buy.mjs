@@ -119,6 +119,7 @@ function parseArgs(argv) {
     else if (a === "--asset") out.asset = argv[++i]?.toLowerCase();
     else if (a === "--max-price") out.maxPrice = Number(argv[++i]);
     else if (a === "--dry-run") out.dryRun = true;
+    else if (a === "--help" || a === "-h") usage();
     else die(`unknown argument: ${a}`);
   }
   if (out.asset && !ASSET_IDS[out.asset]) die("--asset must be usdc or hbar");
@@ -134,7 +135,17 @@ function money(offer) {
 }
 
 async function getJson(url) {
-  const res = await fetch(url, { headers: { accept: "application/json" } });
+  let res;
+  try {
+    res = await fetch(url, { headers: { accept: "application/json" } });
+  } catch (e) {
+    // A raw ECONNREFUSED stack is the first thing a new integrator sees if the
+    // marketplace isn't up yet. Name the cause and the knob instead.
+    if (e?.cause?.code === "ECONNREFUSED") {
+      die(`cannot reach ${new URL(url).origin} — is it running? (start it with bin/dev, or set PRINTWRIGHT_URL)`);
+    }
+    die(`GET ${url} failed: ${e.message}`);
+  }
   if (!res.ok) die(`GET ${url} -> ${res.status}`);
   return res.json();
 }
@@ -173,4 +184,22 @@ function indent(text, n) {
 function die(msg) {
   console.error(`\nerror: ${msg}`);
   process.exit(1);
+}
+
+function usage() {
+  console.log(`Printwright agent buyer — search, pay over x402 on Hedera, get the file + license.
+
+Usage: node scripts/buy.mjs --query "beaver hat" [options]
+
+  --query <text>      what to search for (required)
+  --license <kind>    license kind to buy (default: personal)
+  --asset usdc|hbar   what to pay in (default: the offer's lead currency)
+  --max-price <cents> skip anything dearer
+  --dry-run           stop after the 402, pay nothing
+  -h, --help          this message
+
+Env: PRINTWRIGHT_URL (default http://localhost:3000), BUYER_ACCOUNT_ID,
+     BUYER_PRIVATE_KEY, HEDERA_NETWORK (testnet|mainnet, default testnet).
+     --dry-run needs no keys. Full API docs: <PRINTWRIGHT_URL>/docs`);
+  process.exit(0);
 }

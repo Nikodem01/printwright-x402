@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Printwright API",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; every purchase mints a public HCS license certificate."
   },
   "servers": [{ "url": "/api/v1" }],
@@ -27,7 +27,8 @@
                 "models": { "type": "array", "items": { "$ref": "#/components/schemas/ModelSummary" } }
               }
             } } }
-          }
+          },
+          "429": { "$ref": "#/components/responses/RateLimited" }
         }
       }
     },
@@ -38,7 +39,8 @@
         "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
         "responses": {
           "200": { "description": "Model detail", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ModelDetail" } } } },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
         }
       }
     },
@@ -50,11 +52,11 @@
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
           { "name": "license", "in": "query", "schema": { "type": "string", "enum": ["personal", "commercial_unit"], "default": "personal" } },
-          { "name": "PAYMENT-SIGNATURE", "in": "header", "schema": { "type": "string" }, "description": "base64 x402 PaymentPayload (v2)" }
+          { "name": "PAYMENT-SIGNATURE", "in": "header", "schema": { "type": "string" }, "description": "base64 x402 PaymentPayload (v2). X-PAYMENT is accepted as an alias." }
         ],
         "responses": {
           "402": {
-            "description": "Payment required — PaymentRequired object in body and PAYMENT-REQUIRED header",
+            "description": "Payment required — PaymentRequired object in body and PAYMENT-REQUIRED header. `error` is \"payment required\" when no payment is attached, or \"invalid_payment_requirements\" when the attached payment matches none of the offer's `accepts` entries (still a fresh PaymentRequired body to retry against).",
             "headers": { "PAYMENT-REQUIRED": { "schema": { "type": "string" }, "description": "base64 of the same PaymentRequired JSON" } },
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaymentRequired" } } }
           },
@@ -63,22 +65,42 @@
             "headers": { "PAYMENT-RESPONSE": { "schema": { "type": "string" }, "description": "base64 settlement response incl. transaction id" } },
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Delivery" } } }
           },
-          "400": { "description": "Malformed payment header", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "400": {
+            "description": "error: \"invalid_payload\" — the PAYMENT-SIGNATURE header is not decodable base64 JSON",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
           "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "description": "Replay of an already-presented payment; delivered purchases return the original delivery payload" },
-          "410": { "description": "Offer sold out", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "503": { "description": "Facilitator unavailable — retry with the same signed payment", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "409": {
+            "description": "Replay of an already-presented payment. If the purchase already reached \"delivered\", the original Delivery payload is returned again unchanged (an idempotent replay, not an error); for any other in-flight status the body is {error: \"duplicate_payment\", status} naming the purchase's current status.",
+            "content": { "application/json": { "schema": { "oneOf": [
+              { "$ref": "#/components/schemas/Delivery" },
+              { "$ref": "#/components/schemas/Error" }
+            ] } } }
+          },
+          "410": {
+            "description": "error: \"sold_out\" — the offer's max_units is exhausted. Includes transaction_id when the offer sold out to a concurrent buyer after this payment had already settled; that purchase is refundable on-chain (operator-run: see docs/OPERATIONS.md), and the transaction_id identifies it.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": {
+            "description": "error: \"facilitator_unavailable\" (+ retry_after: 5) — facilitator down or its circuit breaker is open. The purchase is kept alive; retry the same signed payment.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
         }
       }
     },
     "/certificates/{cert_id}": {
       "get": {
         "operationId": "getCertificate",
-        "summary": "Public license certificate + HCS anchoring links",
-        "parameters": [{ "name": "cert_id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "pw-000003" }],
+        "summary": "Public license certificate + HCS/HTS anchoring links",
+        "parameters": [{ "name": "cert_id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "pw-000036" }],
         "responses": {
-          "200": { "description": "Certificate with status anchored|minting and mirror/HashScan links" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "200": {
+            "description": "Certificate with status anchored|minting, HCS mirror/HashScan links, and the NFT claim (when minted)",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CertificateResponse" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
         }
       }
     },
@@ -89,18 +111,35 @@
         "parameters": [{ "name": "token", "in": "path", "required": true, "schema": { "type": "string" } }],
         "responses": {
           "302": { "description": "Redirect to the file blob" },
-          "410": { "description": "Grant expired or exhausted" },
-          "404": { "$ref": "#/components/responses/NotFound" }
+          "410": {
+            "description": "error: \"grant_expired\" — the grant is expired or its use-count is exhausted",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
         }
       }
     }
   },
   "components": {
     "responses": {
-      "NotFound": { "description": "Not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+      "NotFound": { "description": "Not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+      "RateLimited": {
+        "description": "error: \"rate_limited\" (+ retry_after: 60) — request rate exceeded the endpoint's per-minute limit",
+        "headers": { "Retry-After": { "schema": { "type": "integer" }, "description": "seconds until the limit resets (60)" } },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      }
     },
     "schemas": {
-      "Error": { "type": "object", "properties": { "error": { "type": "string" } } },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "status": { "type": "string", "description": "included on 409 duplicate_payment: the existing purchase's current status" },
+          "retry_after": { "type": "integer", "description": "included on 429 rate_limited (60) and 503 facilitator_unavailable (5)" },
+          "transaction_id": { "type": "string", "description": "included on 410 sold_out when the offer sold out after this payment had already settled" }
+        }
+      },
       "ModelSummary": {
         "type": "object",
         "properties": {
@@ -117,7 +156,20 @@
           { "$ref": "#/components/schemas/ModelSummary" },
           { "type": "object", "properties": {
             "description": { "type": "string" }, "tags": { "type": "array", "items": { "type": "string" } },
-            "file_hash": { "type": "string" }, "download_url": { "type": "string" } } }
+            "file_hash": { "type": "string" },
+            "files": { "type": "array", "items": { "type": "object", "properties": {
+              "kind": { "type": "string" }, "filename": { "type": ["string", "null"] } } } },
+            "license_offers": { "type": "array", "items": { "type": "object", "properties": {
+              "kind": { "type": "string" }, "price_cents": { "type": "integer" }, "currency": { "type": "string" },
+              "max_units": { "type": ["integer", "null"] },
+              "terms": { "type": "object", "properties": {
+                "version": { "type": ["string", "null"] }, "hash": { "type": "string" },
+                "url": { "type": ["string", "null"] }, "text": { "type": "string" } } }
+            } } },
+            "designer": { "type": "object", "properties": {
+              "name": { "type": "string" }, "verified": { "type": "boolean" },
+              "hedera_account_id": { "type": ["string", "null"] } } },
+            "download_url": { "type": "string" } } }
         ]
       },
       "PaymentRequired": {
@@ -149,6 +201,24 @@
           "verify_url": { "type": "string" },
           "transaction_id": { "type": "string" },
           "hashscan_url": { "type": "string" }
+        }
+      },
+      "CertificateResponse": {
+        "type": "object",
+        "properties": {
+          "certificate": { "type": ["object", "null"], "properties": {
+            "v": { "type": "integer" }, "cert_id": { "type": "string" }, "designer": { "type": "string" },
+            "model_id": { "type": "integer" }, "issued_at": { "type": "string" }, "buyer_hint": { "type": "string" },
+            "model_hash": { "type": "string" }, "payment_tx": { "type": "string" }, "terms_hash": { "type": "string" },
+            "unit_serial": { "type": "integer" }, "license_type": { "type": "string" } } },
+          "status": { "type": "string", "enum": ["anchored", "minting"] },
+          "hcs": { "type": ["object", "null"], "properties": {
+            "topic_id": { "type": "string" }, "sequence_number": { "type": "integer" },
+            "hashscan_url": { "type": "string" }, "mirror_url": { "type": "string" } } },
+          "nft": { "type": ["object", "null"], "description": "null until the license NFT is minted and airdropped", "properties": {
+            "token_id": { "type": "string" }, "serial": { "type": "integer" },
+            "claim_state": { "type": "string" }, "airdrop_tx_id": { "type": ["string", "null"] },
+            "hashscan_url": { "type": "string" } } }
         }
       }
     }

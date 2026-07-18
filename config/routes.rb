@@ -48,4 +48,5 @@ Rails.application.routes.draw do
   get "terms", to: "pages#terms", as: :terms
   get "privacy", to: "pages#privacy", as: :privacy
   get "takedown", to: "pages#takedown", as: :takedown
+  get "docs", to: "pages#docs", as: :docs
 end
