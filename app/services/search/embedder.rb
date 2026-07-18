@@ -24,8 +24,12 @@ module Search
     def embed(text)
       return nil unless available? && text.present?
 
-      uri = URI("#{ENDPOINT}?key=#{@api_key}")
-      req = Net::HTTP::Post.new(uri, "content-type" => "application/json")
+      # Key goes in a header, never the query string: URLs end up in access
+      # logs, proxy traces and exception messages (WebMock printed it into test
+      # output), and a leaked key is a billable secret.
+      uri = URI(ENDPOINT)
+      req = Net::HTTP::Post.new(uri, "content-type" => "application/json",
+                                     "x-goog-api-key" => @api_key)
       req.body = JSON.generate(
         model: "models/gemini-embedding-001",
         content: { parts: [ { text: text } ] },

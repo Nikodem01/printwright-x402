@@ -51,56 +51,62 @@ curl -i "http://localhost:3000/api/v1/models/5/download?license=personal" \
       <% end %>
 
       <% if op["parameters"].present? %>
+        <div class="table-scroll">
+          <table class="facts-table">
+            <thead><tr><th>Param</th><th>In</th><th>Type</th><th>Notes</th></tr></thead>
+            <tbody>
+              <% op["parameters"].each do |param| %>
+                <tr>
+                  <td><code class="mono"><%= param["name"] %></code></td>
+                  <td><%= param["in"] %></td>
+                  <td><%= param.dig("schema", "type") %></td>
+                  <td class="t-small muted"><%= param["description"] %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+
+      <div class="table-scroll">
         <table class="facts-table">
-          <thead><tr><th>Param</th><th>In</th><th>Type</th><th>Notes</th></tr></thead>
+          <thead><tr><th>Status</th><th>Description</th></tr></thead>
           <tbody>
-            <% op["parameters"].each do |param| %>
+            <% op["responses"].each do |code, resp| %>
+              <% resp = openapi_deref(@openapi, resp) %>
               <tr>
-                <td><code class="mono"><%= param["name"] %></code></td>
-                <td><%= param["in"] %></td>
-                <td><%= param.dig("schema", "type") %></td>
-                <td class="t-small muted"><%= param["description"] %></td>
+                <td><%= code %></td>
+                <td class="t-small">
+                  <%= resp["description"] %>
+                  <% if resp["headers"].present? %>
+                    <br><span class="muted">headers: <%= resp["headers"].keys.join(", ") %></span>
+                  <% end %>
+                </td>
               </tr>
             <% end %>
           </tbody>
         </table>
-      <% end %>
-
-      <table class="facts-table">
-        <thead><tr><th>Status</th><th>Description</th></tr></thead>
-        <tbody>
-          <% op["responses"].each do |code, resp| %>
-            <% resp = openapi_deref(@openapi, resp) %>
-            <tr>
-              <td><%= code %></td>
-              <td class="t-small">
-                <%= resp["description"] %>
-                <% if resp["headers"].present? %>
-                  <br><span class="muted">headers: <%= resp["headers"].keys.join(", ") %></span>
-                <% end %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
+      </div>
     <% end %>
   <% end %>
 
   <h2>Error contract</h2>
-  <table class="facts-table">
-    <thead><tr><th>Status</th><th>error</th><th>Where</th></tr></thead>
-    <tbody>
-      <tr><td>400</td><td><code class="mono">invalid_payload</code></td><td>download — PAYMENT-SIGNATURE not decodable</td></tr>
-      <tr><td>402</td><td><code class="mono">payment required</code></td><td>download — no payment attached</td></tr>
-      <tr><td>402</td><td><code class="mono">invalid_payment_requirements</code></td><td>download — attached payment matches no <code class="mono">accepts</code> entry</td></tr>
-      <tr><td>404</td><td><code class="mono">not_found</code></td><td>any resource missing</td></tr>
-      <tr><td>409</td><td><code class="mono">duplicate_payment</code> (+ <code class="mono">status</code>)</td><td>download — replayed payment (a replay of an already-delivered purchase instead returns the original delivery payload, not this error)</td></tr>
-      <tr><td>410</td><td><code class="mono">sold_out</code></td><td>download — offer <code class="mono">max_units</code> exhausted (may include <code class="mono">transaction_id</code> when it sold out after payment)</td></tr>
-      <tr><td>410</td><td><code class="mono">grant_expired</code></td><td>files — download grant no longer usable</td></tr>
-      <tr><td>429</td><td><code class="mono">rate_limited</code> (+ <code class="mono">retry_after: 60</code>)</td><td>all API endpoints; also sets <code class="mono">Retry-After: 60</code></td></tr>
-      <tr><td>503</td><td><code class="mono">facilitator_unavailable</code> (+ <code class="mono">retry_after: 5</code>)</td><td>download — facilitator down / circuit breaker open</td></tr>
-    </tbody>
-  </table>
+  <div class="table-scroll">
+    <table class="facts-table">
+      <thead><tr><th>Status</th><th>error</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>400</td><td><code class="mono">invalid_payload</code></td><td>download — PAYMENT-SIGNATURE not decodable</td></tr>
+        <tr><td>402</td><td><code class="mono">payment required</code></td><td>download — no payment attached</td></tr>
+        <tr><td>402</td><td><code class="mono">invalid_payment_requirements</code></td><td>download — attached payment matches no <code class="mono">accepts</code> entry</td></tr>
+        <tr><td>404</td><td><code class="mono">not_found</code></td><td>any resource missing</td></tr>
+        <tr><td>409</td><td><code class="mono">duplicate_payment</code> (+ <code class="mono">status</code>)</td><td>download — replayed payment (a replay of an already-delivered purchase instead returns the original delivery payload, not this error)</td></tr>
+        <tr><td>410</td><td><code class="mono">sold_out</code></td><td>download — offer <code class="mono">max_units</code> exhausted (may include <code class="mono">transaction_id</code> when it sold out after payment)</td></tr>
+        <tr><td>410</td><td><code class="mono">grant_expired</code></td><td>files — download grant no longer usable</td></tr>
+        <tr><td>429</td><td><code class="mono">rate_limited</code> (+ <code class="mono">retry_after: 60</code>)</td><td>all API endpoints; also sets <code class="mono">Retry-After: 60</code></td></tr>
+        <tr><td>503</td><td><code class="mono">facilitator_unavailable</code> (+ <code class="mono">retry_after: 5</code>)</td><td>download — facilitator down / circuit breaker open</td></tr>
+      </tbody>
+    </table>
+  </div>
 
   <p class="t-small">Per-endpoint rate limits, all on a 1-minute window (so a 429's
     <code class="mono">Retry-After</code> is always 60): <code class="mono">/models</code> and
@@ -127,17 +133,19 @@ claude mcp add printwright \
   <h2>Networks</h2>
   <p class="t-small">One switch, <code class="mono">HEDERA_NETWORK</code>, flips every
     network-dependent value below.</p>
-  <table class="facts-table">
-    <thead><tr><th>Item</th><th>testnet</th><th>mainnet</th></tr></thead>
-    <tbody>
-      <tr><th scope="row">CAIP-2 network id</th><td><code class="mono">hedera:testnet</code></td><td><code class="mono">hedera:mainnet</code></td></tr>
-      <tr><th scope="row">USDC token id</th><td><code class="mono">0.0.429274</code></td><td><code class="mono">0.0.456858</code></td></tr>
-      <tr><th scope="row">USDC decimals</th><td>6</td><td>6</td></tr>
-      <tr><th scope="row">HBAR asset id</th><td colspan="2"><code class="mono">0.0.0</code> — always, on either network</td></tr>
-      <tr><th scope="row">Mirror node</th><td colspan="2"><code class="mono">https://&lt;network&gt;.mirrornode.hedera.com</code>, overridable with <code class="mono">MIRROR_NODE_URL</code></td></tr>
-      <tr><th scope="row">HashScan</th><td colspan="2"><code class="mono">https://hashscan.io/&lt;network&gt;</code></td></tr>
-    </tbody>
-  </table>
+  <div class="table-scroll">
+    <table class="facts-table">
+      <thead><tr><th>Item</th><th>testnet</th><th>mainnet</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">CAIP-2 network id</th><td><code class="mono">hedera:testnet</code></td><td><code class="mono">hedera:mainnet</code></td></tr>
+        <tr><th scope="row">USDC token id</th><td><code class="mono">0.0.429274</code></td><td><code class="mono">0.0.456858</code></td></tr>
+        <tr><th scope="row">USDC decimals</th><td>6</td><td>6</td></tr>
+        <tr><th scope="row">HBAR asset id</th><td colspan="2"><code class="mono">0.0.0</code> — always, on either network</td></tr>
+        <tr><th scope="row">Mirror node</th><td colspan="2"><code class="mono">https://&lt;network&gt;.mirrornode.hedera.com</code>, overridable with <code class="mono">MIRROR_NODE_URL</code></td></tr>
+        <tr><th scope="row">HashScan</th><td colspan="2"><code class="mono">https://hashscan.io/&lt;network&gt;</code></td></tr>
+      </tbody>
+    </table>
+  </div>
 
   <h2>More</h2>
   <ul class="t-small">

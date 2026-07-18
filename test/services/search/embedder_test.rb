@@ -19,7 +19,11 @@ class Search::EmbedderTest < ActiveSupport::TestCase
     embedder = Search::Embedder.new(api_key: "test-key")
     assert embedder.available?
     assert_equal vector, embedder.embed("cable clip")
-    assert_requested(:post, ENDPOINT) { |req| req.uri.query == "key=test-key" }
+    # The key authenticates via header and must never reach the query string:
+    # URLs leak into access logs, proxies and exception messages.
+    assert_requested(:post, ENDPOINT) do |req|
+      req.headers["X-Goog-Api-Key"] == "test-key" && req.uri.query.nil?
+    end
   end
 
   test "non-200 response degrades to nil instead of raising" do
