@@ -106,8 +106,14 @@ Agent discovery: [`/openapi.json`](public/openapi.json) · [`/llms.txt`](public/
 
 ```bash
 bin/rails test            # Rails suite (paywall error table runs against real captured wire bytes)
+bin/rails test:system     # Capybara: browser checkout (signer stubbed), designer publish, verify states
 cd sidecar && npm test    # sidecar suite (SDK faked)
+cd mcp && npm test        # MCP stdio smoke (spawns the real server over stdio)
 ```
+
+All four run on every push via GitHub Actions ([ci.yml](.github/workflows/ci.yml)), plus
+rubocop, brakeman, a seeds boot, a tree-wide secret grep, and a log-hygiene grep that fails
+the build if key/token/signature material ever reaches a log.
 
 ## On-chain artifacts (testnet)
 

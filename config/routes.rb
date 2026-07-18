@@ -18,6 +18,15 @@ Rails.application.routes.draw do
       get "certificates/:cert_id", to: "certificates#show", as: :certificate
     end
   end
+  # System tests stub the demo-wallet daemon with an in-app signer endpoint
+  # (same-origin keeps the CSP connect-src untouched). Never mounted outside test.
+  # The controller lives outside autoload paths, so it is required here — the
+  # constant must resolve for any test-env process, not just the checkout suite.
+  if Rails.env.test?
+    require Rails.root.join("test/system/support/test_wallet_controller").to_s
+    post "__test_wallet__/sign", to: "test_wallet#sign"
+  end
+
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.

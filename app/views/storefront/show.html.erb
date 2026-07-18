@@ -57,7 +57,10 @@
 
   <aside>
     <div class="buy-panel" data-controller="checkout"
-         data-checkout-download-url-value="<%= "/api/v1/models/#{@model.id}/download" %>">
+         data-checkout-download-url-value="<%= "/api/v1/models/#{@model.id}/download" %>"
+         <%# Only override the signer origin when configured — blank/unset falls
+             back to the Stimulus default, and CSP connect-src reads the same var. %>
+         <% if (wallet_url = ENV["DEMO_WALLET_URL"].presence) %>data-checkout-wallet-url-value="<%= wallet_url %>"<% end %>>
       <h3>Buy a license</h3>
       <% @model.license_offers.each_with_index do |offer, index| %>
         <label class="offer-row" data-checkout-target="offer" data-price-cents="<%= offer.price_cents %>">
