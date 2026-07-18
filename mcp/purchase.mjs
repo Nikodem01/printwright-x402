@@ -4,7 +4,12 @@ import { x402Client, x402HTTPClient } from "@x402/core/client";
 import { createClientHederaSigner, PrivateKey } from "@x402/hedera";
 import { ExactHederaScheme } from "@x402/hedera/exact/client";
 
-const USDC = "0.0.429274";
+// Derived from HEDERA_NETWORK like every other network-dependent value in the
+// project (scripts/buy.mjs, the sidecar, Hedera::Network). Hardcoding testnet
+// here would silently keep this buyer on testnet while the rest of a mainnet
+// deployment moved — the one switch has to flip everything or it flips nothing.
+const NET = process.env.HEDERA_NETWORK === "mainnet" ? "mainnet" : "testnet";
+const USDC = NET === "mainnet" ? "0.0.456858" : "0.0.429274"; // native USDC per network
 const ASSET_IDS = { usdc: USDC, hbar: "0.0.0" };
 
 export async function purchase({ base, modelId, license, asset, accountId, privateKey }) {
@@ -19,7 +24,7 @@ export async function purchase({ base, modelId, license, asset, accountId, priva
   if (!accept) throw new Error(`server does not accept asset "${asset}"`);
 
   const signer = createClientHederaSigner(accountId, PrivateKey.fromStringECDSA(privateKey), {
-    network: "hedera:testnet",
+    network: `hedera:${NET}`,
   });
   const httpClient = new x402HTTPClient(new x402Client().register("hedera:*", new ExactHederaScheme(signer)));
   const paymentRequired = httpClient.getPaymentRequiredResponse((n) => leg1.headers.get(n), required);

@@ -8,7 +8,22 @@ import { z } from "zod";
 import { purchase } from "./purchase.mjs";
 
 const BASE = (process.env.PRINTWRIGHT_URL || "http://localhost:3000").replace(/\/$/, "");
-const MAX_SPEND_CENTS = Number(process.env.MAX_SPEND_CENTS || 500);
+
+// The spend cap is the only thing standing between an autonomous agent and an
+// unbounded purchase, so a malformed value must never silently disable it:
+// Number("abc") is NaN, and `price > NaN` is false, which would wave every
+// offer through. Refuse to start instead.
+export const MAX_SPEND_CENTS = parseSpendCap(process.env.MAX_SPEND_CENTS);
+
+function parseSpendCap(raw) {
+  if (raw === undefined || raw === "") return 500;
+  const cap = Number(raw);
+  if (!Number.isFinite(cap) || cap < 0) {
+    console.error(`MAX_SPEND_CENTS must be a non-negative number of cents (got ${JSON.stringify(raw)})`);
+    process.exit(1);
+  }
+  return cap;
+}
 
 const server = new McpServer({ name: "printwright", version: "0.1.0" });
 

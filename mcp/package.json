@@ -1,16 +1,32 @@
 {
   "name": "printwright-mcp",
-  "version": "1.0.0",
-  "main": "index.js",
+  "version": "0.1.0",
+  "description": "MCP server exposing the Printwright marketplace to AI assistants: search, inspect, buy a print license via x402 on Hedera, and verify a license certificate against the public mirror node.",
+  "type": "module",
+  "main": "server.mjs",
+  "bin": {
+    "printwright-mcp": "server.mjs"
+  },
+  "files": [
+    "server.mjs",
+    "purchase.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "test": "node --test test/"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "description": "MCP server exposing the Printwright marketplace to AI assistants",
-  "type": "module",
-  "private": "true",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Nikodem01/printwright-x402"
+  },
+  "homepage": "https://github.com/Nikodem01/printwright-x402",
   "dependencies": {
     "@hiero-ledger/sdk": "^2.85.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
