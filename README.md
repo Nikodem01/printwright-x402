@@ -63,6 +63,7 @@ Prereqs: Ruby 3.3, Postgres (with `pg_trgm`), Node ≥ 20, and a funded
 testnet USDC comes from the [Circle faucet](https://faucet.circle.com) — pick Hedera).
 
 ```bash
+sudo apt install postgresql-16-pgvector  # or your platform's pgvector build
 cp .env.example .env                     # fill in the marked values
 echo "HEDERA_PRIVATE_KEY=0x..." > sidecar/.env   # operator key stays with the signer
 bin/setup --skip-server                  # bundle + db:prepare
@@ -140,7 +141,7 @@ Hedera account.
 - Print-server royalty hook (OctoPrint): one `commercial_unit` purchase per job start
 - On-chain royalty splits (designer + marketplace legs in one transfer)
 - Mainnet + listing in the x402 ecosystem directory / x402scan
-- Semantic search (pgvector) and a conversational shopkeeper over the same agent API
+- A conversational shopkeeper over the same agent API
 
 ## Status / usage so far
 

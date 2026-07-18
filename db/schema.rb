@@ -10,10 +10,11 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_17_000007) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_18_212711) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
+  enable_extension "vector"
 
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
@@ -129,6 +130,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_000007) do
     t.datetime "created_at", null: false
     t.text "description"
     t.bigint "designer_id", null: false
+    t.vector "embedding", limit: 768
+    t.string "embedding_text_digest"
     t.string "file_hash"
     t.jsonb "printability", default: {}, null: false
     t.string "slug", null: false
@@ -138,6 +141,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_000007) do
     t.datetime "updated_at", null: false
     t.datetime "warranty_accepted_at"
     t.index ["designer_id"], name: "index_models3d_on_designer_id"
+    t.index ["embedding"], name: "index_models3d_on_embedding", opclass: :vector_cosine_ops, using: :hnsw
     t.index ["slug"], name: "index_models3d_on_slug", unique: true
     t.index ["status"], name: "index_models3d_on_status"
     t.index ["tags"], name: "index_models3d_on_tags", using: :gin
