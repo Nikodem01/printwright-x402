@@ -83,7 +83,9 @@ Troubleshooting: if your Postgres needs a password or a non-default socket, expo
 `DATABASE_URL` (e.g. `postgresql://user:pass@localhost/printwright_x402_development`).
 
 The x402 facilitator is hosted ([Blocky402 testnet](https://blocky402.com), open access) —
-nothing to run. `docker-compose up` starts Postgres + sidecar if you prefer containers.
+nothing to run. It is not a single point of dependency: [`selfhost-facilitator/`](selfhost-facilitator/)
+is a working fallback you can run yourself, and switching is one env var
+(`X402_FACILITATOR_URL`). `docker-compose up` starts Postgres + sidecar if you prefer containers.
 
 **Browser checkout:** the storefront's Buy button signs through a local demo-wallet daemon
 (`BUYER_ACCOUNT_ID=... BUYER_PRIVATE_KEY=0x... node scripts/demo-wallet.mjs`) — a separate

@@ -1,0 +1,15 @@
+{
+  "name": "printwright-selfhost-facilitator",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Self-hosted x402 facilitator (Hedera exact scheme) — the fallback for the hosted Blocky402 endpoint.",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@x402/core": "^2.19.0",
+    "@x402/hedera": "^2.19.0",
+    "express": "^4.21.2"
+  }
+}
