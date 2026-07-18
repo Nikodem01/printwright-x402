@@ -1,0 +1,31 @@
+<% content_for :title, "Pricing — Printwright" %>
+<div class="container" style="max-width: 720px">
+  <h1>Pricing</h1>
+  <p class="t-small muted">The real economics, not a rate card — there is no paid tier here to
+    upsell.</p>
+
+  <h2>Designers</h2>
+  <ul>
+    <li>You set your own per-print price on every license offer.</li>
+    <li>You keep <strong>90%</strong> of every sale; the platform fee is <strong>10%</strong>
+      (recorded per-sale in an immutable ledger, visible on your statement).</li>
+    <li>No listing fees, no subscription.</li>
+  </ul>
+
+  <h2>Buyers</h2>
+  <ul>
+    <li>Pay the offer price, settled on-chain in HBAR or USDC on Hedera
+      <%= Hedera::Network.name %>. No card processing, no account required for the agent
+      door.</li>
+    <li>Network fees — a fraction of a cent per purchase — are paid by the facilitator, not
+      added to the offer price.</li>
+    <li>The license certificate anchored to Hedera Consensus Service costs roughly $0.0001 to
+      submit; that cost is absorbed by the platform, not billed separately.</li>
+  </ul>
+
+  <h2>Settlement</h2>
+  <p>Every payment and every certificate is a real transaction on Hedera
+    <%= Hedera::Network.name %> — see the <%= link_to "API docs", docs_path %> for the exact
+    negotiation, or <%= link_to "verify a certificate", verify_path(cert_id: "pw-000038") %>
+    against the public mirror node.</p>
+</div>

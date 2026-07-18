@@ -1,5 +1,45 @@
 <% content_for :title, @query.present? ? "#{@query} — Printwright" : "Printwright — every print, licensed" %>
 
+<section class="hero">
+  <h1>Every print, licensed.</h1>
+  <p class="t-small muted">A marketplace for licensed 3D-printable models. Every purchase mints
+    a tamper-evident license certificate on Hedera — proof of what was licensed, to whom, and
+    when, checkable by anyone, independent of Printwright.</p>
+</section>
+
+<div class="doors-grid" role="group" aria-label="Three ways to buy">
+  <div class="door">
+    <h3>Agents</h3>
+    <p class="t-small">REST + x402 over plain HTTP: request a download, get a
+      <span class="mono">402</span> with payment requirements, pay in HBAR or USDC on Hedera,
+      get the file and certificate back. No account, no card, no API key.
+      <%= link_to "API docs →", docs_path %></p>
+  </div>
+  <div class="door">
+    <h3>Humans</h3>
+    <p class="t-small">This storefront — the Buy button runs the same x402 negotiation, signed
+      by a wallet instead of a script.</p>
+  </div>
+  <div class="door">
+    <h3>Print servers</h3>
+    <p class="t-small">A print job can pay a per-print royalty automatically at job start,
+      before the job runs.</p>
+  </div>
+</div>
+
+<div class="steps-strip" role="group" aria-label="How a purchase works">
+  <div class="step"><span class="step-num">1</span> Search the catalog</div>
+  <div class="step"><span class="step-num">2</span> <span class="mono">402</span> payment required</div>
+  <div class="step"><span class="step-num">3</span> Pay on Hedera (HBAR/USDC)</div>
+  <div class="step"><span class="step-num">4</span> File + certificate, on-chain</div>
+</div>
+
+<div class="trust-strip t-small">
+  <span>Testnet deployment — settlements are real Hedera testnet transactions with no monetary
+    value.</span>
+  <span><%= link_to "Verify a real certificate ↗", verify_path(cert_id: "pw-000038"), class: "mono" %></span>
+</div>
+
 <div class="filters" role="group" aria-label="Filters">
   <%= link_to "Support-free",
         url_for(request.query_parameters.merge(supports_free: params[:supports_free].present? ? nil : "1").compact),

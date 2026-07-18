@@ -1,0 +1,44 @@
+<% content_for :title, "About — Printwright" %>
+<div class="container" style="max-width: 720px">
+  <h1>About Printwright</h1>
+  <p class="t-small muted"><strong>Testnet build</strong> — this is a working demonstration on
+    Hedera testnet, not a production marketplace. Settlements are real testnet transactions;
+    the tokens have no monetary value.</p>
+
+  <h2>The problem</h2>
+  <p>Designers who sell 3D-printable models have no enforceable record of what was actually
+    licensed to whom — a sale is a download link and an invoice, easy to dispute and easy to
+    ignore. Software agents have no way to buy a licensed file at all: there is no account to
+    create, no card to charge, nothing an agent can act on without a human in the loop.</p>
+
+  <h2>What Printwright is</h2>
+  <p>A marketplace for <strong>licensed</strong> 3D-printable models. Designers upload a model
+    and set a per-print royalty; buyers — human or software agent — pay for a license over
+    <a class="mono" href="<%= Hedera::Network.hashscan_base %>">Hedera <%= Hedera::Network.name %></a>
+    using the x402 protocol. Every purchase mints a license certificate on Hedera Consensus
+    Service: a tamper-evident public record of "unit N of model X, licensed at time T,"
+    verifiable by anyone on the public mirror node, independent of Printwright.</p>
+
+  <h2>How the certificate rail works</h2>
+  <p>Each license offer carries a price and terms. When a buyer pays, the marketplace submits a
+    message to an HCS topic — id
+    <a class="mono" href="<%= Hedera::Network.hashscan_base %>/topic/<%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %>"><%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %></a>
+    — recording the model, the unit serial, the license terms hash, and the payment
+    transaction. Consensus ordering makes the record tamper-evident; anyone can read it back
+    from the public mirror node and compare it against the marketplace's copy, field by field,
+    from the <%= link_to "verify page", verify_path(cert_id: "pw-000038") %>.</p>
+
+  <h2>Three doors, one marketplace</h2>
+  <ul>
+    <li><strong>Agents</strong> — REST + x402 over plain HTTP, no account or API key. See the
+      <%= link_to "API docs", docs_path %>.</li>
+    <li><strong>Humans</strong> — this storefront, with a wallet as the signer.</li>
+    <li><strong>Print servers</strong> — a print job can pay a per-print royalty automatically
+      at job start.</li>
+  </ul>
+
+  <h2>Project status</h2>
+  <p>Printwright runs today on Hedera testnet (HBAR and native USDC). It is a hackathon-stage
+    build: functional end to end, not yet audited, and not a claim of production readiness or
+    real revenue.</p>
+</div>

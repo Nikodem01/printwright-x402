@@ -50,4 +50,13 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
     get model_page_path("hidden-draft")
     assert_response :not_found
   end
+
+  test "landing page narrates the three doors and how a purchase works" do
+    get root_path
+    assert_response :success
+    assert_select "h3", text: "Agents"
+    assert_select "h3", text: "Humans"
+    assert_select "h3", text: /print server/i
+    assert_select "a[href=?]", docs_path
+  end
 end

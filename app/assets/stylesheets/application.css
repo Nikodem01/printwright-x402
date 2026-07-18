@@ -71,9 +71,13 @@ a.mono, .mono a { color: var(--chain); text-decoration: underline; }
 .site-header .container { display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
 .wordmark { font-size: 20px; font-weight: 700; color: var(--text); text-decoration: none; }
 .wordmark .tagline { display: block; font-size: 12px; font-weight: 400; color: var(--text-muted); }
-.search-form { flex: 1; display: flex; gap: var(--s-2); min-width: 260px; }
+/* min-width: min(...) so the form still claims a sensible width on wide screens
+   but may shrink below it at 360px instead of pushing the button off-screen. */
+.search-form { flex: 1; display: flex; gap: var(--s-2); min-width: min(260px, 100%); }
 .search-form input[type="search"] {
-  flex: 1; padding: var(--s-2) var(--s-3); font: inherit;
+  /* flex items default to min-width:auto — without this the input refuses to
+     shrink under its intrinsic size and overflows the header on narrow phones. */
+  flex: 1; min-width: 0; padding: var(--s-2) var(--s-3); font: inherit;
   border: 1px solid var(--border); border-radius: var(--radius-s);
   background: var(--bg); color: var(--text);
 }
@@ -215,6 +219,33 @@ a.mono, .mono a { color: var(--chain); text-decoration: underline; }
 .field-row { display: flex; gap: var(--s-3); flex-wrap: wrap; }
 .field-row label { flex: 1; min-width: 140px; }
 fieldset.field { border: 1px solid var(--border); border-radius: var(--radius-s); padding: var(--s-3); }
+
+/* S1 landing narrative (V26) */
+.hero { max-width: var(--measure); margin: var(--s-4) 0 var(--s-3); }
+.hero p { margin: 0; }
+.doors-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--s-3); margin-bottom: var(--s-3);
+}
+.door {
+  background: var(--bg-raised); border: 1px solid var(--border);
+  border-radius: var(--radius-m); padding: var(--s-3);
+}
+.door h3 { margin-bottom: var(--s-1); font-size: 16px; }
+.door p { margin: 0; }
+.steps-strip {
+  display: flex; gap: var(--s-3); flex-wrap: wrap; align-items: center;
+  margin-bottom: var(--s-3); padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--border); border-radius: var(--radius-s);
+  background: var(--bg-raised); font-size: 14px;
+}
+.step { display: flex; align-items: center; gap: var(--s-1); }
+.step-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: var(--radius-pill);
+  background: var(--action); color: var(--action-contrast);
+  font-size: 12px; font-weight: 700;
+}
 
 @media print {
   .site-header, .site-footer, .copy-btn, .evidence-footer p { display: none; }
