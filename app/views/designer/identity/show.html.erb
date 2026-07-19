@@ -1,0 +1,30 @@
+<% content_for :title, "Verify identity — Printwright" %>
+<h1>Verify a public profile</h1>
+<p class="muted">Prove control without sharing a password: place a short-lived, Printwright-signed token in your public bio.</p>
+
+<% if Current.designer.identity_verified? %>
+  <div class="flash flash-ok">
+    Verified from <%= link_to Current.designer.verified_profile_url, verified_profile_designer_path(Current.designer),
+          target: "_blank", rel: "noopener" %>.
+  </div>
+<% end %>
+
+<%= form_with url: designer_identity_path do %>
+  <div class="field">
+    <%= label_tag :profile_url, "Public profile URL" %>
+    <%= url_field_tag :profile_url, @verification&.profile_url,
+          placeholder: "https://www.printables.com/@your-name", required: true %>
+  </div>
+  <%= submit_tag "Create signed proof", class: "btn btn-primary" %>
+<% end %>
+
+<% if @verification&.pending? || @verification&.failed? %>
+  <h2>Current challenge</h2>
+  <ol>
+    <li>Copy this exact token into the public profile bio:</li>
+  </ol>
+  <pre class="code-block"><code class="mono"><%= @verification.challenge_token %></code></pre>
+  <p class="t-small muted">Expires <%= time_ago_in_words(@verification.expires_at) %> from now.</p>
+  <%= button_to "Check public profile", verify_designer_identity_path,
+        params: { verification_id: @verification.id }, class: "btn" %>
+<% end %>

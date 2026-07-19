@@ -3,6 +3,7 @@ class Designer < ApplicationRecord
   has_many :sessions, dependent: :destroy
   has_many :models3d, class_name: "Model3d", dependent: :destroy
   has_many :catalog_imports, dependent: :destroy
+  has_many :profile_verifications, dependent: :destroy
   has_many :admin_audit_logs, foreign_key: :actor_designer_id
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
@@ -14,6 +15,10 @@ class Designer < ApplicationRecord
 
   def payout_account_verified?
     hedera_account_id.present? && payout_account_verified_at.present?
+  end
+
+  def identity_verified?
+    identity_verified_at.present? && verified_profile_url.present?
   end
 
   # Runs the mirror check and stamps the result. Returns the verified? state.

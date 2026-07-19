@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_19_193000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_19_203000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -90,11 +90,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_193000) do
     t.string "display_name", null: false
     t.string "email_address", null: false
     t.string "hedera_account_id"
+    t.datetime "identity_verified_at"
     t.string "nft_collection_id"
     t.string "password_digest", null: false
     t.datetime "payout_account_verified_at"
     t.datetime "updated_at", null: false
     t.boolean "verified", default: false, null: false
+    t.string "verified_profile_url"
     t.index ["admin"], name: "index_designers_on_admin"
     t.index ["email_address"], name: "index_designers_on_email_address", unique: true
   end
@@ -201,6 +203,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_193000) do
     t.index ["title"], name: "index_models3d_on_title_trgm", opclass: :gin_trgm_ops, using: :gin
   end
 
+  create_table "profile_verifications", force: :cascade do |t|
+    t.text "challenge_token", null: false
+    t.datetime "created_at", null: false
+    t.bigint "designer_id", null: false
+    t.datetime "expires_at", null: false
+    t.string "host", null: false
+    t.text "last_error"
+    t.string "profile_url", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.datetime "verified_at"
+    t.index ["designer_id", "status"], name: "index_profile_verifications_on_designer_id_and_status"
+    t.index ["designer_id"], name: "index_profile_verifications_on_designer_id"
+  end
+
   create_table "purchases", force: :cascade do |t|
     t.string "amount_base_units"
     t.string "asset"
@@ -243,6 +260,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_193000) do
   add_foreign_key "model_files", "models3d"
   add_foreign_key "models3d", "catalog_imports"
   add_foreign_key "models3d", "designers"
+  add_foreign_key "profile_verifications", "designers"
   add_foreign_key "purchases", "license_offers"
   add_foreign_key "sessions", "designers"
 end

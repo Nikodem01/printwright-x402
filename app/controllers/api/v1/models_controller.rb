@@ -70,7 +70,7 @@ class Api::V1::ModelsController < Api::V1::BaseController
       download_url: "#{api_v1_model_url(model)}/download?license={kind}",
       designer: {
         name: model.designer.display_name,
-        verified: model.designer.verified,
+        verified: model.designer.identity_verified?,
         hedera_account_id: model.designer.hedera_account_id
       }
     )

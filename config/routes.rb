@@ -1,13 +1,19 @@
 Rails.application.routes.draw do
   resource :session
   resources :passwords, param: :token, only: %i[new create edit update]
-  resources :designers, only: %i[new create show]
+  resources :designers, only: %i[new create show] do
+    member { get :verified_profile }
+  end
 
   namespace :designer do
     resources :models, except: %i[destroy show] do
       member { post :publish }
     end
     resources :imports, only: %i[index new create destroy]
+    resource :identity, only: %i[show create], controller: :identity do
+      post :verify
+    end
+    resource :takedown_packet, only: %i[new create]
     resources :sales, only: :index
   end
 

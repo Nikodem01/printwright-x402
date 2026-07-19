@@ -1,6 +1,10 @@
 <% content_for :title, "#{@designer.display_name} — Printwright" %>
 <div class="designer-page">
-  <h1><%= @designer.display_name %><%= " ✓" if @designer.verified %></h1>
+  <h1><%= @designer.display_name %><%= " ✓" if @designer.identity_verified? %></h1>
+  <% if @designer.identity_verified? %>
+    <p class="t-small"><%= link_to "Verified public profile", verified_profile_designer_path(@designer),
+          target: "_blank", rel: "noopener" %></p>
+  <% end %>
   <% if @designer.bio.present? %>
     <div class="prose"><%= simple_format(@designer.bio) %></div>
   <% end %>

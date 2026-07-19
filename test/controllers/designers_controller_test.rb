@@ -5,7 +5,8 @@ class DesignersControllerTest < ActionDispatch::IntegrationTest
     @designer = Designer.create!(
       email_address: "profile@example.com", password: "s3curepass",
       display_name: "Profile Studio", bio: "We make desk gadgets.",
-      hedera_account_id: "0.0.9604186", verified: true
+      hedera_account_id: "0.0.9604186", verified: true,
+      identity_verified_at: Time.current, verified_profile_url: "https://github.com/profile-studio"
     )
     @published = Model3d.create!(
       designer: @designer, title: "Public Widget", slug: "public-widget",
@@ -35,7 +36,7 @@ class DesignersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "unverified designer gets no checkmark" do
-    @designer.update!(verified: false)
+    @designer.update!(verified: false, identity_verified_at: nil, verified_profile_url: nil)
     get designer_path(@designer)
     assert_select "h1", text: /Profile Studio/
     assert_select "h1", { text: /✓/, count: 0 }

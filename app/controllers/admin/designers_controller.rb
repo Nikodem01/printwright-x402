@@ -6,15 +6,19 @@ class Admin::DesignersController < Admin::BaseController
   before_action :set_designer
 
   def toggle_verification
-    @designer.transaction do
-      @designer.update!(verified: !@designer.verified?)
-      audit!("designer_verification_toggled", subject: @designer,
-        details: { verified: @designer.verified? })
+    unless @designer.identity_verified?
+      audit_failure!("designer_verification_revoke", @designer, StandardError.new("no verified proof"))
+      return redirect_to admin_root_path, alert: "Identity badges can only be earned through public-profile proof."
     end
-    redirect_to admin_root_path,
-      notice: "#{@designer.display_name} is now #{@designer.verified? ? 'verified' : 'unverified'}."
+
+    @designer.transaction do
+      @designer.update!(verified: false, identity_verified_at: nil, verified_profile_url: nil)
+      @designer.profile_verifications.verified.update_all(status: "revoked", updated_at: Time.current)
+      audit!("designer_verification_revoked", subject: @designer)
+    end
+    redirect_to admin_root_path, notice: "#{@designer.display_name}'s identity badge was revoked."
   rescue StandardError => error
-    audit_failure!("designer_verification_toggle", @designer, error)
+    audit_failure!("designer_verification_revoke", @designer, error)
     redirect_to admin_root_path, alert: "Designer update failed: #{error.message}"
   end
 

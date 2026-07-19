@@ -104,11 +104,14 @@
       <% @designers.each do |designer| %>
         <tr>
           <td><%= designer.display_name %><br><span class="t-caption muted"><%= designer.email_address %></span></td>
-          <td><span class="badge <%= designer.verified? ? "badge-ok" : "badge-pending" %>"><%= designer.verified? ? "verified" : "unverified" %></span></td>
+          <td><span class="badge <%= designer.identity_verified? ? "badge-ok" : "badge-pending" %>"><%= designer.identity_verified? ? "profile verified" : "unverified" %></span></td>
           <td><span class="mono"><%= designer.hedera_account_id.presence || "none" %></span><br><span class="t-caption"><%= designer.payout_account_verified? ? "mirror-ready" : "not verified" %></span></td>
           <td>
-            <%= button_to(designer.verified? ? "Mark unverified" : "Mark verified",
-                  toggle_verification_admin_designer_path(designer), class: "linklike") %>
+            <% if designer.identity_verified? %>
+              <%= button_to "Revoke identity badge", toggle_verification_admin_designer_path(designer), class: "linklike" %>
+            <% else %>
+              <span class="t-caption muted">self-service proof required</span>
+            <% end %>
             <% if designer.hedera_account_id.present? %>
               <%= button_to "Recheck payout", verify_payout_admin_designer_path(designer), class: "linklike" %>
             <% end %>

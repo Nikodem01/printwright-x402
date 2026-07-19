@@ -34,7 +34,12 @@
             owed
           <% end %>
         </td>
-        <td><%= link_to purchase.license.cert_id, verify_path(purchase.license.verify_slug), class: "mono" if purchase.license %></td>
+        <td>
+          <% if purchase.license %>
+            <%= link_to purchase.license.cert_id, verify_path(purchase.license.verify_slug), class: "mono" %><br>
+            <%= link_to "takedown packet", new_designer_takedown_packet_path(cert_id: purchase.license.cert_id), class: "t-caption" %>
+          <% end %>
+        </td>
       </tr>
     <% end %>
   </table>

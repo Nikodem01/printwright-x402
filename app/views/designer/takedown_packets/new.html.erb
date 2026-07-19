@@ -1,0 +1,10 @@
+<% content_for :title, "Takedown packet — Printwright" %>
+<h1>Generate a takedown packet</h1>
+<p class="muted">Creates a PDF notice template with certificate, settlement, model-hash, and HCS mirror evidence. It is not legal advice.</p>
+
+<%= form_with url: designer_takedown_packet_path do %>
+  <div class="field"><%= label_tag :cert_id, "Certificate ID" %><%= text_field_tag :cert_id, @cert_id, required: true %></div>
+  <div class="field"><%= label_tag :infringing_url, "Reported URL" %><%= url_field_tag :infringing_url, nil, required: true %></div>
+  <div class="field"><%= label_tag :details, "Additional context" %><%= text_area_tag :details, nil, rows: 5, maxlength: 2000 %></div>
+  <%= submit_tag "Download evidence PDF", class: "btn btn-primary" %>
+<% end %>

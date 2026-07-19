@@ -7,6 +7,7 @@
       <%= link_to "Models", designer_models_path %>
       <%= link_to "Upload", new_designer_model_path %>
       <%= link_to "Bulk import", designer_imports_path %>
+      <%= link_to "Identity", designer_identity_path %>
       <%= link_to "Sales", designer_sales_path %>
       <%= link_to "Operator", admin_root_path if Current.designer&.admin? %>
       <%= button_to "Sign out", session_path, method: :delete, class: "linklike" %>

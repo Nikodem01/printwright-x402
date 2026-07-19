@@ -14,7 +14,10 @@ class AdminOperationsTest < RackSystemTestCase
     @admin.update!(hedera_account_id: "0.0.9604186")
     @admin.update!(payout_account_verified_at: Time.current)
     @designer = designers(:two)
-    @designer.update!(verified: false)
+    @designer.update!(
+      verified: true, identity_verified_at: Time.current,
+      verified_profile_url: "https://github.com/demo-designer-two"
+    )
 
     model = Model3d.create!(
       designer: @admin, title: "Operator Fixture", slug: "operator-#{SecureRandom.hex(4)}"
@@ -64,15 +67,15 @@ class AdminOperationsTest < RackSystemTestCase
     assert_text "queued for retry"
     assert enqueued_jobs.any? { |job| job[:job] == CertMintJob && job[:args] == [ @license.id ] }
 
-    within("tr", text: @designer.email_address) { click_button "Mark verified" }
-    assert_text "is now verified"
-    assert @designer.reload.verified?
+    within("tr", text: @designer.email_address) { click_button "Revoke identity badge" }
+    assert_text "identity badge was revoked"
+    assert_not @designer.reload.identity_verified?
 
     actions = AdminAuditLog.order(:id).pluck(:action)
     assert_includes actions, "purchase_reconcile_completed"
     assert_includes actions, "purchase_refund_completed"
     assert_includes actions, "certificate_retry_enqueued"
-    assert_includes actions, "designer_verification_toggled"
+    assert_includes actions, "designer_verification_revoked"
     assert AdminAuditLog.all.all?(&:readonly?)
   end
 

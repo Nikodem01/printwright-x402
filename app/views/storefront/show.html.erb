@@ -59,7 +59,7 @@
                 data-action="clipboard#copy" data-clipboard-full-value="<%= @model.file_hash %>">copy</button>
       </span>
       <span class="muted"><%= pluralize(@licenses_issued, "license") %> issued</span>
-      <span>by <strong><%= link_to @model.designer.display_name, designer_path(@model.designer), style: "color: inherit" %></strong><%= " ✓" if @model.designer.verified %></span>
+      <span>by <strong><%= link_to @model.designer.display_name, designer_path(@model.designer), style: "color: inherit" %></strong><%= " ✓" if @model.designer.identity_verified? %></span>
     </div>
 
     <h1 style="margin-top: var(--s-5)"><%= @model.title %></h1>
