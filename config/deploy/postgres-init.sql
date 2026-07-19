@@ -1,0 +1,3 @@
+CREATE DATABASE printwright_x402_production_cache OWNER printwright_x402;
+CREATE DATABASE printwright_x402_production_queue OWNER printwright_x402;
+CREATE DATABASE printwright_x402_production_cable OWNER printwright_x402;

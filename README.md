@@ -138,7 +138,8 @@ Troubleshooting: if your Postgres needs a password or a non-default socket, expo
 
 Production stores paid model files in a private S3-compatible bucket and runs an encrypted
 custom-format PostgreSQL dump to that bucket nightly. See [docs/OPERATIONS.md](docs/OPERATIONS.md)
-for required `S3_*` configuration, on-demand backup, and guarded restore rehearsal steps.
+for the parameterized Kamal/pgvector/sidecar deployment, required storage and SMTP configuration,
+on-demand backup, and guarded restore rehearsal steps.
 
 The x402 facilitator is hosted ([Blocky402 testnet](https://blocky402.com), open access) —
 nothing to run. It is not a single point of dependency: [`selfhost-facilitator/`](selfhost-facilitator/)

@@ -61,6 +61,8 @@ jobs:
       - name: Sidecar tests
         working-directory: sidecar
         run: npm ci && npm test
+      - name: Sidecar production image
+        run: docker build -t printwright-sidecar:ci sidecar
 
   client:
     runs-on: ubuntu-latest

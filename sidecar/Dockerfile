@@ -1,8 +1,13 @@
-FROM node:20-slim
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
-COPY . .
-ENV SIDECAR_HOST=0.0.0.0
+FROM node:20-bookworm-slim
+
+ENV NODE_ENV=production
+WORKDIR /sidecar
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+COPY app.mjs hedera.mjs server.mjs ./
+
+USER node
 EXPOSE 4021
 CMD ["node", "server.mjs"]

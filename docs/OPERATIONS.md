@@ -28,6 +28,39 @@ or require a demo buyer key—smoke, buyer funding, facilitator startup and netw
 remain external-only by design. Moving those keys into Rails to make them web buttons would
 violate the custody map at the end of this document.
 
+## First production deploy (Kamal)
+
+`config/deploy.yml` is a single-host topology: kamal-proxy terminates TLS, the Rails container
+runs Solid Queue inside Puma, and private-network accessories run pgvector/Postgres and the HCS
+sidecar. The sidecar is a separate image and is the only container receiving Hedera private keys.
+Copy `.env.example` values into the operator shell or a password manager; `.kamal/secrets` contains
+only indirection and must never contain literal values.
+
+Build and push the two images, validate the rendered manifest, then boot accessories before setup:
+
+```bash
+docker build -t "$SIDECAR_IMAGE" sidecar && docker push "$SIDECAR_IMAGE"
+bin/kamal config
+bin/kamal accessory boot db
+bin/kamal accessory boot sidecar
+bin/kamal setup
+```
+
+DNS for `APP_HOST` must already point to `DEPLOY_HOST`, with inbound 80/443 open for Let's Encrypt.
+The database initializer creates the cache, queue and cable databases; Rails migrations enable
+`vector` in the primary pgvector image. Verify the target and background worker:
+
+```bash
+bin/kamal app exec 'bin/rails runner "puts ActiveRecord::Base.connection.extension_enabled?(:vector)"'
+bin/kamal app exec 'bin/rails runner "puts SolidQueue::Process.count"'
+curl --fail "https://$APP_HOST/up"
+```
+
+Production SMTP raises delivery errors. After configuring the sender, request a designer password
+reset and a buyer-library link through the public UI, then confirm both arrive and open the expected
+HTTPS origin. Configure an external uptime monitor against `https://$APP_HOST/up`; `/up` is process
+health only, so retain the paid smoke and HCS heartbeat checks below.
+
 ## Daily / after any incident: smoke
 
 ```bash

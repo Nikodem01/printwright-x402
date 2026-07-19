@@ -87,6 +87,7 @@ test:
 production:
   primary: &primary_production
     <<: *default
+    host: <%= ENV.fetch("DB_HOST", "localhost") %>
     database: printwright_x402_production
     username: printwright_x402
     password: <%= ENV["PRINTWRIGHT_X402_DATABASE_PASSWORD"] %>

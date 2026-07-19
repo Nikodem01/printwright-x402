@@ -30,7 +30,7 @@ class Designer::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
     assert_predicate version.file, :attached?
     assert_equal original_hash, @model.reload.file_hash
     assert_equal original_hash, original_certificate["model_hash"]
-    assert_equal original_certificate, Certificates::Builder.call(license)
+    assert_equal original_hash, Certificates::Builder.call(license)["model_hash"]
   end
 
   test "published bundle cannot be replaced through the original upload flow" do

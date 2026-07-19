@@ -1,5 +1,8 @@
 if Rails.env.production? && !ENV["SECRET_KEY_BASE_DUMMY"]
-  required = %w[S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY S3_BUCKET]
+  required = %w[
+    APP_HOST MAIL_FROM S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY S3_BUCKET
+    SMTP_ADDRESS SMTP_USERNAME SMTP_PASSWORD
+  ]
   missing = required.select { |name| ENV[name].blank? }
   raise "Missing production configuration: #{missing.join(', ')}" if missing.any?
 
