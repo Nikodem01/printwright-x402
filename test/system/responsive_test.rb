@@ -35,8 +35,22 @@ class ResponsiveTest < ApplicationSystemTestCase
       paths.each do |name, path|
         visit path
         overflow = page.evaluate_script("document.documentElement.scrollWidth - document.documentElement.clientWidth")
+        offenders = if overflow > 1
+          page.evaluate_script(<<~JS)
+            Array.from(document.querySelectorAll("body *"))
+              .filter((element) => !element.closest(".table-scroll"))
+              .filter((element) => element.getBoundingClientRect().right > document.documentElement.clientWidth + 1)
+              .slice(0, 5)
+              .map((element) => {
+                const style = getComputedStyle(element);
+                return `${element.tagName.toLowerCase()}.${element.className}: ${element.textContent.slice(0, 80)} ` +
+                  `[white-space=${style.whiteSpace}, overflow-wrap=${style.overflowWrap}, word-break=${style.wordBreak}]`;
+              })
+              .join(", ")
+          JS
+        end
         assert_operator overflow, :<=, 1,
-          "#{name} (#{path}) overflows by #{overflow}px at #{width}px wide"
+          "#{name} (#{path}) overflows by #{overflow}px at #{width}px wide: #{offenders}"
       end
     end
   end

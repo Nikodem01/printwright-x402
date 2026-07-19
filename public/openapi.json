@@ -2,10 +2,10 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Printwright API",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; every purchase mints a public HCS license certificate.",
     "contact": { "url": "https://github.com/Nikodem01/printwright-x402" },
-    "x-guidance": "Search GET /api/v1/models, inspect an offer with GET /api/v1/models/{id}, then call GET /api/v1/models/{id}/download?license=personal or commercial_unit. The unpaid download returns an x402 v2 challenge; sign one exact payment option and retry the same URL. The paid response contains expiring file grants, the license, and public Hedera transaction/certificate references."
+    "x-guidance": "Search GET /api/v1/models, inspect an offer with GET /api/v1/models/{id}, then call GET /api/v1/models/{id}/download?license=personal or commercial_unit. The unpaid download returns an x402 v2 challenge; sign one exact payment option and retry the same URL. For a zero-funds rehearsal, send X-Sandbox: true on both download requests; this returns hedera:sandbox artifacts that are explicitly not payments or licenses."
   },
   "servers": [{ "url": "/api/v1" }],
   "paths": {
@@ -52,7 +52,7 @@
       "get": {
         "operationId": "downloadModel",
         "summary": "The paid endpoint: x402 negotiation",
-        "description": "Without a payment header, responds 402 with PaymentRequirements (JSON body AND base64 PAYMENT-REQUIRED header). Retry the same request with the base64 PaymentPayload in the PAYMENT-SIGNATURE header (X-PAYMENT also accepted). The server verifies and settles through an x402 facilitator on Hedera testnet, then returns the file grant, license and certificate.",
+        "description": "Without a payment header, responds 402 with PaymentRequirements (JSON body AND base64 PAYMENT-REQUIRED header). Retry the same request with the base64 PaymentPayload in the PAYMENT-SIGNATURE header (X-PAYMENT also accepted). The server verifies and settles through an x402 facilitator on Hedera. Set X-Sandbox: true on both legs for the built-in zero-funds mock facilitator; sandbox results never contain printable geometry or on-chain proof.",
         "x-payment-info": {
           "price": { "mode": "dynamic", "currency": "USD", "min": "0.01", "max": "10000.00" },
           "protocols": [{ "x402": {} }]
@@ -60,20 +60,25 @@
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
           { "name": "license", "in": "query", "schema": { "type": "string", "enum": ["personal", "commercial_unit"], "default": "personal" } },
-          { "name": "PAYMENT-SIGNATURE", "in": "header", "schema": { "type": "string" }, "description": "base64 x402 PaymentPayload (v2). X-PAYMENT is accepted as an alias." }
+          { "name": "PAYMENT-SIGNATURE", "in": "header", "schema": { "type": "string" }, "description": "base64 x402 PaymentPayload (v2). X-PAYMENT is accepted as an alias." },
+          { "name": "X-Sandbox", "in": "header", "schema": { "type": "string", "const": "true" }, "description": "Opt into the local mock facilitator and throwaway topic. Send on both the 402 probe and retry. No credentials or funds; no real license or printable model." }
         ],
         "responses": {
           "402": {
             "description": "Payment required — PaymentRequired object in body and PAYMENT-REQUIRED header. `error` is \"payment required\" when no payment is attached, or \"invalid_payment_requirements\" when the attached payment matches none of the offer's `accepts` entries (still a fresh PaymentRequired body to retry against).",
             "headers": {
               "PAYMENT-REQUIRED": { "schema": { "type": "string" }, "description": "base64 of the same PaymentRequired JSON" },
-              "WWW-Authenticate": { "schema": { "type": "string", "const": "x402" }, "description": "Marks the challenge as x402 for generic HTTP-payment discovery clients" }
+              "WWW-Authenticate": { "schema": { "type": "string", "const": "x402" }, "description": "Marks the challenge as x402 for generic HTTP-payment discovery clients" },
+              "X-Printwright-Sandbox": { "schema": { "type": "string", "const": "true" }, "description": "Present only on an opted-in sandbox challenge" }
             },
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaymentRequired" } } }
           },
           "200": {
             "description": "Paid — delivery payload; settlement receipt in PAYMENT-RESPONSE header (X-PAYMENT-RESPONSE mirror)",
-            "headers": { "PAYMENT-RESPONSE": { "schema": { "type": "string" }, "description": "base64 settlement response incl. transaction id" } },
+            "headers": {
+              "PAYMENT-RESPONSE": { "schema": { "type": "string" }, "description": "base64 settlement response incl. transaction id" },
+              "X-Printwright-Sandbox": { "schema": { "type": "string", "const": "true" }, "description": "Present only on an opted-in sandbox delivery" }
+            },
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Delivery" } } }
           },
           "400": {
@@ -108,7 +113,7 @@
         "parameters": [{ "name": "cert_id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "pw-000036" }],
         "responses": {
           "200": {
-            "description": "Certificate with status anchored|minting, HCS mirror/HashScan links, and the NFT claim (when minted)",
+            "description": "Certificate with status anchored|minting|sandbox, proof links, and the NFT claim (when minted)",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CertificateResponse" } } }
           },
           "404": { "$ref": "#/components/responses/NotFound" },
@@ -132,6 +137,48 @@
           "429": { "$ref": "#/components/responses/RateLimited" }
         }
       }
+    },
+    "/sandbox/topics/{topic_id}/messages/{sequence_number}": {
+      "get": {
+        "operationId": "getSandboxTopicMessage",
+        "summary": "Read a local sandbox certificate envelope (not HCS)",
+        "security": [],
+        "parameters": [
+          { "name": "topic_id", "in": "path", "required": true, "schema": { "type": "string", "const": "printwright-sandbox" } },
+          { "name": "sequence_number", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Base64 sandbox message in a mirror-like envelope, always labeled sandbox", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/sandbox/files/{cert_id}": {
+      "get": {
+        "operationId": "downloadSandboxReceipt",
+        "summary": "Download the non-printable sandbox receipt",
+        "security": [],
+        "parameters": [{ "name": "cert_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Plain-text sandbox receipt; never model geometry", "content": { "text/plain": { "schema": { "type": "string" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/sandbox/transactions/{transaction_id}": {
+      "get": {
+        "operationId": "getSandboxTransaction",
+        "summary": "Inspect a fake sandbox settlement",
+        "security": [],
+        "parameters": [{ "name": "transaction_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Local settlement record labeled sandbox; not a HashScan or Hedera transaction", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
     }
   },
   "components": {
@@ -148,6 +195,8 @@
         "type": "object",
         "properties": {
           "error": { "type": "string" },
+          "sandbox": { "type": "boolean" },
+          "warning": { "type": "string" },
           "status": { "type": "string", "description": "included on 409 duplicate_payment: the existing purchase's current status" },
           "retry_after": { "type": "integer", "description": "included on 429 rate_limited (60) and 503 facilitator_unavailable (5)" },
           "transaction_id": { "type": "string", "description": "included on 410 sold_out when the offer sold out after this payment had already settled" }
@@ -194,7 +243,7 @@
             "url": { "type": "string" }, "description": { "type": "string" }, "mimeType": { "type": "string" } } },
           "accepts": { "type": "array", "items": { "type": "object", "properties": {
             "scheme": { "type": "string", "const": "exact" },
-            "network": { "type": "string", "const": "hedera:testnet" },
+            "network": { "type": "string", "enum": ["hedera:testnet", "hedera:mainnet", "hedera:sandbox"] },
             "amount": { "type": "string", "description": "base units as string (tinybars / token smallest unit)" },
             "asset": { "type": "string", "description": "0.0.0 = HBAR, else HTS token id (USDC 0.0.429274)" },
             "payTo": { "type": "string" },
@@ -207,13 +256,17 @@
         "type": "object",
         "properties": {
           "files": { "type": "array", "items": { "type": "object", "properties": {
-            "kind": { "type": "string" }, "url": { "type": "string" }, "expires_at": { "type": "string" } } } },
+            "kind": { "type": "string" }, "url": { "type": "string" },
+            "expires_at": { "type": ["string", "null"] }, "sandbox": { "type": "boolean" } } } },
           "license": { "type": "object", "properties": {
             "cert_id": { "type": "string" }, "serial": { "type": "integer" }, "kind": { "type": "string" } } },
           "certificate": { "type": ["object", "null"] },
           "verify_url": { "type": "string" },
           "transaction_id": { "type": "string" },
-          "hashscan_url": { "type": "string" }
+          "hashscan_url": { "type": ["string", "null"] },
+          "sandbox": { "type": "boolean", "description": "true only for the mock-facilitator rehearsal" },
+          "warning": { "type": "string" },
+          "sandbox_url": { "type": "string" }
         }
       },
       "CertificateResponse": {
@@ -224,10 +277,11 @@
             "model_id": { "type": "integer" }, "issued_at": { "type": "string" }, "buyer_hint": { "type": "string" },
             "model_hash": { "type": "string" }, "payment_tx": { "type": "string" }, "terms_hash": { "type": "string" },
             "unit_serial": { "type": "integer" }, "license_type": { "type": "string" } } },
-          "status": { "type": "string", "enum": ["anchored", "minting"] },
+          "status": { "type": "string", "enum": ["anchored", "minting", "sandbox"] },
           "hcs": { "type": ["object", "null"], "properties": {
             "topic_id": { "type": "string" }, "sequence_number": { "type": "integer" },
-            "hashscan_url": { "type": "string" }, "mirror_url": { "type": "string" } } },
+            "hashscan_url": { "type": ["string", "null"] }, "mirror_url": { "type": "string" },
+            "sandbox": { "type": "boolean" }, "warning": { "type": "string" } } },
           "nft": { "type": ["object", "null"], "description": "null until the license NFT is minted and airdropped", "properties": {
             "token_id": { "type": "string" }, "serial": { "type": "integer" },
             "claim_state": { "type": "string" }, "airdrop_tx_id": { "type": ["string", "null"] },

@@ -23,6 +23,11 @@ curl -i "https://<host>/api/v1/models/1/download?license=personal"
 No funded account? `node scripts/buy.mjs --query "..." --dry-run` runs steps 1-2 and prints
 the PaymentRequirements without paying — no keys needed.
 
+Need the full flow with no funded account? `node scripts/buy.mjs --query "cable clip" --sandbox`
+runs 402 → mock verify → mock settle → local certificate. Raw clients send `X-Sandbox: true`
+on both download requests. Every response says SANDBOX, no Hedera funds move, the topic is local,
+and the only downloadable artifact is a non-printable text receipt.
+
 ## Rate limits
 
 Every endpoint returns 429 {"error":"rate_limited","retry_after":60} (and a `Retry-After: 60`
@@ -37,6 +42,7 @@ allows 60/min. Back off and retry after the given number of seconds.
 - /api/v1/models/{id}/download: the paid endpoint (x402)
 - /api/v1/certificates/{cert_id}: public certificate + HCS mirror links + nft (license NFT
   claim state, once minted)
+- /api/v1/sandbox/*: explicitly fake transaction, receipt, and local topic-message artifacts
 - /verify/{cert_id}: human-readable certificate verification page
 
 ## Reference clients

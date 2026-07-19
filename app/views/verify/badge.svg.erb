@@ -1,7 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="200" height="36" role="img" aria-label="Printwright licensed: <%= cert_id %>">
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="36" role="img" aria-label="Printwright <%= sandbox ? "sandbox simulation" : "licensed" %>: <%= cert_id %>">
   <rect width="200" height="36" rx="6" fill="#141518"/>
   <rect x="1" y="1" width="198" height="34" rx="5" fill="none" stroke="#3a3d45"/>
-  <text x="12" y="15" font-family="system-ui,sans-serif" font-size="10" fill="#8b8f98">PRINTWRIGHT ⬡ LICENSED UNIT</text>
+  <text x="12" y="15" font-family="system-ui,sans-serif" font-size="10" fill="#8b8f98">PRINTWRIGHT ⬡ <%= sandbox ? "SANDBOX ONLY" : "LICENSED UNIT" %></text>
   <text x="12" y="29" font-family="ui-monospace,monospace" font-size="12" fill="#e8eaef"><%= cert_id %></text>
-  <text x="188" y="24" text-anchor="end" font-family="system-ui,sans-serif" font-size="9" fill="#6ee7a0">verify ▸</text>
+  <text x="188" y="24" text-anchor="end" font-family="system-ui,sans-serif" font-size="9" fill="<%= sandbox ? "#fbbf24" : "#6ee7a0" %>"><%= sandbox ? "fake ▸" : "verify ▸" %></text>
 </svg>

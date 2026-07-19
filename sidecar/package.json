@@ -13,6 +13,8 @@
     "dotenv": "^17.4.2"
   },
   "overrides": {
+    "@grpc/grpc-js": "1.14.4",
+    "protobufjs": "8.7.1",
     "ethers": {
       "ws": "8.21.1"
     }

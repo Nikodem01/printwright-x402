@@ -31,7 +31,7 @@ class Purchase < ApplicationRecord
       update!(status: new_status)
       # settled = money moved; the revenue split is recorded in the same
       # transaction so no settled purchase can exist without ledger rows.
-      LedgerEntry.record_settle!(self) if new_status == "settled"
+      LedgerEntry.record_settle!(self) if new_status == "settled" && !sandbox?
     end
   end
 end

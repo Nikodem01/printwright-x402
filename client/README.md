@@ -38,6 +38,18 @@ console.log(receipt.hashscan_url, proof.match);
 result back as `buy({ quote })` to sign exactly that selection without requesting another
 quote.
 
+For a full zero-funds integration rehearsal, set `sandbox: true` and omit credentials:
+
+```js
+const sandbox = new PrintwrightClient({ baseUrl: "http://localhost:3000", sandbox: true });
+const receipt = await sandbox.buy({ modelId: 1, license: "personal" });
+const proof = await sandbox.verify(receipt.license.cert_id);
+```
+
+This still performs a 402, mock verification, mock settlement, and certificate lookup. It
+returns a non-printable text receipt and a local throwaway-topic message. Every artifact is
+labeled sandbox; none is a Hedera transaction, real license, or proof of payment.
+
 The current Hiero SDK pins older transitive versions even though patched same-major releases
 exist. npm applications should carry the same overrides as this repository until Hiero rolls
 them forward: `@grpc/grpc-js` 1.14.4, `protobufjs` 8.7.1, and `ethers > ws` 8.21.1.

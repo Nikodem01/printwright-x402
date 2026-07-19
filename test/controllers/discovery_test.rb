@@ -1,13 +1,15 @@
 require "test_helper"
 
 class DiscoveryTest < ActionDispatch::IntegrationTest
-  test "openapi.json is served, parses, and covers the five public endpoints" do
+  test "openapi.json is served, parses, and covers every public endpoint" do
     get "/openapi.json"
     assert_response :success
     spec = JSON.parse(response.body)
     assert_equal "3.1.0", spec["openapi"]
     assert spec.dig("info", "x-guidance").present?
-    assert_equal [ "/certificates/{cert_id}", "/files/{token}", "/models", "/models/{id}", "/models/{id}/download" ],
+    assert_equal [ "/certificates/{cert_id}", "/files/{token}", "/models", "/models/{id}", "/models/{id}/download",
+                   "/sandbox/files/{cert_id}", "/sandbox/topics/{topic_id}/messages/{sequence_number}",
+                   "/sandbox/transactions/{transaction_id}" ],
                  spec["paths"].keys.sort
     operation = spec.dig("paths", "/models/{id}/download", "get")
     assert_equal [ "x402" ], operation.dig("x-payment-info", "protocols").flat_map(&:keys)
@@ -16,6 +18,7 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
     assert responses.key?("402"), "402 response must be documented"
     assert responses.dig("402", "headers").key?("PAYMENT-REQUIRED")
     assert responses.dig("402", "headers").key?("WWW-Authenticate")
+    assert responses.dig("402", "headers").key?("X-Printwright-Sandbox")
     assert responses.dig("200", "headers").key?("PAYMENT-RESPONSE")
   end
 
@@ -25,6 +28,7 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "x402"
     assert_includes response.body, "/openapi.json"
     assert_includes response.body, "PAYMENT-SIGNATURE"
+    assert_includes response.body, "X-Sandbox: true"
   end
 
   # Staleness guard: derives the route list from Rails.application.routes

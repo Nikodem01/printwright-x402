@@ -25,31 +25,45 @@
   <% end %>
   <div class="frame">
     <div class="qr"><%= raw @qr_svg %></div>
-    <h1>License Certificate</h1>
-    <div class="sub">Printwright ⬡ — every print, licensed. Publicly anchored on Hedera.</div>
+    <h1><%= @license.purchase.sandbox? ? "Sandbox Rehearsal Certificate" : "License Certificate" %></h1>
+    <div class="sub">
+      <% if @license.purchase.sandbox? %>
+        SANDBOX SIMULATION — not a Hedera record, payment, or printable-model license.
+      <% else %>
+        Printwright ⬡ — every print, licensed. Publicly anchored on Hedera.
+      <% end %>
+    </div>
 
-    <p>
-      This certifies that unit <strong>#<%= @license.serial %></strong> of
-      <strong><%= @model.title %></strong> is licensed under a
-      <strong><%= @license.purchase.license_offer.kind.humanize.downcase %></strong> license
-      granted by <strong><%= @model.designer.display_name %></strong>.
-    </p>
+    <% if @license.purchase.sandbox? %>
+      <p>
+        This locally simulates unit <strong>#<%= @license.serial %></strong> of
+        <strong><%= @model.title %></strong> by <strong><%= @model.designer.display_name %></strong>.
+        It grants no rights and certifies no payment or license.
+      </p>
+    <% else %>
+      <p>
+        This certifies that unit <strong>#<%= @license.serial %></strong> of
+        <strong><%= @model.title %></strong> is licensed under a
+        <strong><%= @license.purchase.license_offer.kind.humanize.downcase %></strong> license
+        granted by <strong><%= @model.designer.display_name %></strong>.
+      </p>
+    <% end %>
 
     <dl>
       <dt>Certificate</dt><dd><%= @license.cert_id %></dd>
       <dt>Model hash</dt><dd><%= @cert["model_hash"] %></dd>
-      <dt>Payment tx</dt><dd><%= @cert["payment_tx"] %></dd>
+      <dt><%= @license.purchase.sandbox? ? "Fake transaction" : "Payment tx" %></dt><dd><%= @cert["payment_tx"] %></dd>
       <dt>Terms hash</dt><dd><%= @cert["terms_hash"] %></dd>
       <dt>Issued</dt><dd><%= @cert["issued_at"] %></dd>
-      <% if @license.anchored? %>
+      <% if @license.anchored? && !@license.purchase.sandbox? %>
         <dt>HCS anchor</dt><dd>topic <%= @license.hcs_topic_id %> · sequence <%= @license.hcs_sequence_number %></dd>
       <% end %>
     </dl>
 
     <div class="urls">
-      Verify independently — none of these require trusting Printwright:
+      <%= @license.purchase.sandbox? ? "Inspect this local simulation:" : "Verify independently — none of these require trusting Printwright:" %>
       <div>live check: <%= verify_url(@license.verify_slug) %></div>
-      <% if @license.anchored? %>
+      <% if @license.anchored? && !@license.purchase.sandbox? %>
         <div>mirror node: <%= Hedera::Network.mirror_base %>/api/v1/topics/<%= @license.hcs_topic_id %>/messages/<%= @license.hcs_sequence_number %></div>
         <div>hashscan: <%= Hedera::Network.hashscan_base %>/topic/<%= @license.hcs_topic_id %></div>
       <% end %>

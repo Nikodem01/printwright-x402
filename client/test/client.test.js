@@ -26,6 +26,29 @@ before(async () => {
       return response.end(JSON.stringify({ id: 7, title: "Gear", license_offers: [] }));
     }
     if (url.pathname === "/api/v1/models/7/download") {
+      if (request.headers["x-sandbox"] === "true") {
+        if (request.headers["payment-signature"]) {
+          const payload = JSON.parse(Buffer.from(request.headers["payment-signature"], "base64").toString("utf8"));
+          assert.match(payload.payload.transaction, /^sandbox:/);
+          return response.end(JSON.stringify({
+            sandbox: true, warning: "SIMULATION ONLY", files: [],
+            license: { cert_id: "sandbox-pw-000009", serial: 1, kind: "personal" },
+            hashscan_url: null,
+          }));
+        }
+        response.statusCode = 402;
+        const sandboxRequired = {
+          x402Version: 2, sandbox: true, warning: "SIMULATION ONLY",
+          resource: { url: `${baseUrl}${url.pathname}?license=personal`, mimeType: "application/json" },
+          accepts: [ {
+            scheme: "exact", network: "hedera:sandbox", amount: "25",
+            asset: "sandbox:credit", payTo: "sandbox:designer", maxTimeoutSeconds: 180,
+            extra: { feePayer: "sandbox:facilitator", sandbox: true },
+          } ],
+        };
+        response.setHeader("payment-required", Buffer.from(JSON.stringify(sandboxRequired)).toString("base64"));
+        return response.end(JSON.stringify(sandboxRequired));
+      }
       if (request.headers["payment-signature"]) {
         paidRequests += 1;
         return response.end(JSON.stringify({
@@ -62,11 +85,25 @@ before(async () => {
         hcs: { mirror_url: `${baseUrl}/mirror/messages/8` },
       }));
     }
+    if (url.pathname === "/api/v1/certificates/sandbox-pw-000009") {
+      const sandboxCertificate = { cert_id: "sandbox-pw-000009", sandbox: true };
+      return response.end(JSON.stringify({
+        status: "sandbox", certificate: sandboxCertificate,
+        hcs: { sandbox: true, mirror_url: "/sandbox/messages/9" },
+      }));
+    }
     if (url.pathname === "/mirror/messages/7") {
       return response.end(JSON.stringify({
         message: Buffer.from(JSON.stringify({ serial: 1, cert_id: "pw-000007", model_hash: "sha256:abc" }))
           .toString("base64"),
         consensus_timestamp: "123.456",
+      }));
+    }
+    if (url.pathname === "/sandbox/messages/9") {
+      return response.end(JSON.stringify({
+        sandbox: true,
+        message: Buffer.from(JSON.stringify({ cert_id: "sandbox-pw-000009", sandbox: true })).toString("base64"),
+        consensus_timestamp: "sandbox-local",
       }));
     }
 
@@ -108,6 +145,24 @@ test("quotes, signs offline, and retries the selected x402 requirement", async (
 
   assert.equal(receipt.license.cert_id, "pw-000007");
   assert.equal(paidRequests, 1);
+});
+
+test("completes a labeled sandbox purchase without an account or private key", async () => {
+  const client = new PrintwrightClient({ baseUrl, sandbox: true });
+
+  const quote = await client.quote({ modelId: 7 });
+  assert.equal(quote.sandbox, true);
+  assert.equal(quote.accepted.network, "hedera:sandbox");
+  const receipt = await client.buy({ quote });
+
+  assert.equal(receipt.sandbox, true);
+  assert.match(receipt.license.cert_id, /^sandbox-pw-/);
+  assert.equal(receipt.hashscan_url, null);
+
+  const proof = await client.verify(receipt.license.cert_id);
+  assert.equal(proof.status, "sandbox");
+  assert.equal(proof.match, true);
+  assert.equal(proof.onchain.sandbox, true);
 });
 
 test("verifies an anchored certificate independent of JSON key order", async () => {

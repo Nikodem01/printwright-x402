@@ -41,6 +41,11 @@ console.log(model.title, model.license_offers);
 `buy()` signs locally with the configured Hedera account, and `verify()` compares the issued
 certificate with its public HCS mirror message.
 
+**Try the complete integration without funds:** construct the client with `sandbox: true`, or
+run `node scripts/buy.mjs --query "cable clip" --sandbox`. The app still returns a 402 and runs
+verify → settle → certificate, but through its built-in mock facilitator and local throwaway
+topic. Sandbox output is visibly fake and contains only a text receipt—never paid geometry.
+
 ## Buy a model from the command line (Scene 1a)
 
 ```bash

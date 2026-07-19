@@ -17,14 +17,15 @@ class License < ApplicationRecord
     transaction do
       offer.lock!
       next_serial = joins(:purchase)
-        .where(purchases: { license_offer_id: offer.id })
+        .where(purchases: { license_offer_id: offer.id, sandbox: purchase.sandbox? })
         .maximum(:serial).to_i + 1
-      raise SoldOut if offer.max_units && next_serial > offer.max_units
+      raise SoldOut if !purchase.sandbox? && offer.max_units && next_serial > offer.max_units
 
       license = create!(purchase: purchase, serial: next_serial)
+      prefix = purchase.sandbox? ? "sandbox-pw" : "pw"
       license.update!(
-        cert_id: format("pw-%06d", license.id),
-        verify_slug: format("pw-%06d", license.id)
+        cert_id: format("#{prefix}-%06d", license.id),
+        verify_slug: format("#{prefix}-%06d", license.id)
       )
       license
     end

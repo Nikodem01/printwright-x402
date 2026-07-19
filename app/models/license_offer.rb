@@ -13,7 +13,7 @@ class LicenseOffer < ApplicationRecord
   # in flight. Authoritative only under the offer row lock (see the download
   # controller's create step); unlocked callers get an advisory answer.
   def sold_out?
-    max_units && purchases.where.not(status: FAILED_STATUSES).count >= max_units
+    max_units && purchases.where(sandbox: false).where.not(status: FAILED_STATUSES).count >= max_units
   end
 
   FAILED_STATUSES = %w[failed_verification failed_settlement].freeze

@@ -14,13 +14,14 @@ account with Printwright, no card — just a funded Hedera testnet account.
   id, title, license offers, and printability facts.
 - **`get_model`** — full metadata for one model: description, tags, file hash, license offers
   with terms.
-- **`buy_license`** — **spends real Hedera testnet funds.** Negotiates the x402 payment for a
+- **`buy_license`** — **spends real Hedera testnet funds unless sandbox mode is explicitly on.** Negotiates the x402 payment for a
   model's license, signs a Hedera transfer with `BUYER_PRIVATE_KEY`, and returns the file
   download URLs, license serial, certificate id, and HashScan transaction link. Requires
   `confirm: true` in the tool call — the server refuses outright without it, and separately
   refuses any offer priced above `MAX_SPEND_CENTS`.
 - **`verify_certificate`** — fetches Printwright's copy of a license certificate *and* the
   on-chain HCS message from the public Hedera mirror node, and reports `match: true/false`.
+  Sandbox certificates instead compare against an explicitly local, fake message.
 
 ## Environment variables
 
@@ -31,6 +32,7 @@ account with Printwright, no card — just a funded Hedera testnet account.
 | `BUYER_PRIVATE_KEY` | for `buy_license` | — | That account's hex ECDSA private key, used locally to sign the payment — never sent anywhere but the Hedera network. `HEDERA_PRIVATE_KEY` is accepted as a fallback name. |
 | `MAX_SPEND_CENTS` | no | `500` | Hard cap, in USD cents, on any single `buy_license` purchase. **Any offer priced above this is refused.** A malformed value (non-numeric or negative) makes the server refuse to start at all, printing why — this exists so a typo can never silently disable the cap. Set to `0` to refuse every priced offer (a deliberate "buying is off" setting, not a fallback). |
 | `HEDERA_NETWORK` | no | `testnet` | `testnet` or `mainnet`. Selects the signing network and the USDC token id (`0.0.429274` testnet / `0.0.456858` mainnet), the same switch the rest of the project derives from. Anything other than `mainnet` is treated as testnet. |
+| `PRINTWRIGHT_SANDBOX` | no | `false` | Set exactly `true` to use Printwright's local mock facilitator and throwaway topic. No buyer credentials or funds are needed; receipts and artifacts are labeled sandbox and have no on-chain or license value. |
 
 `BUYER_ACCOUNT_ID` and `BUYER_PRIVATE_KEY` are only required to call `buy_license`;
 `search_models`, `get_model`, and `verify_certificate` need none of them.

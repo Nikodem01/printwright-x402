@@ -17,7 +17,7 @@ class VerifyController < ApplicationController
     return head :not_found unless license
 
     render "badge", formats: :svg, layout: false,
-      locals: { cert_id: license.cert_id },
+      locals: { cert_id: license.cert_id, sandbox: license.purchase.sandbox? },
       content_type: "image/svg+xml"
   end
 

@@ -8,6 +8,7 @@ export interface PrintwrightClientOptions {
   network?: Network;
   fetch?: typeof globalThis.fetch;
   autoAssociate?: boolean;
+  sandbox?: boolean;
 }
 
 export interface SearchOptions {
@@ -62,15 +63,19 @@ export interface PaymentQuote {
   resourceUrl: string;
   paymentRequired: Record<string, unknown> & { accepts?: Array<Record<string, unknown>> };
   accepted: Record<string, unknown> & { asset: string; amount: string; payTo: string };
+  sandbox: boolean;
   responseHeaders: Record<string, string>;
 }
 
 export interface PurchaseReceipt {
-  files: Array<{ kind: string; url: string; expires_at?: string }>;
+  files: Array<{ kind: string; url: string; expires_at?: string | null; sandbox?: boolean }>;
   license: { cert_id: string; serial: number; kind: string };
   verify_url: string;
   transaction_id: string;
-  hashscan_url: string;
+  hashscan_url: string | null;
+  sandbox?: boolean;
+  warning?: string;
+  sandbox_url?: string;
   [key: string]: unknown;
 }
 

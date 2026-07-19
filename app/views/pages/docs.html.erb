@@ -55,6 +55,21 @@ console.log(model.title, model.license_offers);</pre>
     for an unsigned approval/dry-run view and <code class="mono">verify(certId)</code> to compare
     the marketplace certificate with its public mirror-node message.</p>
 
+  <h3>Try the whole flow free</h3>
+  <p class="t-small">Sandbox mode performs the same 402 → mock verify → mock settle → certificate
+    sequence with no Hedera account, key, association, or funds. It returns only a text receipt,
+    never paid geometry. Every identifier, response, verify page, and topic message says
+    <strong>SANDBOX</strong>; none is a payment or license:</p>
+  <pre class="mono t-small" style="overflow-x:auto">import { PrintwrightClient } from "@printwright/client";
+const sandbox = new PrintwrightClient({ baseUrl: "http://localhost:3000", sandbox: true });
+const { models } = await sandbox.search({ query: "cable clip" });
+const receipt = await sandbox.buy({ modelId: models[0].id, license: "personal" });
+console.log(receipt.warning, await sandbox.verify(receipt.license.cert_id));</pre>
+  <p class="t-small">The CLI equivalent is
+    <code class="mono">node scripts/buy.mjs --query "cable clip" --sandbox</code>. Raw HTTP
+    clients send <code class="mono">X-Sandbox: true</code> on both the initial download request
+    and its <code class="mono">PAYMENT-SIGNATURE</code> retry.</p>
+
   <h2>Endpoint reference</h2>
   <p class="t-small muted">Generated from <%= link_to "/openapi.json", "/openapi.json" %> at request
     time — the tables below are that file, not a hand-kept copy.</p>

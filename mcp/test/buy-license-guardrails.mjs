@@ -20,10 +20,37 @@ const MODELS = {
   30: { id: 30, license_offers: [ { kind: "personal", price_cents: 1 } ] },          // cheap, but not free
 };
 
-let marketplace, BASE;
+let marketplace, BASE, sandboxPaidRequests = 0;
 
 before(async () => {
   marketplace = http.createServer((req, res) => {
+    if (req.url === "/api/v1/models/30/download?license=personal") {
+      res.setHeader("content-type", "application/json");
+      assert.equal(req.headers["x-sandbox"], "true");
+      if (req.headers["payment-signature"]) {
+        sandboxPaidRequests += 1;
+        const payload = JSON.parse(Buffer.from(req.headers["payment-signature"], "base64").toString("utf8"));
+        assert.match(payload.payload.transaction, /^sandbox:/);
+        return res.end(JSON.stringify({
+          sandbox: true, warning: "SIMULATION ONLY — NO HEDERA FUNDS MOVE",
+          files: [ { kind: "sandbox_receipt", sandbox: true } ],
+          license: { cert_id: "sandbox-pw-000001", serial: 1, kind: "personal" },
+          verify_url: `${BASE}/verify/sandbox-pw-000001`,
+          transaction_id: "sandbox-tx-example", hashscan_url: null,
+          sandbox_url: `${BASE}/api/v1/sandbox/transactions/sandbox-tx-example`,
+        }));
+      }
+      res.writeHead(402);
+      return res.end(JSON.stringify({
+        x402Version: 2, sandbox: true, warning: "SIMULATION ONLY — NO HEDERA FUNDS MOVE",
+        resource: { url: `${BASE}${req.url}`, mimeType: "application/json" },
+        accepts: [ {
+          scheme: "exact", network: "hedera:sandbox", amount: "1", asset: "sandbox:credit",
+          payTo: "sandbox:designer", maxTimeoutSeconds: 180,
+          extra: { feePayer: "sandbox:facilitator", sandbox: true },
+        } ],
+      }));
+    }
     const match = req.url.match(/^\/api\/v1\/models\/(\d+)$/);
     const model = match && MODELS[match[1]];
     if (model) {
@@ -128,4 +155,19 @@ test("MAX_SPEND_CENTS=0 boots and refuses every priced offer", async () => {
     { model_id: 30, license: "personal", confirm: true });
   assert.equal(result.isError, true);
   assert.match(result.content[0].text, /offer is 1c, over the MAX_SPEND_CENTS=0 guardrail/);
+});
+
+test("sandbox mode completes without buyer credentials or Hedera traffic", async () => {
+  const result = await callBuyLicense(
+    { ...NO_CREDS, PRINTWRIGHT_SANDBOX: "true" },
+    { model_id: 30, license: "personal", confirm: true }
+  );
+
+  assert.equal(result.isError, undefined);
+  const receipt = JSON.parse(result.content[0].text);
+  assert.equal(receipt.sandbox, true);
+  assert.equal(receipt.hashscan_url, null);
+  assert.match(receipt.cert_id, /^sandbox-pw-/);
+  assert.match(receipt.warning, /NO HEDERA FUNDS MOVE/);
+  assert.equal(sandboxPaidRequests, 1);
 });

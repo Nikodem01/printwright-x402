@@ -3,7 +3,7 @@
 // No accounts, no cards, no browser — the whole purchase is one HTTP negotiation.
 //
 // Usage: node scripts/buy.mjs --query "beaver hat" [--license personal] [--asset usdc|hbar]
-//                             [--max-price 300] [--dry-run]
+//                             [--max-price 300] [--dry-run] [--sandbox]
 // Env:   PRINTWRIGHT_URL, BUYER_ACCOUNT_ID, BUYER_PRIVATE_KEY, HEDERA_NETWORK=testnet
 import "dotenv/config";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -19,11 +19,12 @@ const ACCOUNT_ID = process.env.BUYER_ACCOUNT_ID || process.env.HEDERA_ACCOUNT_ID
 const PRIVATE_KEY = process.env.BUYER_PRIVATE_KEY || process.env.HEDERA_PRIVATE_KEY;
 
 if (!args.query) die("--query is required");
-if (!args.dryRun && (!ACCOUNT_ID || !PRIVATE_KEY)) {
+if (!args.dryRun && !args.sandbox && (!ACCOUNT_ID || !PRIVATE_KEY)) {
   die("BUYER_ACCOUNT_ID and BUYER_PRIVATE_KEY env vars are required to pay");
 }
 const printwright = new PrintwrightClient({
   baseUrl: BASE, accountId: ACCOUNT_ID, privateKey: PRIVATE_KEY, network: NET,
+  sandbox: args.sandbox,
 });
 
 // ---- 1. search ------------------------------------------------------------
@@ -49,7 +50,8 @@ console.log("   402 Payment Required — the server's PaymentRequired object:");
 console.log(indent(JSON.stringify(paymentRequired402, null, 2), 3));
 
 const accept = quote.accepted;
-console.log(`   paying with ${accept.asset === USDC ? "USDC" : "HBAR"}: ${accept.amount} base units -> ${accept.payTo}`);
+const assetLabel = args.sandbox ? "SANDBOX CREDIT (no funds)" : (accept.asset === USDC ? "USDC" : "HBAR");
+console.log(`   paying with ${assetLabel}: ${accept.amount} base units -> ${accept.payTo}`);
 
 if (args.dryRun) {
   step("--dry-run: stopping after the 402 (no payment made)");
@@ -57,11 +59,15 @@ if (args.dryRun) {
 }
 
 // ---- 3. associate if needed, sign & retry ---------------------------------
-step("associating USDC if needed, then signing + retrying (buyer signature only; facilitator pays fees)");
+step(args.sandbox
+  ? "sending the mock sandbox payment (no key, funds, or Hedera transaction)"
+  : "associating USDC if needed, then signing + retrying (buyer signature only; facilitator pays fees)");
 const body = await printwright.buy({ quote });
 
 // ---- 5. deliverables ------------------------------------------------------
-step("payment settled on Hedera — downloading deliverables");
+step(args.sandbox
+  ? "sandbox simulation accepted locally — downloading the non-printable receipt"
+  : "payment settled on Hedera — downloading deliverables");
 const dir = join("purchases", model.slug);
 mkdirSync(dir, { recursive: true });
 for (const file of body.files) {
@@ -77,13 +83,15 @@ writeFileSync(join(dir, "certificate.json"), JSON.stringify(cert, null, 2));
 console.log(`   certificate: ${join(dir, "certificate.json")} (${cert.status})`);
 
 console.log(`\n   License:     ${body.license.cert_id} — ${body.license.kind}, unit serial ${body.license.serial}`);
-console.log(`   Transaction: ${body.hashscan_url}`);
+console.log(`   Transaction: ${body.sandbox ? body.sandbox_url : body.hashscan_url}`);
 console.log(`   Verify:      ${body.verify_url}`);
 if (cert.hcs) {
-  console.log(`   HCS topic:   ${cert.hcs.hashscan_url}`);
+  console.log(`   HCS topic:   ${cert.hcs.sandbox ? `${cert.hcs.topic_id} (LOCAL SANDBOX ONLY)` : cert.hcs.hashscan_url}`);
   console.log(`   Mirror node: ${cert.hcs.mirror_url}`);
 }
-console.log("\ndone — licensed and ready to print.");
+console.log(body.sandbox
+  ? "\ndone — SANDBOX rehearsal complete; no printable model or real license was issued."
+  : "\ndone — licensed and ready to print.");
 
 // ---- helpers ---------------------------------------------------------------
 
@@ -96,10 +104,12 @@ function parseArgs(argv) {
     else if (a === "--asset") out.asset = argv[++i]?.toLowerCase();
     else if (a === "--max-price") out.maxPrice = Number(argv[++i]);
     else if (a === "--dry-run") out.dryRun = true;
+    else if (a === "--sandbox") out.sandbox = true;
     else if (a === "--help" || a === "-h") usage();
     else die(`unknown argument: ${a}`);
   }
   if (out.asset && ![ "usdc", "hbar" ].includes(out.asset)) die("--asset must be usdc or hbar");
+  if (out.sandbox && out.asset) die("--sandbox uses fake sandbox credit; omit --asset");
   return out;
 }
 
@@ -114,7 +124,7 @@ function money(offer) {
 async function waitForCertificate(certId, attempts = 10) {
   for (let i = 0; i < attempts; i++) {
     const cert = await printwright.verify(certId);
-    if (cert.status === "anchored") return cert;
+    if (["anchored", "sandbox"].includes(cert.status)) return cert;
     if (i === 0) step("waiting for the HCS certificate to anchor (mirror-node lag is a few seconds)");
     await new Promise((r) => setTimeout(r, 2000));
   }
@@ -144,6 +154,7 @@ Usage: node scripts/buy.mjs --query "beaver hat" [options]
   --asset usdc|hbar   what to pay in (default: the offer's lead currency)
   --max-price <cents> skip anything dearer
   --dry-run           stop after the 402, pay nothing
+  --sandbox           complete the fake end-to-end flow with no account or funds
   -h, --help          this message
 
 Env: PRINTWRIGHT_URL (default http://localhost:3000), BUYER_ACCOUNT_ID,

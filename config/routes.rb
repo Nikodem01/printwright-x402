@@ -16,6 +16,11 @@ Rails.application.routes.draw do
       get "models/:model_id/download", to: "downloads#show", as: :model_download
       get "files/:token", to: "files#show", as: :file
       get "certificates/:cert_id", to: "certificates#show", as: :certificate
+      get "sandbox/topics/:topic_id/messages/:sequence_number", to: "sandbox#message",
+          as: :sandbox_message
+      get "sandbox/files/:cert_id", to: "sandbox#file", as: :sandbox_file
+      get "sandbox/transactions/:transaction_id", to: "sandbox#transaction",
+          as: :sandbox_transaction
     end
   end
   # System tests stub the demo-wallet daemon with an in-app signer endpoint

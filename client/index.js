@@ -2,6 +2,7 @@ import { x402Client, x402HTTPClient } from "@x402/core/client";
 import { createClientHederaSigner, PrivateKey } from "@x402/hedera";
 import { ExactHederaScheme } from "@x402/hedera/exact/client";
 import { Client as HederaClient, TokenAssociateTransaction } from "@hiero-ledger/sdk";
+import { randomUUID } from "node:crypto";
 
 const USDC_IDS = { testnet: "0.0.429274", mainnet: "0.0.456858" };
 const ASSET_IDS = { hbar: "0.0.0" };
@@ -23,6 +24,7 @@ export class PrintwrightClient {
     network = "testnet",
     fetch: fetchImplementation = globalThis.fetch,
     autoAssociate = true,
+    sandbox = false,
   } = {}) {
     if (![ "testnet", "mainnet" ].includes(network)) {
       throw new TypeError("network must be testnet or mainnet");
@@ -38,6 +40,7 @@ export class PrintwrightClient {
     this.network = network;
     this.fetch = fetchImplementation;
     this.autoAssociate = autoAssociate;
+    this.sandbox = sandbox;
     this.quotes = new WeakSet();
   }
 
@@ -58,12 +61,17 @@ export class PrintwrightClient {
   async quote({ modelId, license = "personal", asset } = {}) {
     const id = integerId(modelId, "modelId");
     const resourceUrl = this.url(`api/v1/models/${id}/download?${new URLSearchParams({ license })}`);
-    const response = await this.fetch(resourceUrl, { headers: { accept: "application/json" } });
+    const headers = { accept: "application/json" };
+    if (this.sandbox) headers["X-Sandbox"] = "true";
+    const response = await this.fetch(resourceUrl, { headers });
     const paymentRequired = deepFreeze(await jsonBody(response));
     if (response.status !== 402) {
       throw new PrintwrightError(`expected 402 from ${resourceUrl}, got ${response.status}`, {
         status: response.status, body: paymentRequired,
       });
+    }
+    if (this.sandbox && paymentRequired.sandbox !== true) {
+      throw new PrintwrightError("server did not return a sandbox payment requirement");
     }
 
     const accepted = selectAsset(paymentRequired, asset, this.network);
@@ -73,6 +81,7 @@ export class PrintwrightClient {
       resourceUrl: resourceUrl.toString(),
       paymentRequired,
       accepted,
+      sandbox: paymentRequired.sandbox === true,
       responseHeaders: Object.freeze(Object.fromEntries(response.headers)),
     });
     this.quotes.add(quote);
@@ -80,9 +89,11 @@ export class PrintwrightClient {
   }
 
   async buy({ modelId, license = "personal", asset, quote } = {}) {
-    this.requireSigner();
     const purchaseQuote = quote || await this.quote({ modelId, license, asset });
     this.validateQuote(purchaseQuote);
+    if (purchaseQuote.sandbox) return this.buySandbox(purchaseQuote);
+
+    this.requireSigner();
 
     if (this.autoAssociate && purchaseQuote.accepted.asset === USDC_IDS[this.network]) {
       await this.ensureUsdcAssociated();
@@ -115,11 +126,11 @@ export class PrintwrightClient {
     if (!certId?.trim()) throw new TypeError("certId is required");
 
     const ours = await this.getJson(this.url(`api/v1/certificates/${encodeURIComponent(certId)}`));
-    if (ours.status !== "anchored") return { ...ours, match: null };
+    if (!["anchored", "sandbox"].includes(ours.status)) return { ...ours, match: null };
 
     let mirror;
     try {
-      mirror = await this.getJson(new URL(ours.hcs.mirror_url));
+      mirror = await this.getJson(new URL(ours.hcs.mirror_url, this.baseUrl));
     } catch (error) {
       if (error instanceof PrintwrightError && error.status === 404) {
         return { ...ours, match: null, note: "HCS message is anchored but still indexing on the mirror node" };
@@ -162,6 +173,30 @@ export class PrintwrightClient {
     if (!this.accountId || !this.privateKey) {
       throw new PrintwrightError("accountId and privateKey are required to buy");
     }
+  }
+
+  async buySandbox(quote) {
+    const payload = {
+      x402Version: 2,
+      resource: quote.paymentRequired.resource,
+      accepted: quote.accepted,
+      payload: { transaction: `sandbox:${randomUUID()}` },
+    };
+    const response = await this.fetch(quote.resourceUrl, {
+      headers: {
+        accept: "application/json",
+        "X-Sandbox": "true",
+        "PAYMENT-SIGNATURE": Buffer.from(JSON.stringify(payload)).toString("base64"),
+      },
+    });
+    const body = await jsonBody(response);
+    if (!response.ok) {
+      throw new PrintwrightError(`sandbox payment failed (${response.status})`, {
+        status: response.status, body,
+      });
+    }
+    if (body.sandbox !== true) throw new PrintwrightError("server returned an unlabeled sandbox receipt");
+    return body;
   }
 
   validateQuote(quote) {

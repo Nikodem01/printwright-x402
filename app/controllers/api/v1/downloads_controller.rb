@@ -8,9 +8,15 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     model = Model3d.published.find(params[:model_id])
     offer = model.license_offers.find_by!(kind: params.fetch(:license, "personal"))
 
-    requirements = X402::Requirements.new(offer: offer, resource_url: request.original_url)
+    sandbox = sandbox_request?
+    response.set_header("X-Printwright-Sandbox", "true") if sandbox
+    requirements = if sandbox
+      Sandbox::Requirements.new(offer: offer, resource_url: request.original_url)
+    else
+      X402::Requirements.new(offer: offer, resource_url: request.original_url)
+    end
     if X402::PaymentHeader.raw(request).nil?
-      return render json: { error: "sold_out" }, status: :gone if offer.sold_out?
+      return render json: { error: "sold_out" }, status: :gone if !sandbox && offer.sold_out?
       return payment_required(requirements)
     end
 
@@ -24,7 +30,7 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     # purchase keeps its recovery path even when the offer sells out.
     return replay(payload) if Purchase.exists?(replay_key: replay_key(payload))
 
-    purchase = create_purchase(offer, payload, matched)
+    purchase = create_purchase(offer, payload, matched, sandbox: sandbox)
     return replay(payload) if purchase.nil? # lost a same-tx race
     return render json: { error: "sold_out" }, status: :gone if purchase == :sold_out
 
@@ -54,9 +60,9 @@ class Api::V1::DownloadsController < Api::V1::BaseController
   # moves — so two in-flight payments can't both reserve the last unit and
   # leave one buyer in the refundless sold-out-after-payment path (A5/E6).
   # License.allocate! keeps its own max_units enforcement as the backstop.
-  def create_purchase(offer, payload, matched)
+  def create_purchase(offer, payload, matched, sandbox:)
     offer.with_lock do
-      if offer.sold_out?
+      if !sandbox && offer.sold_out?
         :sold_out
       else
         Purchase.create!(
@@ -64,7 +70,8 @@ class Api::V1::DownloadsController < Api::V1::BaseController
           asset: matched[:asset],
           amount_base_units: matched[:amount],
           replay_key: replay_key(payload),
-          requirements_json: matched.deep_stringify_keys
+          requirements_json: matched.deep_stringify_keys,
+          sandbox: sandbox
         )
       end
     end
@@ -82,7 +89,11 @@ class Api::V1::DownloadsController < Api::V1::BaseController
       complete_chat_purchase_intent!
       render json: delivery_payload(purchase), status: :conflict
     when "settled" # paid but delivery previously crashed — finish the job
-      deliver(purchase, { "transaction" => purchase.payment_tx_id, "network" => X402::Requirements.network })
+      deliver(purchase, {
+        "transaction" => purchase.payment_tx_id,
+        "network" => purchase.sandbox? ? Sandbox::Requirements::NETWORK : X402::Requirements.network,
+        "sandbox" => purchase.sandbox?
+      })
     when "verified"
       reconcile(purchase, payload)
     when "pending"
@@ -98,6 +109,8 @@ class Api::V1::DownloadsController < Api::V1::BaseController
 
   # Settle previously timed out: check the mirror node before retrying.
   def reconcile(purchase, payload)
+    return settle(purchase, payload, purchase.requirements_json) if purchase.sandbox?
+
     if (tx_id = X402::MirrorReconciler.call(purchase))
       purchase.update!(payment_tx_id: tx_id)
       purchase.transition_to!(:settled)
@@ -108,7 +121,7 @@ class Api::V1::DownloadsController < Api::V1::BaseController
   end
 
   def verify_and_settle(purchase, payload, matched)
-    verification = FacilitatorClient.new.verify(payload, matched)
+    verification = facilitator_for(purchase).verify(payload, matched)
     unless verification["isValid"]
       purchase.update!(error_reason: verification["invalidReason"])
       purchase.transition_to!(:failed_verification)
@@ -123,7 +136,7 @@ class Api::V1::DownloadsController < Api::V1::BaseController
   end
 
   def settle(purchase, payload, matched)
-    settlement = FacilitatorClient.new.settle(payload, matched)
+    settlement = facilitator_for(purchase).settle(payload, matched)
     unless settlement["success"]
       purchase.update!(error_reason: settlement["errorReason"])
       purchase.transition_to!(:failed_settlement)
@@ -146,8 +159,9 @@ class Api::V1::DownloadsController < Api::V1::BaseController
 
   def deliver(purchase, settlement)
     license = purchase.license || License.allocate!(purchase)
+    Sandbox::Topic.anchor!(license) if purchase.sandbox? && !license.anchored?
     purchase.transition_to!(:delivered)
-    CertMintJob.perform_later(license.id)
+    CertMintJob.perform_later(license.id) unless purchase.sandbox?
     complete_chat_purchase_intent!
     response.set_header("PAYMENT-RESPONSE", Base64.strict_encode64(JSON.generate(settlement)))
     response.set_header("X-PAYMENT-RESPONSE", response.get_header("PAYMENT-RESPONSE"))
@@ -161,6 +175,8 @@ class Api::V1::DownloadsController < Api::V1::BaseController
 
   def delivery_payload(purchase)
     license = purchase.license
+    return sandbox_delivery_payload(purchase, license) if purchase.sandbox?
+
     grant = license.download_grants.detect(&:usable?) || DownloadGrant.issue!(license)
     model = purchase.model3d
     {
@@ -173,6 +189,33 @@ class Api::V1::DownloadsController < Api::V1::BaseController
       transaction_id: purchase.payment_tx_id,
       hashscan_url: "#{Hedera::Network.hashscan_base}/transaction/#{purchase.payment_tx_id}"
     }
+  end
+
+  def sandbox_delivery_payload(purchase, license)
+    {
+      sandbox: true,
+      warning: Sandbox::Requirements::WARNING,
+      files: [ {
+        kind: "sandbox_receipt",
+        url: api_v1_sandbox_file_url(license.cert_id),
+        expires_at: nil,
+        sandbox: true
+      } ],
+      license: { cert_id: license.cert_id, serial: license.serial, kind: purchase.license_offer.kind },
+      certificate: license.cert_json,
+      verify_url: "#{request.base_url}/verify/#{license.verify_slug}",
+      transaction_id: purchase.payment_tx_id,
+      hashscan_url: nil,
+      sandbox_url: api_v1_sandbox_transaction_url(purchase.payment_tx_id)
+    }
+  end
+
+  def facilitator_for(purchase)
+    purchase.sandbox? ? Sandbox::Facilitator.new : FacilitatorClient.new
+  end
+
+  def sandbox_request?
+    request.headers["X-Sandbox"] == "true"
   end
 
   def authorize_chat_purchase!(offer, payload, matched)

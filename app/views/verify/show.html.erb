@@ -5,6 +5,12 @@
 
 <div class="verify-page">
   <% case @check.state %>
+  <% when :sandbox %>
+    <div class="verify-banner banner-pending banner-sandbox">
+      <strong>Sandbox simulation — not on Hedera.</strong>
+      This certificate is stored on Printwright's local throwaway topic; no funds moved and no
+      printable model was delivered.
+    </div>
   <% when :anchored %>
     <div class="verify-banner banner-ok">
       <strong>✓ Verified on Hedera</strong> — matches the on-chain record.
@@ -24,7 +30,7 @@
 
   <div class="cert-card">
     <header>
-      <span class="t-caption muted">License Certificate</span>
+      <span class="t-caption muted"><%= @license.purchase.sandbox? ? "Sandbox rehearsal certificate" : "License Certificate" %></span>
       <div class="mono cert-id"><%= @license.cert_id %></div>
     </header>
 
@@ -42,7 +48,7 @@
       <dl class="fact-grid">
         <dt>License type</dt><dd><%= @cert["license_type"]&.humanize %></dd>
         <dt>Unit serial</dt><dd class="mono">#<%= @cert["unit_serial"] %></dd>
-        <dt>Issued <span class="t-caption muted">(network consensus time)</span></dt>
+        <dt>Issued <span class="t-caption muted">(<%= @license.purchase.sandbox? ? "local sandbox time" : "network consensus time" %>)</span></dt>
         <dd class="mono">
           <% if @check.consensus_timestamp %>
             <% issued_at = Time.at(@check.consensus_timestamp.to_r).utc %>
@@ -96,11 +102,13 @@
   </div>
 
   <footer class="evidence-footer">
-    <% if @cert&.dig("payment_tx").present? %>
+    <% unless @license.purchase.sandbox? %>
+      <% if @cert&.dig("payment_tx").present? %>
       <a class="mono" href="<%= Hedera::Network.hashscan_base %>/transaction/<%= @cert["payment_tx"] %>">payment tx ↗</a>
-    <% end %>
-    <% if @license.hcs_topic_id.present? %>
+      <% end %>
+      <% if @license.hcs_topic_id.present? %>
       <a class="mono" href="<%= Hedera::Network.hashscan_base %>/topic/<%= @license.hcs_topic_id %>">HCS topic ↗</a>
+      <% end %>
     <% end %>
     <% if @check.mirror_url.present? %>
       <a class="mono" href="<%= @check.mirror_url %>">raw mirror message ↗</a>
@@ -120,14 +128,20 @@
       </dl>
     <% end %>
     <p class="t-small" style="margin-top: var(--s-3)">
-      <%= link_to "Printable certificate", verify_certificate_path(@license.verify_slug) %> ·
+      <%= link_to(@license.purchase.sandbox? ? "Printable sandbox record" : "Printable certificate",
+                  verify_certificate_path(@license.verify_slug)) %> ·
       <%= link_to "Embeddable badge", badge_docs_path %>
     </p>
     <p class="t-caption muted">
+      <% if @license.purchase.sandbox? %>
+        Sandbox records imitate the public mirror envelope for integration rehearsal only. They
+        are not consensus records, cannot prove payment, and never count as issued licenses.
+      <% else %>
       How verification works: this page fetches the certificate from Hedera's public mirror node
       and compares it, field by field, with the marketplace record. The chain copy wins.
       Every licensed unit gets a certificate like this one — how many units of a model were ever
       licensed is public, auditable fact, not a marketplace claim.
+      <% end %>
     </p>
   </footer>
 </div>

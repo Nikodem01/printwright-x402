@@ -9,6 +9,18 @@ module Certificates
 
     def self.call(license)
       return Result.new(state: :minting) unless license.anchored?
+      if license.purchase.sandbox?
+        path = Rails.application.routes.url_helpers.api_v1_sandbox_message_path(
+          topic_id: license.hcs_topic_id, sequence_number: license.hcs_sequence_number
+        )
+        return Result.new(
+          state: :sandbox,
+          onchain: license.cert_json,
+          mismatched_keys: [],
+          consensus_timestamp: format("%.9f", license.updated_at.to_r),
+          mirror_url: path
+        )
+      end
 
       mirror_url = "#{mirror_base}/api/v1/topics/#{license.hcs_topic_id}/messages/#{license.hcs_sequence_number}"
       response = Hedera::Network.get(URI(mirror_url))

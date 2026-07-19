@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_19_100549) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_19_131000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -170,11 +170,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_100549) do
     t.string "refund_tx_id"
     t.string "replay_key", null: false
     t.jsonb "requirements_json", default: {}, null: false
+    t.boolean "sandbox", default: false, null: false
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
     t.index ["license_offer_id"], name: "index_purchases_on_license_offer_id"
     t.index ["payment_tx_id"], name: "index_purchases_on_payment_tx_id", unique: true, where: "(payment_tx_id IS NOT NULL)"
     t.index ["replay_key"], name: "index_purchases_on_replay_key", unique: true
+    t.index ["sandbox"], name: "index_purchases_on_sandbox"
     t.index ["status"], name: "index_purchases_on_status"
   end
 
