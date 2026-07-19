@@ -1,6 +1,7 @@
 // Entry point: load env (repo root .env first, then a local sidecar/.env),
 // wire the real SDK in, listen on localhost only.
 import { config } from "dotenv";
+import * as Sentry from "@sentry/node";
 import { fileURLToPath } from "node:url";
 import { buildHedera } from "./hedera.mjs";
 import { createApp } from "./app.mjs";
@@ -29,6 +30,7 @@ createApp({
   token: process.env.SIDECAR_TOKEN,
   topicId: () => process.env.HEDERA_HCS_TOPIC_ID,
   heartbeatTopicId: () => process.env.HEDERA_HEARTBEAT_TOPIC_ID,
+  captureException: Sentry.captureException,
 }).listen(PORT, HOST, () => {
   console.log(`hcs sidecar on ${HOST}:${PORT} (network: ${hedera.network})`);
 });

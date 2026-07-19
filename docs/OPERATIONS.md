@@ -61,6 +61,31 @@ reset and a buyer-library link through the public UI, then confirm both arrive a
 HTTPS origin. Configure an external uptime monitor against `https://$APP_HOST/up`; `/up` is process
 health only, so retain the paid smoke and HCS heartbeat checks below.
 
+## Error monitoring
+
+Rails requests, Solid Queue jobs and the Node sidecar report to Sentry when `SENTRY_DSN` is set.
+Both SDKs disable default PII, tracing defaults off, and `SENTRY_TRACES_SAMPLE_RATE` is bounded to
+0..1. The sidecar tags its boundary but sends no request body; client responses and local logs expose
+only the exception class, not SDK messages or signed payloads. With no DSN both processes stay inert.
+
+After creating the provider project and deploying, send one marker from each process:
+
+```bash
+bin/kamal app exec 'bin/rails runner "Sentry.capture_message(%q[rails-monitor-smoke]); Sentry.flush(2)"'
+bin/kamal accessory exec sidecar 'node --import ./instrument.mjs --input-type=module -e \
+  "import * as Sentry from \"@sentry/node\"; Sentry.captureMessage(\"sidecar-monitor-smoke\"); await Sentry.flush(2000)"'
+```
+
+Confirm both events have the expected environment and no request body, cookie, email, bearer token,
+private key or signed transaction. Then configure alerts for new errors, repeated background-job
+failures and sidecar `hedera_error` bursts. A provider dashboard check remains required after every
+DSN or release change.
+
+Clone reproducibility was rechecked on 2026-07-20: `DATABASE_URL` pointed `db:schema:load` at a
+new scratch PostgreSQL database, which loaded 24 public tables with both `vector` and `pg_trgm`;
+the named scratch database was then removed. PostgreSQL with pgvector remains an explicit README
+prerequisite and deploys from `pgvector/pgvector:pg16`.
+
 ## Daily / after any incident: smoke
 
 ```bash

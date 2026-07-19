@@ -3,7 +3,10 @@ import http from "node:http";
 
 const MAX_MESSAGE_BYTES = 1024; // keep provenance records in one HCS message
 
-export function createApp({ hedera, token, topicId, heartbeatTopicId = () => undefined }) {
+export function createApp({
+  hedera, token, topicId, heartbeatTopicId = () => undefined,
+  captureException = () => undefined,
+}) {
   async function handle(req, res) {
     const send = (status, body) => {
       res.writeHead(status, { "content-type": "application/json" });
@@ -132,8 +135,9 @@ export function createApp({ hedera, token, topicId, heartbeatTopicId = () => und
       const result = await hedera.submitMessage(target, message);
       return send(200, result);
     } catch (error) {
-      console.error(error);
-      return send(502, { error: "hedera_error", detail: String(error) });
+      captureException(error, { tags: { component: "hedera-sidecar", boundary: "request" } });
+      console.error(`sidecar request failed (${error?.name || "Error"})`);
+      return send(502, { error: "hedera_error" });
     }
   }
 
@@ -163,7 +167,8 @@ export function createApp({ hedera, token, topicId, heartbeatTopicId = () => und
 
   return http.createServer((req, res) => {
     handle(req, res).catch((error) => {
-      console.error(error);
+      captureException(error, { tags: { component: "hedera-sidecar", boundary: "server" } });
+      console.error(`sidecar server failed (${error?.name || "Error"})`);
       res.writeHead(500, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: "internal" }));
     });

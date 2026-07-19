@@ -175,7 +175,11 @@ test("submit-cert with no topic configured is a 400", async () => {
 
 test("hedera failure surfaces as 502, not a crash", async () => {
   const failing = { ...fakeHedera, submitMessage: async () => { throw new Error("boom"); } };
-  const s = createApp({ hedera: failing, token: TOKEN, topicId: () => "0.0.111" });
+  const captured = [];
+  const s = createApp({
+    hedera: failing, token: TOKEN, topicId: () => "0.0.111",
+    captureException: (error, context) => captured.push({ error, context }),
+  });
   await new Promise((resolve) => s.listen(0, "127.0.0.1", resolve));
   const res = await fetch(`http://127.0.0.1:${s.address().port}/submit-cert`, {
     method: "POST",
@@ -183,7 +187,10 @@ test("hedera failure surfaces as 502, not a crash", async () => {
     body: JSON.stringify({ cert: { v: 1 } }),
   });
   assert.equal(res.status, 502);
-  assert.equal((await res.json()).error, "hedera_error");
+  assert.deepEqual(await res.json(), { error: "hedera_error" });
+  assert.equal(captured.length, 1);
+  assert.equal(captured[0].error.message, "boom");
+  assert.equal(captured[0].context.tags.boundary, "request");
   s.close();
 });
 

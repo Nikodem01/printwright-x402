@@ -58,6 +58,7 @@ env:
     CHAT_DAILY_SPEND_CENTS: <%= ENV.fetch("CHAT_DAILY_SPEND_CENTS", "0") %>
     CHAT_DAILY_MESSAGE_LIMIT: <%= ENV.fetch("CHAT_DAILY_MESSAGE_LIMIT", "500") %>
     SENTRY_ENVIRONMENT: production
+    SENTRY_TRACES_SAMPLE_RATE: <%= ENV.fetch("SENTRY_TRACES_SAMPLE_RATE", "0") %>
 
 asset_path: /rails/public/assets
 
@@ -102,9 +103,12 @@ accessories:
         HEDERA_HCS_TOPIC_ID: <%= ENV.fetch("HEDERA_HCS_TOPIC_ID") %>
         HEDERA_HEARTBEAT_TOPIC_ID: <%= ENV.fetch("HEDERA_HEARTBEAT_TOPIC_ID") %>
         TREASURY_ACCOUNT_ID: <%= ENV.fetch("TREASURY_ACCOUNT_ID") %>
+        SENTRY_ENVIRONMENT: production-sidecar
+        SENTRY_TRACES_SAMPLE_RATE: <%= ENV.fetch("SENTRY_TRACES_SAMPLE_RATE", "0") %>
       secret:
         - SIDECAR_TOKEN
         - HEDERA_PRIVATE_KEY
         - TREASURY_PRIVATE_KEY
+        - SENTRY_DSN
     options:
       restart: always

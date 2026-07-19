@@ -5,11 +5,12 @@
   "type": "module",
   "description": "Tiny HCS signing sidecar: the only process holding the Hedera operator key. Creates the license-certificate topic and submits certificate messages.",
   "scripts": {
-    "start": "node server.mjs",
+    "start": "node --import ./instrument.mjs server.mjs",
     "test": "node --test test/"
   },
   "dependencies": {
     "@hiero-ledger/sdk": "2.85.0",
+    "@sentry/node": "^10.42.0",
     "dotenv": "^17.4.2"
   },
   "overrides": {
