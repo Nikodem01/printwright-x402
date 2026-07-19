@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_19_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_19_183000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -162,6 +162,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_150000) do
     t.vector "embedding", limit: 768
     t.string "embedding_text_digest"
     t.string "file_hash"
+    t.string "geometry_hash"
+    t.jsonb "mesh_analysis", default: {}, null: false
+    t.string "mesh_analysis_digest"
+    t.string "mesh_analysis_status", default: "pending", null: false
     t.jsonb "printability", default: {}, null: false
     t.string "slug", null: false
     t.string "status", default: "draft", null: false
@@ -173,6 +177,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_150000) do
     t.index ["collections"], name: "index_models3d_on_collections", using: :gin
     t.index ["designer_id"], name: "index_models3d_on_designer_id"
     t.index ["embedding"], name: "index_models3d_on_embedding", opclass: :vector_cosine_ops, using: :hnsw
+    t.index ["geometry_hash"], name: "index_models3d_on_geometry_hash"
+    t.index ["mesh_analysis_status"], name: "index_models3d_on_mesh_analysis_status"
     t.index ["slug"], name: "index_models3d_on_slug", unique: true
     t.index ["status"], name: "index_models3d_on_status"
     t.index ["tags"], name: "index_models3d_on_tags", using: :gin

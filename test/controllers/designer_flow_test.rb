@@ -1,7 +1,10 @@
 require "test_helper"
 require "webmock/minitest"
+require_relative "../test_helpers/mesh_test_helper"
 
 class DesignerFlowTest < ActionDispatch::IntegrationTest
+  include MeshTestHelper
+
   setup do
     # Publish runs the payout-account mirror check; this designer's account
     # can receive USDC directly (unlimited auto-association).
@@ -34,6 +37,9 @@ class DesignerFlowTest < ActionDispatch::IntegrationTest
     assert_equal false, model.printability["supports"]
     assert model.model_files.count == 2
 
+    AnalyzeModelMeshJob.perform_now(model.id)
+    assert_equal "passed", model.reload.mesh_analysis_status
+
     post publish_designer_model_path(model), params: { warranty: "1" }
     model.reload
     assert model.published?
@@ -57,6 +63,64 @@ class DesignerFlowTest < ActionDispatch::IntegrationTest
     assert model.reload.draft?
     follow_redirect!
     assert_select ".flash-bad", text: /printable file/
+  end
+
+  test "publish refuses a broken mesh with the analysis reason" do
+    designer = designers(:one)
+    sign_in_as designer
+    model = designer.models3d.create!(title: "Broken upload", slug: "broken-upload")
+    model.license_offers.create!(kind: "personal", price_cents: 100)
+    lines = box_stl.lines
+    attach_stl(model, (lines[0...-8] + [ lines.last ]).join, filename: "broken.stl")
+    AnalyzeModelMeshJob.perform_now(model.id)
+
+    post publish_designer_model_path(model), params: { warranty: "1" }
+
+    assert model.reload.draft?
+    follow_redirect!
+    assert_select ".flash-bad", text: /broken\.stl: is open/
+  end
+
+  test "publish refuses normalized geometry copied from another model" do
+    original = designers(:one).models3d.create!(
+      title: "Original geometry", slug: "original-geometry", status: "published"
+    )
+    attach_stl(original, box_stl, filename: "original.stl")
+    AnalyzeModelMeshJob.perform_now(original.id)
+    original.reload.update!(file_hash: original.mesh_analysis_digest)
+
+    copy = designers(:two).models3d.create!(title: "Geometry copy", slug: "geometry-copy")
+    copy.license_offers.create!(kind: "personal", price_cents: 100)
+    attach_stl(copy, box_stl(offset: [ 20.0, -3.0, 4.0 ], reverse: true), filename: "copy.stl")
+    AnalyzeModelMeshJob.perform_now(copy.id)
+    sign_in_as designers(:two)
+
+    post publish_designer_model_path(copy), params: { warranty: "1" }
+
+    assert copy.reload.draft?
+    follow_redirect!
+    assert_select ".flash-bad", text: /matches existing published model “Original geometry”/
+  end
+
+  test "publish requeues analysis when the printable bundle changed" do
+    designer = designers(:one)
+    model = designer.models3d.create!(title: "Changed bundle", slug: "changed-bundle")
+    model.license_offers.create!(kind: "personal", price_cents: 100)
+    attach_stl(model, box_stl, filename: "first.stl")
+    AnalyzeModelMeshJob.perform_now(model.id)
+    analyzed_digest = model.reload.mesh_analysis_digest
+    attach_stl(model, box_stl(width: 11), filename: "second.stl")
+    sign_in_as designer
+
+    assert_enqueued_with(job: AnalyzeModelMeshJob, args: [ model.id ]) do
+      post publish_designer_model_path(model), params: { warranty: "1" }
+    end
+
+    assert model.reload.draft?
+    assert_nil model.mesh_analysis_digest
+    assert_not_equal analyzed_digest, MeshAnalysis::Analyzer.bundle_digest(model.printable_files)
+    follow_redirect!
+    assert_select ".flash-bad", text: /analysis is still running for this exact file bundle/i
   end
 
   test "designers cannot touch another designer's models" do

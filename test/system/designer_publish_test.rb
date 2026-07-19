@@ -33,6 +33,10 @@ class DesignerPublishTest < RackSystemTestCase
     model = Model3d.find_by!(slug: "form-flow-clip")
     assert model.draft?
 
+    AnalyzeModelMeshJob.perform_now(model.id)
+    visit edit_designer_model_path(model)
+    assert_text "Mesh analysis: passed"
+
     # Publishing without the recorded warranty must bounce, not go live.
     click_button "Publish — freeze the bundle hash and go live"
     assert_text(/warranty/i)

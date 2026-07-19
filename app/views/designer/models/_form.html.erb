@@ -41,6 +41,18 @@
         <% end %>
       </ul>
     <% end %>
+    <% if model.persisted? && model.printable_files.any? %>
+      <div class="flash <%= model.mesh_analysis_status == 'failed' ? 'flash-bad' : (model.mesh_analysis_status == 'passed' ? 'flash-ok' : '') %>">
+        Mesh analysis: <strong><%= model.mesh_analysis_status %></strong>
+        <% if model.mesh_analysis_errors.any? %>
+          <ul>
+            <% model.mesh_analysis_errors.each do |message| %><li><%= message %></li><% end %>
+          </ul>
+        <% elsif model.mesh_analysis_status == "pending" %>
+          — checking manifold geometry, wall thickness, and prior uploads.
+        <% end %>
+      </div>
+    <% end %>
     <label class="t-small">Printable files (STL/3MF/STEP)
       <%= file_field_tag "model3d[printable_files][]", multiple: true, accept: ".stl,.3mf,.step,.zip" %>
     </label>

@@ -57,6 +57,8 @@ class Model3d < ApplicationRecord
 
   enum :status, %w[draft published retired].index_by(&:itself), default: "draft"
 
+  validates :mesh_analysis_status, inclusion: { in: %w[pending passed failed] }
+
   validates :title, presence: true
   validates :slug, presence: true, uniqueness: true
   validates :category, inclusion: { in: CATEGORIES.keys }, allow_blank: true
@@ -152,6 +154,10 @@ class Model3d < ApplicationRecord
 
   def printable_files
     model_files.select { |f| %w[stl 3mf step].include?(f.kind) }
+  end
+
+  def mesh_analysis_errors
+    Array(mesh_analysis["errors"])
   end
 
   private

@@ -46,10 +46,25 @@ class Designer::ModelsController < Designer::BaseController
         alert: "Publishing requires the ownership warranty — every sold license names it."
     end
 
-    digest = Digest::SHA256.new
-    files.sort_by { |f| f.file.filename.to_s }.each { |f| digest.update(f.file.download) }
+    digest = MeshAnalysis::Analyzer.bundle_digest(files)
+    if @model.mesh_analysis_digest != digest || @model.mesh_analysis_status == "pending"
+      queue_mesh_analysis
+      return redirect_to edit_designer_model_path(@model),
+        alert: "Mesh analysis is still running for this exact file bundle. Try Publish again after it passes."
+    end
+    if @model.mesh_analysis_status == "failed"
+      return redirect_to edit_designer_model_path(@model),
+        alert: "Publish blocked: #{@model.mesh_analysis_errors.join('; ')}"
+    end
+
+    duplicate = duplicate_model(digest)
+    if duplicate
+      return redirect_to edit_designer_model_path(@model),
+        alert: "Publish blocked: matches existing published model “#{duplicate.title}”. Contact support if you are authorized to republish it."
+    end
+
     PreviewMeshes::Attacher.call(@model)
-    @model.update!(file_hash: "sha256:#{digest.hexdigest}", status: "published",
+    @model.update!(file_hash: digest, status: "published",
                    warranty_accepted_at: Time.current)
     redirect_to model_page_path(@model.slug), notice: publish_notice
   end
@@ -72,6 +87,18 @@ class Designer::ModelsController < Designer::BaseController
 
   def find_model
     current_designer.models3d.find(params[:id])
+  end
+
+  def duplicate_model(digest)
+    scope = Model3d.published.where.not(id: @model.id)
+    scope.find_by(file_hash: digest) ||
+      (@model.geometry_hash.present? && scope.find_by(geometry_hash: @model.geometry_hash))
+  end
+
+  def queue_mesh_analysis
+    @model.update_columns(mesh_analysis_status: "pending", mesh_analysis_digest: nil,
+                          geometry_hash: nil, mesh_analysis: {}, updated_at: Time.current)
+    AnalyzeModelMeshJob.perform_later(@model.id)
   end
 
   def model_params
@@ -103,6 +130,7 @@ class Designer::ModelsController < Designer::BaseController
   # attached; rejects surface to the designer and never create records.
   def attach_uploads
     rejected = []
+    printable_attached = false
     Array(params.dig(:model3d, :printable_files)).reject(&:blank?).each do |upload|
       ext = upload.original_filename.split(".").last.to_s.downcase
       kind = ModelFile::KINDS.include?(ext) ? ext : "stl"
@@ -112,6 +140,7 @@ class Designer::ModelsController < Designer::BaseController
       end
       file = @model.model_files.create!(kind: kind, position: @model.model_files.count)
       file.file.attach(upload)
+      printable_attached = true
     end
     Array(params.dig(:model3d, :render_files)).reject(&:blank?).each do |upload|
       if (reason = Uploads::Validator.reason_to_reject(upload, kind: "render"))
@@ -122,5 +151,6 @@ class Designer::ModelsController < Designer::BaseController
       file.file.attach(upload)
     end
     flash[:alert] = "Rejected: #{rejected.join('; ')}" if rejected.any?
+    queue_mesh_analysis if printable_attached
   end
 end

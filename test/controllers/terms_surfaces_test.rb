@@ -43,7 +43,10 @@ class TermsSurfacesTest < ActionDispatch::IntegrationTest
     draft = Model3d.create!(designer: designers(:two), title: "Draft", slug: "warranty-draft")
     draft.license_offers.create!(kind: "personal", price_cents: 100)
     stl = draft.model_files.create!(kind: "stl", position: 0)
-    stl.file.attach(io: StringIO.new("solid t\nendsolid t\n"), filename: "t.stl", content_type: "model/stl")
+    stl.file.attach(
+      io: File.open(Rails.root.join("db/seed_assets/calibration-cube.stl"), "rb"),
+      filename: "calibration-cube.stl", content_type: "model/stl"
+    )
     sign_in_as designers(:two)
 
     post publish_designer_model_path(draft)
@@ -51,6 +54,7 @@ class TermsSurfacesTest < ActionDispatch::IntegrationTest
     assert draft.reload.status == "draft"
     assert_nil draft.warranty_accepted_at
 
+    AnalyzeModelMeshJob.perform_now(draft.id)
     post publish_designer_model_path(draft), params: { warranty: "1" }
     assert draft.reload.published?
     assert_not_nil draft.warranty_accepted_at

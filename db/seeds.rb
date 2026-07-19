@@ -331,6 +331,7 @@ DESIGNERS = { studio: studio, atelier: atelier, workshop: workshop }.freeze
   end
 
   PreviewMeshes::Attacher.call(model)
+  AnalyzeModelMeshJob.perform_now(model.id)
 
   spec[:offers].each do |offer_spec|
     offer = model.license_offers.find_or_initialize_by(kind: offer_spec[:kind])
