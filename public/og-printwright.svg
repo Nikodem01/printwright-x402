@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Printwright — every print, licensed</title>
+  <desc id="desc">License printable designs and anchor durable proof on Hedera.</desc>
+  <rect width="1200" height="630" fill="#f8fafc"/>
+  <path fill="#ccfbf1" d="M1070 18 1260 128v220l-190 110-190-110V128z"/>
+  <path fill="#0f766e" d="M88 60 125 81.5v43L88 146l-37-21.5v-43z"/>
+  <path fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="7" d="m66 88 9 34 13-21 13 21 9-34"/>
+  <path fill="none" stroke="#99f6e4" stroke-linecap="round" stroke-width="4" d="M66 130h44"/>
+  <text x="145" y="103" fill="#0f172a" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="39" font-weight="750" letter-spacing="-1.4">Printwright</text>
+  <text x="147" y="131" fill="#64748b" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="18">Every print, licensed.</text>
+  <text x="70" y="265" fill="#0f172a" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="58" font-weight="760" letter-spacing="-2">Rights that travel</text>
+  <text x="70" y="330" fill="#0f172a" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="58" font-weight="760" letter-spacing="-2">with every print.</text>
+  <text x="73" y="382" fill="#475569" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="24">License printable designs. Pay per print. Verify the proof.</text>
+  <rect x="70" y="444" width="1060" height="112" rx="14" fill="#fff" stroke="#e2e8f0" stroke-width="2"/>
+  <circle cx="120" cy="500" r="20" fill="#ccfbf1"/>
+  <text x="120" y="507" fill="#0f766e" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,monospace" font-size="18" font-weight="700">1</text>
+  <text x="156" y="507" fill="#334155" font-family="ui-monospace,SFMono-Regular,monospace" font-size="18" font-weight="700">DESIGN</text>
+  <path stroke="#cbd5e1" stroke-width="2" d="M275 500h86"/>
+  <circle cx="405" cy="500" r="20" fill="#ccfbf1"/>
+  <text x="405" y="507" fill="#0f766e" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,monospace" font-size="18" font-weight="700">2</text>
+  <text x="441" y="507" fill="#334155" font-family="ui-monospace,SFMono-Regular,monospace" font-size="18" font-weight="700">x402 PAYMENT</text>
+  <path stroke="#cbd5e1" stroke-width="2" d="M625 500h86"/>
+  <circle cx="755" cy="500" r="20" fill="#ccfbf1"/>
+  <text x="755" y="507" fill="#0f766e" text-anchor="middle" font-family="ui-monospace,SFMono-Regular,monospace" font-size="18" font-weight="700">3</text>
+  <text x="791" y="507" fill="#334155" font-family="ui-monospace,SFMono-Regular,monospace" font-size="18" font-weight="700">LICENSE PROOF</text>
+  <text x="70" y="601" fill="#0f766e" font-family="ui-monospace,SFMono-Regular,monospace" font-size="17">Publicly anchored on Hedera · independently verifiable</text>
+</svg>

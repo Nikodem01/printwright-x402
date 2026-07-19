@@ -1,4 +1,8 @@
-You can reset your password on
-<%= edit_password_url(@designer.password_reset_token) %>
+Reset your Printwright password
 
-This link will expire in <%= distance_of_time_in_words(0, @designer.password_reset_token_expires_in) %>.
+We received a request to reset your Printwright designer password. Open this secure, one-time link:
+<%= edit_password_url(@password_reset_token) %>
+
+This one-time link expires in <%= distance_of_time_in_words(0, @designer.password_reset_token_expires_in) %>.
+
+If you did not request a password reset, ignore this email. Your password will not change.

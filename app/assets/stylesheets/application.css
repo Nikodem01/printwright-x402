@@ -69,7 +69,12 @@ a.mono, .mono a { color: var(--chain); text-decoration: underline; }
   padding: var(--s-3) 0;
 }
 .site-header .container { display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
-.wordmark { font-size: 20px; font-weight: 700; color: var(--text); text-decoration: none; }
+.wordmark {
+  display: inline-flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none;
+}
+.wordmark img { width: 40px; height: 40px; flex: none; }
+.wordmark-copy { display: block; }
+.wordmark-name { display: block; font-size: 20px; line-height: 1.05; font-weight: 750; letter-spacing: -0.03em; }
 .wordmark .tagline { display: block; font-size: 12px; font-weight: 400; color: var(--text-muted); }
 /* min-width: min(...) so the form still claims a sensible width on wide screens
    but may shrink below it at 360px instead of pushing the button off-screen. */

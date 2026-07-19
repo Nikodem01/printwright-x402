@@ -2,12 +2,34 @@
 <html>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <style>
-      /* Email styles need to be inline */
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
 
-  <body>
-    <%= yield %>
+  <body style="margin:0; padding:0; background:#f1f5f9; color:#0f172a; font-family:Arial,Helvetica,sans-serif;">
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0;">A secure, one-time link from Printwright.</div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;">
+            <tr>
+              <td style="padding:0 0 16px; color:#0f172a; font-size:22px; font-weight:700; letter-spacing:-0.4px;">
+                <span style="display:inline-block; margin-right:8px; padding:3px 6px; border-radius:5px; background:#0f766e; color:#ffffff; font-size:16px; line-height:1;">W</span>Printwright
+                <span style="display:block; margin:4px 0 0 36px; color:#64748b; font-size:12px; font-weight:400; letter-spacing:0;">Every print, licensed.</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px; background:#ffffff; border:1px solid #e2e8f0; border-radius:10px; box-shadow:0 1px 2px rgba(15,23,42,.06);">
+                <%= yield %>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 4px 0; color:#64748b; font-size:12px; line-height:1.5;">
+                Printwright licenses printable designs and anchors durable proof on Hedera.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
   </body>
 </html>

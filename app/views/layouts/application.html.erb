@@ -1,17 +1,37 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title><%= content_for(:title) || "Printwright — every print, licensed" %></title>
+    <% page_title = content_for(:title) || "Printwright — every print, licensed" %>
+    <% page_description = content_for(:description) || "License printable designs, pay per print, and verify every right on Hedera." %>
+    <% social_image = "#{request.base_url}/og-printwright.png" %>
+    <title><%= page_title %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="application-name" content="Printwright">
+    <meta name="description" content="<%= page_description %>">
+    <meta name="theme-color" content="#0f766e">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Printwright">
+    <meta property="og:title" content="<%= page_title %>">
+    <meta property="og:description" content="<%= page_description %>">
+    <meta property="og:url" content="<%= request.base_url + request.path %>">
+    <meta property="og:image" content="<%= social_image %>">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Printwright — every print, licensed. Rights anchored on Hedera.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<%= page_title %>">
+    <meta name="twitter:description" content="<%= page_description %>">
+    <meta name="twitter:image" content="<%= social_image %>">
+    <link rel="canonical" href="<%= request.base_url + request.path %>">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
     <%= yield :head %>
 
-    <link rel="icon" href="/icon.png" type="image/png">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/icon.png">
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
+    <link rel="manifest" href="/manifest.json">
 
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
@@ -21,8 +41,11 @@
     <header class="site-header">
       <div class="container">
         <%= link_to root_path, class: "wordmark" do %>
-          Printwright ⬡
-          <span class="tagline">Every print, licensed.</span>
+          <%= image_tag "/brand-mark.svg", alt: "", width: 40, height: 40 %>
+          <span class="wordmark-copy">
+            <span class="wordmark-name">Printwright</span>
+            <span class="tagline">Every print, licensed.</span>
+          </span>
         <% end %>
         <%= form_with url: root_path, method: :get, class: "search-form" do %>
           <input type="search" name="q" value="<%= params[:q] %>" placeholder="Search models — try 'beaver'"

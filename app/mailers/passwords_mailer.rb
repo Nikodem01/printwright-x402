@@ -1,6 +1,7 @@
 class PasswordsMailer < ApplicationMailer
   def reset(designer)
     @designer = designer
-    mail subject: "Reset your password", to: designer.email_address
+    @password_reset_token = designer.password_reset_token
+    mail subject: "Reset your Printwright password", to: designer.email_address
   end
 end
