@@ -1,7 +1,10 @@
 class Model3d < ApplicationRecord
   belongs_to :designer
   has_many :model_files, -> { order(:position) }, dependent: :destroy
-  has_many :license_offers, dependent: :destroy
+  # Personal is the storefront default; keep preload/query order deterministic
+  # so a commercial offer cannot become checked merely because PostgreSQL
+  # returned rows in a different physical order.
+  has_many :license_offers, -> { order(kind: :desc, id: :asc) }, dependent: :destroy
   accepts_nested_attributes_for :license_offers, allow_destroy: true,
                                 reject_if: ->(attrs) { attrs["price_cents"].blank? }
   has_neighbors :embedding

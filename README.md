@@ -161,4 +161,6 @@ and issues welcome.
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Demo seed models are self-authored placeholder solids (CC0).
+MIT — see [LICENSE](LICENSE). The twelve demo models are self-authored, reproducible OpenSCAD
+designs dedicated CC0-1.0; their source, dimensions, print orientation, caveats, and provenance
+live in [`db/seed_assets/`](db/seed_assets/).

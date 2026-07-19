@@ -6,19 +6,35 @@
 # license obligations attach to the demo catalog.
 
 ASSETS = Rails.root.join("db/seed_assets")
+PROVENANCE = YAML.safe_load_file(ASSETS.join("provenance.yml")).fetch("models")
+PROVENANCE_NOTE = "Self-authored parametric model dedicated CC0-1.0; reproducible source and print notes are included with the catalog."
+
+# A published file hash is part of every certificate. If a prior seed asset has
+# already sold, keep that model, its offers, and its attachments immutable;
+# retire it under a stable legacy slug and publish the replacement separately.
+def upgradable_seed_model(slug, file_hash)
+  model = Model3d.find_by(slug: slug)
+  return Model3d.new(slug: slug) unless model
+  return model if model.file_hash.blank? || model.file_hash == file_hash
+  return model unless model.license_offers.joins(:purchases).exists?
+
+  model.update!(slug: "#{slug}-legacy-#{model.id}", status: "retired")
+  Model3d.new(slug: slug)
+end
 
 # Designers with their own funded testnet account (SEED_*_ACCOUNT_ID env)
 # receive sales directly once the publish-time mirror check passes; the rest
 # demonstrate treasury custody + owed balance. Never default to the treasury
 # account here — a designer "owning" the treasury id corrupts held_by.
 def demo_designer(email, name, bio, account_env: nil)
-  Designer.find_or_create_by!(email_address: email) do |d|
+  designer = Designer.find_or_create_by!(email_address: email) do |d|
     d.password = SecureRandom.base58(24)
     d.display_name = name
-    d.bio = "#{bio} (Demo account; catalog is self-authored CC0 placeholder geometry.)"
     d.hedera_account_id = account_env && ENV[account_env].presence
     d.verified = true
   end
+  designer.update!(bio: "#{bio} Demo catalog geometry is self-authored and dedicated CC0-1.0.")
+  designer
 end
 
 studio = demo_designer("studio@printwright.demo", "Printwright Demo Studio",
@@ -36,25 +52,25 @@ EXTRA_MODELS = [
     tags: %w[phone stand desk wedge], printability: { supports: false, materials: %w[PLA PETG], est_print_minutes: 55, bed_min_mm: 50 },
     offers: [ { kind: "personal", price_cents: 180, currency: "USDC" } ] },
   { designer: :studio, slug: "cable-clip", title: "Snap Cable Clip",
-    description: "Snap-fit cable clip for desk edges up to 25 mm. Print a dozen at once.",
+    description: "Springy open clip for cables up to 16 mm, with a broad mounting pad. Print a dozen at once.",
     tags: %w[cable clip organizer desk], printability: { supports: false, materials: %w[PETG], est_print_minutes: 12, bed_min_mm: 20 },
     offers: [ { kind: "personal", price_cents: 90, currency: "USDC" },
               { kind: "commercial_unit", price_cents: 25, currency: "USDC" } ] },
   { designer: :atelier, slug: "planter-mini", title: "Mini Cone Planter",
-    description: "Palm-sized planter for succulents; drainage hole included. Vase-mode friendly.",
+    description: "Palm-sized tapered planter for succulents, with a 6.4 mm drainage hole and sturdy walls.",
     tags: %w[planter succulent decor vase], printability: { supports: false, materials: %w[PLA], est_print_minutes: 80, bed_min_mm: 60 },
     offers: [ { kind: "personal", price_cents: 210, currency: "USDC" } ] },
   { designer: :workshop, slug: "dice-d6", title: "Chunky D6 Dice",
-    description: "Oversized tabletop die with recessed pips. Balanced infill recommended.",
+    description: "Oversized rounded tabletop die with three recessed faces. A toy and calibration print, not casino-balanced.",
     tags: %w[dice tabletop game toy], printability: { supports: false, materials: %w[PLA ABS], est_print_minutes: 40, bed_min_mm: 25 },
     offers: [ { kind: "personal", price_cents: 140, currency: "HBAR" } ] },
   { designer: :studio, slug: "bag-hook", title: "Hex Bag Hook",
-    description: "Load-tested carabiner-style bag hook. Print solid, 6 walls.",
+    description: "Flat carabiner-style hook with a flexible mouth for decorative and light-duty use.",
     tags: %w[hook bag carry utility], printability: { supports: false, materials: %w[PETG], est_print_minutes: 35, bed_min_mm: 45 },
     offers: [ { kind: "personal", price_cents: 160, currency: "USDC" },
               { kind: "commercial_unit", price_cents: 45, currency: "USDC" } ] },
   { designer: :atelier, slug: "vase-spiral", title: "Spiral Bud Vase",
-    description: "Slim bud vase; print in spiral/vase mode for a seamless finish.",
+    description: "Slim twelve-sided bud vase with a 105-degree twist and a closed 2.4 mm floor.",
     tags: %w[vase decor spiral flower], printability: { supports: false, materials: %w[PLA], est_print_minutes: 95, bed_min_mm: 50 },
     offers: [ { kind: "personal", price_cents: 260, currency: "USDC" } ] },
   { designer: :workshop, slug: "gear-toy", title: "Fidget Gear",
@@ -67,7 +83,7 @@ EXTRA_MODELS = [
     tags: %w[bracket wall mount utility], printability: { supports: true, materials: %w[PETG ABS], est_print_minutes: 65, bed_min_mm: 40 },
     offers: [ { kind: "personal", price_cents: 190, currency: "USDC" } ] },
   { designer: :workshop, slug: "whistle", title: "Emergency Whistle",
-    description: "Single-piece pea-less whistle. Loud, print-in-place.",
+    description: "Single-piece pealess signal-whistle prototype. Acoustic performance varies with material and slicer settings.",
     tags: %w[whistle outdoor safety toy], printability: { supports: false, materials: %w[PLA], est_print_minutes: 22, bed_min_mm: 30 },
     offers: [ { kind: "personal", price_cents: 110, currency: "HBAR" } ] }
 ].freeze
@@ -76,11 +92,10 @@ MODELS = [
   {
     designer: :workshop,
     slug: "beaver-with-hat",
-    title: "Articulated Beaver with Hat",
-    description: "A cheerful articulated beaver wearing a tiny top hat. Prints support-free; " \
-                 "joints snap together off the bed. Demo placeholder geometry (pyramid solid).",
-    tags: %w[beaver hat animal articulated flexi toy],
-    printability: { supports: false, materials: %w[PLA PETG], est_print_minutes: 95, bed_min_mm: 40 },
+    title: "Beaver Desk Mascot with Hat",
+    description: "A cheerful single-piece beaver desk mascot with a flat tail, tiny muzzle, ears, feet, and top hat.",
+    tags: %w[beaver hat animal mascot desk toy],
+    printability: { supports: true, materials: %w[PLA PETG], est_print_minutes: 95, bed_min_mm: 45 },
     stl: "beaver-with-hat.stl", render: "beaver-with-hat.png",
     offers: [
       { kind: "personal", price_cents: 250, currency: "USDC",
@@ -93,7 +108,7 @@ MODELS = [
     designer: :studio,
     slug: "calibration-cube-20mm",
     title: "Calibration Cube 20 mm",
-    description: "Classic 20 mm calibration cube for dialing in your printer. Demo placeholder geometry.",
+    description: "Nominal 20 mm calibration cube with lightly rounded edges for dialing in dimensional accuracy.",
     tags: %w[calibration cube test benchmark],
     printability: { supports: false, materials: %w[PLA ABS PETG], est_print_minutes: 25, bed_min_mm: 20 },
     stl: "calibration-cube.stl", render: "calibration-cube.png",
@@ -106,9 +121,8 @@ MODELS = [
     designer: :atelier,
     slug: "hex-desk-organizer",
     title: "Hexagon Desk Organizer",
-    description: "Stackable hexagonal desk organizer cell. Chain as many as your desk deserves. " \
-                 "Demo placeholder geometry (hex prism).",
-    tags: %w[organizer desk hexagon storage stackable],
+    description: "Open hexagonal desk cup with a 3 mm floor and sturdy walls for pens, tools, or brushes.",
+    tags: %w[organizer desk hexagon storage cup],
     printability: { supports: false, materials: %w[PLA], est_print_minutes: 140, bed_min_mm: 30 },
     stl: "hex-organizer.stl", render: "hex-organizer.png",
     offers: [
@@ -126,27 +140,31 @@ DESIGNERS = { studio: studio, atelier: atelier, workshop: workshop }.freeze
   stl_name = spec[:stl] || "#{spec[:slug]}.stl"
   render_name = spec[:render] || "#{spec[:slug]}.png"
   stl_bytes = ASSETS.join(stl_name).binread
+  provenance = PROVENANCE.fetch(File.basename(stl_name, ".stl"))
+  raise "Provenance slug mismatch for #{spec[:slug]}" unless provenance.fetch("slug") == spec[:slug]
+  file_hash = "sha256:#{Digest::SHA256.hexdigest(stl_bytes)}"
 
-  model = Model3d.find_or_initialize_by(slug: spec[:slug])
+  model = upgradable_seed_model(spec[:slug], file_hash)
   model.assign_attributes(
     designer: DESIGNERS.fetch(spec[:designer]),
     title: spec[:title],
-    description: spec[:description],
+    description: "#{spec[:description]} #{PROVENANCE_NOTE}",
     tags: spec[:tags],
     printability: spec[:printability],
-    file_hash: "sha256:#{Digest::SHA256.hexdigest(stl_bytes)}",
+    file_hash: file_hash,
     status: "published"
   )
   model.save!
 
   stl_file = model.model_files.find_or_create_by!(kind: "stl", position: 0)
-  unless stl_file.file.attached?
+  unless stl_file.file.attached? && stl_file.file.blob.checksum == Digest::MD5.base64digest(stl_bytes)
     stl_file.file.attach(io: StringIO.new(stl_bytes), filename: stl_name, content_type: "model/stl")
   end
 
   render = model.model_files.find_or_create_by!(kind: "render", position: 1)
-  unless render.file.attached?
-    render.file.attach(io: ASSETS.join(render_name).open, filename: render_name, content_type: "image/png")
+  render_bytes = ASSETS.join(render_name).binread
+  unless render.file.attached? && render.file.blob.checksum == Digest::MD5.base64digest(render_bytes)
+    render.file.attach(io: StringIO.new(render_bytes), filename: render_name, content_type: "image/png")
   end
 
   spec[:offers].each do |offer_spec|

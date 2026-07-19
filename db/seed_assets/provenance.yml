@@ -1,0 +1,78 @@
+version: 1
+catalog_license: CC0-1.0
+creator: Printwright Demo Studio
+source: db/seed_assets/catalog.scad
+generator: OpenSCAD 2021.01
+models:
+  bag-hook:
+    slug: bag-hook
+    dimensions_mm: [52, 52, 8]
+    orientation: flat on either broad face
+    supports: false
+    notes: Open carabiner-style hook with a flexible mouth; decorative/light-duty only.
+  beaver-with-hat:
+    slug: beaver-with-hat
+    dimensions_mm: [37, 55.5, 76]
+    orientation: feet and tail on the bed
+    supports: true
+    notes: Single-piece desk mascot assembled from intersecting parametric solids.
+  cable-clip:
+    slug: cable-clip
+    dimensions_mm: [28, 25.5, 12]
+    orientation: broad face on the bed
+    supports: false
+    notes: Open 16 mm cable channel with a 5 mm spring wall and flat mounting pad.
+  calibration-cube:
+    slug: calibration-cube-20mm
+    dimensions_mm: [20, 20, 20]
+    orientation: any face on the bed
+    supports: false
+    notes: Nominal 20 mm envelope with a 0.6 mm edge radius.
+  dice-d6:
+    slug: dice-d6
+    dimensions_mm: [24, 24, 24]
+    orientation: unmarked face on the bed
+    supports: false
+    notes: Rounded die with recessed one, two, and three faces; not certified casino-balanced.
+  gear-toy:
+    slug: gear-toy
+    dimensions_mm: [50, 50, 9]
+    orientation: broad face on the bed
+    supports: false
+    notes: Fourteen-tooth hand gear with a center bore and six lightening holes.
+  hex-organizer:
+    slug: hex-desk-organizer
+    dimensions_mm: [68, 59, 72]
+    orientation: closed floor on the bed
+    supports: false
+    notes: Open hexagonal cup with a 3 mm floor and approximately 2.6 mm walls.
+  phone-stand:
+    slug: phone-stand
+    dimensions_mm: [76, 66, 58]
+    orientation: base plate on the bed
+    supports: false
+    notes: Two triangulated back ribs, front retaining lip, and cross brace.
+  planter-mini:
+    slug: planter-mini
+    dimensions_mm: [66, 66, 64]
+    orientation: closed floor on the bed
+    supports: false
+    notes: Tapered hollow pot with a 3 mm floor and 6.4 mm drainage hole.
+  vase-spiral:
+    slug: vase-spiral
+    dimensions_mm: [58, 58, 105]
+    orientation: closed floor on the bed
+    supports: false
+    notes: Twisted twelve-sided shell with a 2.4 mm floor; watertightness depends on slicer settings.
+  wall-bracket:
+    slug: wall-bracket
+    dimensions_mm: [52, 48, 58]
+    orientation: either plate on the bed
+    supports: true
+    notes: One-piece L bracket with twin gussets and two 6.6 mm wall holes; light-duty only.
+  whistle:
+    slug: whistle
+    dimensions_mm: [64, 18, 20]
+    orientation: broad side on the bed
+    supports: false
+    notes: Pealess signal-whistle prototype with airway, resonant chamber, edge, and lanyard hole.
