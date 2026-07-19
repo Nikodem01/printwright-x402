@@ -1,0 +1,30 @@
+<% content_for :title, "License library — Printwright" %>
+<% content_for :head do %><meta name="robots" content="noindex,nofollow"><% end %>
+
+<div class="container" style="max-width: 820px">
+  <div class="page-heading-row">
+    <div><h1>Your license library</h1><p class="muted">Saved paid receipts on this email.</p></div>
+    <%= button_to "Close library", license_library_path, method: :delete, class: "linklike" %>
+  </div>
+
+  <% if @memberships.any? %>
+    <div class="model-grid">
+      <% @memberships.each do |membership| %>
+        <% license = membership.license %>
+        <% model = license.purchase.model3d %>
+        <% receipt_token = license.signed_id(purpose: "purchase-receipt") %>
+        <article class="model-card">
+          <div class="card-body">
+            <span class="badge badge-kind"><%= license.purchase.license_offer.kind.humanize.downcase %></span>
+            <h2><%= model.title %></h2>
+            <p class="mono t-small"><%= license.cert_id %> · unit #<%= license.serial %></p>
+            <p><%= link_to "Open receipt", purchase_receipt_path(license.cert_id, token: receipt_token) %> ·
+              <%= link_to "Re-download", purchase_receipt_download_path(license.cert_id, token: receipt_token) %></p>
+          </div>
+        </article>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="empty-state">No saved paid licenses remain for this email.</div>
+  <% end %>
+</div>

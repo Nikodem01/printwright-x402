@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_19_234500) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_19_235500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -128,6 +128,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_234500) do
     t.index ["designer_id"], name: "index_ledger_entries_on_designer_id"
     t.index ["purchase_id", "entry_kind"], name: "index_ledger_entries_on_purchase_id_and_entry_kind", unique: true
     t.index ["purchase_id"], name: "index_ledger_entries_on_purchase_id"
+  end
+
+  create_table "library_memberships", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "email_address", null: false
+    t.bigint "license_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email_address"], name: "index_library_memberships_on_email_address"
+    t.index ["license_id"], name: "index_library_memberships_on_license_id", unique: true
   end
 
   create_table "license_offers", force: :cascade do |t|
@@ -344,6 +353,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_234500) do
   add_foreign_key "download_grants", "licenses"
   add_foreign_key "ledger_entries", "designers"
   add_foreign_key "ledger_entries", "purchases"
+  add_foreign_key "library_memberships", "licenses"
   add_foreign_key "license_offers", "models3d"
   add_foreign_key "licenses", "purchases"
   add_foreign_key "model_files", "models3d"

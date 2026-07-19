@@ -23,6 +23,7 @@ provenance. Creative Commons, public-domain, missing, and unknown licenses are b
 3. Sign a Hedera TransferTransaction (transactionId.accountId = feePayer, buyer signature
    only) and retry with the base64 PaymentPayload in the PAYMENT-SIGNATURE header
 4. 200 → file download grants, license serial, certificate id, HashScan transaction link
+   plus a private receipt capability for a durable receipt/re-download (real paid flow only)
 
 For 1-20 licenses sharing one payTo, POST {"items":[{"model_id":1,"license":"commercial_unit"}, ...]}
 to /api/v1/batches. Probe and retry the identical JSON body. One aggregate x402 settlement returns
@@ -86,6 +87,8 @@ and retry after the given number of seconds.
 - /api/v1/sandbox/*: explicitly fake transaction, receipt, and local topic-message artifacts
 - /verify/{cert_id}: human-readable certificate verification page
 - /verify/{cert_id}/share-card: receipt-linked 1200x630 SVG certificate card
+- /receipts/{cert_id}: private signed paid-receipt capability; re-download and optional email-library opt-in
+- /library/sign-in: enumeration-safe email magic-link entry for previously saved paid receipts
 - /pwc-1.schema.json: normative frozen schema for the eleven-field PWC-1 HCS certificate payload
 - /printwright-verify-widget.js: dependency-free custom element that validates PWC-1 by querying
   the selected Hedera mirror directly; /widget-example.html is a plain static integration example

@@ -36,7 +36,20 @@ curl -i "http://localhost:3000/api/v1/models/5/download?license=personal" \
 #   HTTP/1.1 200 OK
 #   payment-response: eyJ0cmFuc2FjdGlvbiI6Ii4uLiJ9    (base64 settlement receipt)
 #   { "files": [...], "license": {"cert_id": "pw-000036", "serial": 3, "kind": "personal"},
+#     "receipt": {"url":".../receipts/pw-000036","token":"private signed capability"},
 #     "certificate": {...}, "transaction_id": "...", "hashscan_url": "https://hashscan.io/..." }</pre>
+
+  <h2>Durable receipts and optional library</h2>
+  <p class="t-small">Every real paid delivery includes a private <code class="mono">receipt</code>
+    capability. Its URL plus token opens a no-store receipt and can reissue a model download after
+    the original 24-hour grant expires. Sandbox responses never receive this capability. Treat the
+    token like the downloadable license it protects; do not log or send it to an AI provider.</p>
+  <p class="t-small">A buyer may optionally save the license under an email from that receipt.
+    This creates no buyer account or password. A 30-minute magic link establishes an encrypted,
+    HttpOnly 30-day browser library and immediately redirects to a clean token-free URL. Returning
+    sign-in gives the same response for known and unknown emails. The library lists saved paid
+    receipts and can reissue downloads; the permanent public PWC-1 certificate remains independent
+    of the email and library.</p>
 
   <h2 id="external-profile">External designer profiles</h2>
   <p class="t-small">Designers can import up to 50 self-owned models from a portable public HTTPS

@@ -575,6 +575,7 @@
                 "max_units": { "type": ["integer", "null"] }, "remaining_units": { "type": ["integer", "null"] },
                 "verify_url": { "type": "string" },
                 "share_card_url": { "type": "string" },
+                "receipt": { "$ref": "#/components/schemas/ReceiptCapability" },
                 "print_feedback": { "$ref": "#/components/schemas/PrintFeedbackCapability" },
                 "model_updates": { "$ref": "#/components/schemas/ModelUpdatesCapability" },
                 "files": { "type": "array", "items": { "type": "object" } }
@@ -595,6 +596,7 @@
           "certificate": { "type": ["object", "null"] },
           "verify_url": { "type": "string" },
           "share_card_url": { "type": "string" },
+          "receipt": { "$ref": "#/components/schemas/ReceiptCapability" },
           "print_feedback": { "$ref": "#/components/schemas/PrintFeedbackCapability" },
           "model_updates": { "$ref": "#/components/schemas/ModelUpdatesCapability" },
           "transaction_id": { "type": "string" },
@@ -603,6 +605,16 @@
           "warning": { "type": "string" },
           "sandbox_url": { "type": "string" }
         }
+      },
+      "ReceiptCapability": {
+        "type": "object",
+        "description": "Private durable paid-receipt capability. Never returned by sandbox.",
+        "required": ["url", "token"],
+        "properties": {
+          "url": { "type": "string", "format": "uri" },
+          "token": { "type": "string", "writeOnly": true }
+        },
+        "additionalProperties": false
       },
       "CertificateResponse": {
         "type": "object",

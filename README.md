@@ -55,6 +55,9 @@ queries only the Hedera mirror, so the marketplace can be offline.
 Paid delivery receipts also expose a 1200×630 certificate `share_card_url`. A capped offer reports
 its license unit and current license slots remaining; the cap limits licenses sold, not physical
 copies, and the storefront says so explicitly.
+Real paid deliveries include a private durable receipt capability for later re-download. Buyers
+may optionally attach a receipt to an email-only magic-link library; sandbox gets neither the
+capability nor library eligibility. No buyer account or password is created.
 
 Designers can bulk-import their own catalog ZIP or review a portable public HTTPS profile under
 `/designer/imports`. The [`external-profile v1` schema](public/external-profile-v1.schema.json)

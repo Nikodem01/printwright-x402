@@ -1,0 +1,38 @@
+<% content_for :title, "Receipt #{@license.cert_id} — Printwright" %>
+<% content_for :head do %><meta name="robots" content="noindex,nofollow"><% end %>
+
+<div class="container" style="max-width: 760px">
+  <div class="badge badge-ok">✓ paid license</div>
+  <h1>Purchase receipt</h1>
+  <p class="muted">Keep this private URL. It is a durable capability for this receipt and model re-download.</p>
+
+  <%= image_tag verify_share_card_path(@license.verify_slug),
+        alt: "Certificate share card for #{@license.cert_id}", style: "width:100%;height:auto" %>
+
+  <dl class="fact-grid">
+    <dt>Certificate</dt><dd><%= link_to @license.cert_id, verify_path(@license.verify_slug), class: "mono" %></dd>
+    <dt>Model</dt><dd><%= @model.title %></dd>
+    <dt>License</dt><dd><%= @offer.kind.humanize %> · unit #<%= @license.serial %></dd>
+    <dt>Transaction</dt><dd><%= link_to @license.purchase.payment_tx_id,
+      "#{Hedera::Network.hashscan_base}/transaction/#{@license.purchase.payment_tx_id}",
+      class: "mono", target: "_blank", rel: "noopener noreferrer" %></dd>
+  </dl>
+
+  <p><%= link_to "Re-download model file", purchase_receipt_download_path(@license.cert_id, token: params[:token]),
+    class: "btn btn-primary" %></p>
+
+  <section style="margin-top: var(--s-6)">
+    <h2>Optional license library</h2>
+    <p class="t-small">Save this license under an email address to receive a private magic link.
+      No buyer account or password is created. You can keep using this receipt URL without email.</p>
+    <%= form_with url: receipt_library_membership_path(@license.cert_id) do %>
+      <%= hidden_field_tag :token, params[:token] %>
+      <div class="field">
+        <%= label_tag :email_address, "Email address" %>
+        <%= email_field_tag :email_address, @license.library_membership&.email_address,
+              required: true, autocomplete: "email" %>
+      </div>
+      <%= submit_tag "Email my private library link", class: "btn" %>
+    <% end %>
+  </section>
+</div>

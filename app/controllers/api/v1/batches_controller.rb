@@ -263,6 +263,10 @@ class Api::V1::BatchesController < Api::V1::BaseController
       verify_url: "#{request.base_url}/verify/#{license.verify_slug}"
     }
     payload[:share_card_url] = verify_share_card_url(license.verify_slug) unless purchase.sandbox?
+    payload[:receipt] = {
+      url: purchase_receipt_url(license.cert_id),
+      token: license.signed_id(purpose: "purchase-receipt")
+    } unless purchase.sandbox?
     payload[:print_feedback] = {
       url: api_v1_license_print_reports_url(license.cert_id),
       receipt_token: license.signed_id(purpose: "print-feedback")

@@ -8,7 +8,9 @@
     <li><strong>Designers:</strong> email address, display name, password hash, and the
       Hedera account id you give us for payouts.</li>
     <li><strong>Buyers:</strong> no account. A purchase stores the paying Hedera account
-      id (public on-chain anyway), the payment transaction id, and the license issued.</li>
+      id (public on-chain anyway), the payment transaction id, and the license issued. If you
+      explicitly opt into the license library from a paid receipt, we also store the email address
+      you provide so we can send private library links; it is not published on-chain.</li>
     <li><strong>On-chain:</strong> license certificates (model hash, license type, unit
       serial, buyer account hint, payment tx, terms hash) are published permanently to a
       public Hedera Consensus Service topic — that is the product. Do not buy a license
@@ -23,6 +25,6 @@
   </ul>
 
   <h2>Removal</h2>
-  <p>Email us to delete a designer account; database records go, on-chain certificates
-    are permanent by design. Questions: see the repository README for contact.</p>
+  <p>Email us to delete a designer account or optional buyer-library email; database records go,
+    on-chain certificates are permanent by design. Questions: see the repository README for contact.</p>
 </div>

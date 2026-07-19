@@ -7,6 +7,7 @@ class License < ApplicationRecord
   has_one :license_offer, through: :purchase
   has_many :download_grants, dependent: :destroy
   has_one :print_report, dependent: :destroy
+  has_one :library_membership, dependent: :destroy
 
   validates :serial, presence: true
 

@@ -1,0 +1,13 @@
+<% content_for :title, "Open license library — Printwright" %>
+<div class="container" style="max-width: 620px">
+  <h1>Open your license library</h1>
+  <p class="muted">Enter the optional email you saved from a paid receipt. The response is the
+    same whether or not a library exists, so nobody can use this form to enumerate buyers.</p>
+  <%= form_with url: new_license_library_path do %>
+    <div class="field">
+      <%= label_tag :email_address, "Email address" %>
+      <%= email_field_tag :email_address, nil, required: true, autocomplete: "email" %>
+    </div>
+    <%= submit_tag "Send private magic link", class: "btn btn-primary" %>
+  <% end %>
+</div>

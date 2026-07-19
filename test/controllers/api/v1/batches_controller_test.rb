@@ -69,6 +69,9 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
     assert(body.fetch("licenses").all? { |item| item["verify_url"].include?(item["cert_id"]) })
     assert(body.fetch("licenses").all? { |item| item["share_card_url"].include?(item["cert_id"]) })
     assert(body.fetch("licenses").all? do |item|
+      License.find_signed(item.dig("receipt", "token"), purpose: "purchase-receipt").cert_id == item["cert_id"]
+    end)
+    assert(body.fetch("licenses").all? do |item|
       License.find_signed(item.dig("print_feedback", "receipt_token"), purpose: "print-feedback").cert_id == item["cert_id"]
     end)
     assert(body.fetch("licenses").all? do |item|

@@ -91,6 +91,7 @@ export interface BatchPurchaseReceipt {
     model_id: number; kind: string; cert_id: string; serial: number;
     max_units: number | null; remaining_units: number | null; share_card_url?: string;
     verify_url: string; files: Array<{ kind: string; url: string; expires_at?: string | null }>;
+    receipt?: ReceiptCapability;
     print_feedback?: PrintFeedbackCapability;
     model_updates?: ModelUpdatesCapability;
   }>;
@@ -143,6 +144,7 @@ export interface PurchaseReceipt {
   license: { cert_id: string; serial: number; kind: string; max_units?: number | null; remaining_units?: number | null };
   verify_url: string;
   share_card_url?: string;
+  receipt?: ReceiptCapability;
   transaction_id: string;
   hashscan_url: string | null;
   print_feedback?: PrintFeedbackCapability;
@@ -151,6 +153,11 @@ export interface PurchaseReceipt {
   warning?: string;
   sandbox_url?: string;
   [key: string]: unknown;
+}
+
+export interface ReceiptCapability {
+  url: string;
+  token: string;
 }
 
 export interface CertificateProof {

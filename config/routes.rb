@@ -94,6 +94,14 @@ Rails.application.routes.draw do
   get "verify/:cert_id/share-card", to: "verify#share_card", as: :verify_share_card,
       defaults: { format: :svg }
   get "verify/:cert_id/certificate", to: "verify#certificate", as: :verify_certificate
+  get "receipts/:cert_id", to: "receipts#show", as: :purchase_receipt
+  get "receipts/:cert_id/download", to: "receipts#download", as: :purchase_receipt_download
+  post "receipts/:cert_id/library", to: "library_memberships#create", as: :receipt_library_membership
+  get "library", to: "license_library#show", as: :license_library
+  get "library/sign-in", to: "license_library#new", as: :new_license_library
+  post "library/sign-in", to: "license_library#create"
+  get "library/access", to: "license_library#access", as: :access_license_library
+  delete "library", to: "license_library#destroy"
   get "badge", to: "pages#badge", as: :badge_docs
   get "license/:version/:kind", to: "licenses#show", as: :license_document,
       constraints: { version: /v\d+/, kind: /[a-z_]+/ }

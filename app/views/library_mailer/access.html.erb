@@ -1,0 +1,12 @@
+<h1 style="margin:0 0 16px; color:#0f172a; font-size:26px; line-height:1.2;">Open your license library</h1>
+<p style="margin:0 0 24px; color:#334155; font-size:16px; line-height:1.6;">
+  This private link opens the Printwright licenses you chose to save under this email address.
+</p>
+<p style="margin:0 0 24px;">
+  <%= link_to "Open license library", access_license_library_url(token: @token),
+    style: "display:inline-block; padding:13px 22px; border-radius:6px; background:#0f766e; color:#ffffff; font-size:16px; font-weight:700; text-decoration:none;" %>
+</p>
+<p style="margin:0; color:#64748b; font-size:13px; line-height:1.5; word-break:break-all;">
+  This link expires in 30 minutes. Button not working? Paste this URL:<br>
+  <%= access_license_library_url(token: @token) %>
+</p>

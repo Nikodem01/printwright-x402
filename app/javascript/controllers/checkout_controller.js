@@ -183,11 +183,15 @@ export default class extends Controller {
           <img src="${this.escape(body.share_card_url)}" alt="Share card for ${this.escape(body.license.cert_id)}" style="display:block; margin:var(--s-2) 0; max-width:100%; height:auto">
         </a>`
       : ""
+    const receiptLink = body.receipt
+      ? `<a class="btn" href="${this.escape(body.receipt.url)}?token=${encodeURIComponent(body.receipt.token)}">Open durable receipt</a>`
+      : ""
     this.receiptTarget.innerHTML = `
       <div class="badge badge-ok">✓ licensed</div>
       <h3 style="margin-top: var(--s-2)">Licensed — unit ${serialLabel}</h3>
       ${capNote}
       <a class="btn btn-primary" href="${body.files[0]?.url}" download>Download files</a>
+      ${receiptLink}
       <dl class="t-small" style="margin-bottom:0">
         <dt class="muted">transaction</dt>
         <dd style="margin:0 0 var(--s-2)"><a class="mono" href="${body.hashscan_url}" target="_blank" rel="noopener">${this.escape(txId)}</a></dd>

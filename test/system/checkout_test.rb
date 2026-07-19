@@ -1,4 +1,5 @@
 require "application_system_test_case"
+require "timeout"
 require "webmock/minitest"
 
 # The human door, driven end to end in a real browser: the checkout Stimulus
@@ -6,6 +7,8 @@ require "webmock/minitest"
 # same captured-wire facilitator stubs the API tests use. The signer is the
 # in-app test wallet (test/system/support/test_wallet_controller.rb).
 class CheckoutTest < ApplicationSystemTestCase
+  include ActiveJob::TestHelper
+
   FACILITATOR = "https://facilitator.test".freeze
 
   # Saved/restored around each test so a value in the developer's shell survives.
@@ -19,6 +22,7 @@ class CheckoutTest < ApplicationSystemTestCase
     ENV["X402_PAY_TO"] = "0.0.9584959"
     ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "250" # 25c offer => exactly 0.1 HBAR, matching the fixture
     FacilitatorClient.reset_cache!
+    ActionMailer::Base.deliveries.clear
     stub_request(:get, "#{FACILITATOR}/supported")
       .to_return(body: fixture("supported.json"), headers: { "content-type" => "application/json" })
 
@@ -61,6 +65,29 @@ class CheckoutTest < ApplicationSystemTestCase
     assert_equal "delivered", purchase.status
     assert_equal @model, purchase.license_offer.model3d
     assert_equal settled_tx, purchase.payment_tx_id
+
+    click_link "Open durable receipt"
+    assert_current_path purchase_receipt_path(purchase.license.cert_id), ignore_query: true
+    assert_text "Purchase receipt"
+    assert_link "Re-download model file"
+
+    fill_in "Email address", with: "browser-buyer@example.com"
+    perform_enqueued_jobs(only: ActionMailer::MailDeliveryJob) do
+      click_button "Email my private library link"
+      assert_text "Check your email for a private library link."
+    end
+    access_url = URI.extract(ActionMailer::Base.deliveries.last.text_part.body.to_s, %w[http https]).first
+    visit URI(access_url).request_uri
+    assert_current_path license_library_path
+    assert_text "Your license library"
+    assert_text "Browser Buy"
+
+    grant_count = DownloadGrant.count
+    click_link "Re-download"
+    Timeout.timeout(Capybara.default_max_wait_time) do
+      sleep 0.05 until DownloadGrant.count == grant_count + 1
+    end
+    assert_equal grant_count + 1, DownloadGrant.count
   end
 
   test "facilitator rejection surfaces the failed state with a human message, retry button, and the raw reason" do

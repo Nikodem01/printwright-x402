@@ -191,6 +191,7 @@ class Api::V1::DownloadsController < Api::V1::BaseController
       certificate: license.cert_json.presence,
       verify_url: "#{request.base_url}/verify/#{license.verify_slug}",
       share_card_url: verify_share_card_url(license.verify_slug),
+      receipt: receipt_capability(license),
       print_feedback: {
         url: api_v1_license_print_reports_url(license.cert_id),
         receipt_token: license.signed_id(purpose: "print-feedback")
@@ -232,6 +233,13 @@ class Api::V1::DownloadsController < Api::V1::BaseController
       kind: offer.kind,
       max_units: offer.max_units,
       remaining_units: offer.units_remaining
+    }
+  end
+
+  def receipt_capability(license)
+    {
+      url: purchase_receipt_url(license.cert_id),
+      token: license.signed_id(purpose: "purchase-receipt")
     }
   end
 
