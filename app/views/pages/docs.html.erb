@@ -286,6 +286,11 @@ npx --package ./verifier printwright-verify pw-000058
 npx printwright-verify https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/50</pre>
   <p class="t-small">The verifier queries Hedera's mirror node directly. A Printwright verify
     URL is accepted only as an ID locator; the CLI never requests the marketplace.</p>
+  <p class="t-small">Browser pages can use the dependency-free
+    <%= link_to "verification widget", badge_docs_path %>. Its custom element scans the specified
+    topic and validates PWC-1 using only the selected Hedera mirror; the
+    <%= link_to "plain HTML example", "/widget-example.html", class: "mono" %> also works from a
+    static web server while this Rails application is stopped.</p>
 
   <h2>Printability metadata</h2>
   <p class="t-small">Catalog responses use the following stable fields under

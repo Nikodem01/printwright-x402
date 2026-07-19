@@ -5,6 +5,7 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { validateCertificate, VerificationError, verify } from "../index.js";
+import "../../public/printwright-verify-widget.js";
 
 const execFileAsync = promisify(execFile);
 const topicId = "0.0.9585069";
@@ -108,6 +109,41 @@ test("CLI verifies by id using only a mirror server", async (t) => {
   assert.equal(result.verified, true);
   assert.equal(result.certificate.cert_id, "pw-000058");
   assert.deepEqual(requests, [ `/api/v1/topics/${topicId}/messages?limit=100&order=desc` ]);
+});
+
+test("browser widget verifies through the selected Hedera mirror only", async () => {
+  const requests = [];
+  const fetchImpl = async (url) => {
+    requests.push(String(url));
+    return jsonResponse({ messages: [ envelope() ], links: { next: null } });
+  };
+  const result = await globalThis.PrintwrightVerify.verifyCertificate({
+    certId: "pw-000058", topicId, network: "testnet", fetchImpl,
+  });
+  assert.equal(result.verified, true);
+  assert.equal(result.mirror_url, `https://testnet.mirrornode.hedera.com/api/v1/topics/${topicId}/messages/50`);
+  assert.deepEqual(requests, [
+    `https://testnet.mirrornode.hedera.com/api/v1/topics/${topicId}/messages?limit=100&order=desc`,
+  ]);
+  assert(requests.every((url) => !url.includes("printwright")));
+});
+
+test("browser widget rejects topic escapes and malformed matching certificates", async () => {
+  await assert.rejects(
+    globalThis.PrintwrightVerify.verifyCertificate({
+      certId: "pw-000058", topicId, fetchImpl: fakeFetch({
+        messages: [], links: { next: `https://example.com/api/v1/topics/${topicId}/messages` },
+      }),
+    }),
+    (error) => error.code === "invalid_mirror_response"
+  );
+  await assert.rejects(
+    globalThis.PrintwrightVerify.verifyCertificate({
+      certId: "pw-000058", topicId,
+      fetchImpl: fakeFetch({ messages: [ envelope({ message: encode({ ...certificate, surprise: true }) }) ], links: { next: null } }),
+    }),
+    (error) => error.code === "invalid_certificate" && /unknown fields/.test(error.message)
+  );
 });
 
 function envelope(overrides = {}) {

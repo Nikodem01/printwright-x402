@@ -44,10 +44,25 @@ class BadgeCertificateTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "&lt;img src=", response.body
     assert_match "/verify/pw-000001/badge", response.body
+    assert_match "/printwright-verify-widget.js", response.body
+    assert_match "&lt;printwright-verify", response.body
 
     get verify_badge_path(cert_id: "pw-999999", format: :svg)
     assert_response :not_found
     get verify_certificate_path("pw-999999")
     assert_response :not_found
+  end
+
+  test "standalone widget and plain HTML example are public static assets" do
+    get "/printwright-verify-widget.js"
+    assert_response :success
+    assert_equal "text/javascript", response.media_type
+    assert_match "testnet.mirrornode.hedera.com", response.body
+    assert_no_match %r{/api/v1/(models|licenses|verify)}, response.body
+
+    get "/widget-example.html"
+    assert_response :success
+    assert_match "<printwright-verify", response.body
+    assert_match 'cert-id="pw-000058"', response.body
   end
 end

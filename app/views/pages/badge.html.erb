@@ -18,4 +18,15 @@
   <p class="t-small">The badge itself proves nothing — the page it links to does: a live,
     field-by-field comparison against the public Hedera mirror node. A printable
     certificate is available from the same page.</p>
+
+  <h2>Independent verification widget</h2>
+  <p class="t-small">For proof that does not depend on this marketplace, add the standalone
+    widget to any HTML page. It reads the named Hedera mirror topic directly, validates the
+    frozen PWC-1 fields, and links to the exact consensus message. Replace both identifiers
+    with the values on your receipt.</p>
+  <pre class="mono t-small code-block"><code>&lt;script defer src="<%= request.base_url %>/printwright-verify-widget.js"&gt;&lt;/script&gt;
+&lt;printwright-verify cert-id="pw-000058"
+  topic-id="0.0.9585069" network="testnet"&gt;
+&lt;/printwright-verify&gt;</code></pre>
+  <p class="t-small"><%= link_to "Open the plain HTML example", "/widget-example.html" %>.</p>
 </div>

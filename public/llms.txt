@@ -81,6 +81,8 @@ and retry after the given number of seconds.
 - /api/v1/sandbox/*: explicitly fake transaction, receipt, and local topic-message artifacts
 - /verify/{cert_id}: human-readable certificate verification page
 - /pwc-1.schema.json: normative frozen schema for the eleven-field PWC-1 HCS certificate payload
+- /printwright-verify-widget.js: dependency-free custom element that validates PWC-1 by querying
+  the selected Hedera mirror directly; /widget-example.html is a plain static integration example
 
 ## Reference clients
 
@@ -90,3 +92,5 @@ and retry after the given number of seconds.
 - Third-party verifier — `npx --package ./verifier printwright-verify <cert_id|mirror-message-url>`
   (shortens to `npx printwright-verify` after registry release) queries Hedera's mirror node
   directly and validates the PWC-1 payload without requesting this marketplace
+- Browser widget — load `/printwright-verify-widget.js`, then add `<printwright-verify cert-id="..."
+  topic-id="0.0.N" network="testnet">`; it never requests the marketplace API or database

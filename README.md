@@ -48,6 +48,10 @@ after the package release the shorter command is `npx printwright-verify pw-0000
 mirror-message URL can be supplied instead.
 The frozen PWC-1 contract is published as [`/pwc-1.schema.json`](public/pwc-1.schema.json) and
 documented in `/docs`; the verifier implementation lives in [`verifier/`](verifier/).
+For a browser-native check, load [`public/printwright-verify-widget.js`](public/printwright-verify-widget.js)
+as a classic script and add `<printwright-verify cert-id="…" topic-id="…" network="testnet">`.
+The committed [`widget-example.html`](public/widget-example.html) runs from any static server and
+queries only the Hedera mirror, so the marketplace can be offline.
 
 **Try the complete integration without funds:** construct the client with `sandbox: true`, or
 run `node scripts/buy.mjs --query "cable clip" --sandbox`. The app still returns a 402 and runs

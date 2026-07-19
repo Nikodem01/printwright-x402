@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Standalone Printwright verification widget</title>
+    <script defer src="/printwright-verify-widget.js"></script>
+    <style>
+      body { background: #f5f1e8; color: #20201d; font: 16px/1.5 system-ui, sans-serif; margin: 0; padding: 3rem 1rem; }
+      main { margin: auto; max-width: 42rem; }
+      code { overflow-wrap: anywhere; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Independent license check</h1>
+      <p>This plain HTML page asks the Hedera testnet mirror for the PWC-1 certificate. It does not call the Printwright marketplace.</p>
+      <printwright-verify cert-id="pw-000058" topic-id="0.0.9585069" network="testnet"></printwright-verify>
+      <p><small>Certificate <code>pw-000058</code> · public topic <code>0.0.9585069</code></small></p>
+    </main>
+  </body>
+</html>
