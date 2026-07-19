@@ -39,6 +39,7 @@ gem "thruster", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 gem "image_processing", "~> 1.2"
+gem "aws-sdk-s3", require: false
 
 # Nearest neighbor search for Rails (pgvector) [https://github.com/ankane/neighbor]
 gem "neighbor", "~> 1.2"

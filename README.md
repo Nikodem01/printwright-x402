@@ -136,6 +136,10 @@ curl -X POST localhost:4021/create-topic -H "Authorization: Bearer $SIDECAR_TOKE
 Troubleshooting: if your Postgres needs a password or a non-default socket, export
 `DATABASE_URL` (e.g. `postgresql://user:pass@localhost/printwright_x402_development`).
 
+Production stores paid model files in a private S3-compatible bucket and runs an encrypted
+custom-format PostgreSQL dump to that bucket nightly. See [docs/OPERATIONS.md](docs/OPERATIONS.md)
+for required `S3_*` configuration, on-demand backup, and guarded restore rehearsal steps.
+
 The x402 facilitator is hosted ([Blocky402 testnet](https://blocky402.com), open access) —
 nothing to run. It is not a single point of dependency: [`selfhost-facilitator/`](selfhost-facilitator/)
 is a working fallback you can run yourself, and switching is one env var

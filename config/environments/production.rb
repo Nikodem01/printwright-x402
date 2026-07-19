@@ -21,8 +21,10 @@ Rails.application.configure do
   # Enable serving of images, stylesheets, and JavaScripts from an asset server.
   # config.asset_host = "http://assets.example.com"
 
-  # Store uploaded files on the local file system (see config/storage.yml for options).
-  config.active_storage.service = :local
+  # Paid model files live in private S3-compatible storage. Active Storage's
+  # service redirect is short-lived even though the Printwright grant is durable.
+  config.active_storage.service = :production_s3
+  config.active_storage.service_urls_expire_in = ENV.fetch("STORAGE_URL_TTL_MINUTES", "10").to_i.minutes
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   config.assume_ssl = true

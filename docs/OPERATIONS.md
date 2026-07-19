@@ -37,6 +37,39 @@ BUYER_ACCOUNT_ID=0.0.x BUYER_PRIVATE_KEY=0x... node scripts/smoke.mjs
 Green = app, sidecar, facilitator, a real settle, and a mirror-confirmed cert.
 A red smoke outranks every other task.
 
+## Private model storage and database backups
+
+Production uses the private `production_s3` Active Storage service. The bucket must deny public
+access; a redeemed Printwright download grant redirects through Rails to a provider-signed URL
+that expires after `STORAGE_URL_TTL_MINUTES` (10 minutes by default). Configure the `S3_*` values
+from `.env.example`; `S3_ENDPOINT` is optional for AWS and required for most compatible providers.
+Production refuses to boot without the bucket and access credentials.
+
+Solid Queue runs `DatabaseBackupJob` nightly at 02:15. It calls `pg_dump --format=custom` without
+putting the database password in argv and uploads an AES-256 server-side-encrypted object under
+`BACKUP_S3_PREFIX`. Run and inspect one on demand:
+
+```bash
+bin/rails backups:database
+# Confirm the printed key exists in the private bucket and has the provider's retention policy.
+```
+
+Restore rehearsals must target a newly created, non-production database. Download a selected dump
+to a temporary operator path, create a scratch database, restore it, and compare critical counts:
+
+```bash
+createdb printwright_restore_rehearsal
+pg_restore --no-owner --no-privileges --dbname printwright_restore_rehearsal /tmp/printwright.dump
+psql printwright_restore_rehearsal -c 'select count(*) from models3d'
+psql printwright_restore_rehearsal -c 'select count(*) from licenses'
+dropdb printwright_restore_rehearsal
+```
+
+Never use `--clean` or point a rehearsal at the production database. On 2026-07-19 the local
+custom-format rehearsal restored schema version `20260719235500`, 36 model rows and the expected
+zero local license rows, then removed only the named scratch database and temporary dump. The
+provider upload/download rehearsal remains pending until V20's owner-created bucket exists.
+
 ## Public HCS heartbeat
 
 The production scheduler submits one compact PWH-1 liveness statement every six hours to a

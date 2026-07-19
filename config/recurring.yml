@@ -19,3 +19,6 @@ production:
   submit_public_heartbeat:
     class: HeartbeatJob
     schedule: every 6 hours
+  backup_primary_database:
+    class: DatabaseBackupJob
+    schedule: every day at 2:15am
