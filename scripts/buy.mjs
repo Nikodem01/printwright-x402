@@ -8,17 +8,10 @@
 import "dotenv/config";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { x402Client, x402HTTPClient } from "@x402/core/client";
-import { createClientHederaSigner, PrivateKey } from "@x402/hedera";
-import { ExactHederaScheme } from "@x402/hedera/exact/client";
-import {
-  Client as HederaClient,
-  TokenAssociateTransaction,
-} from "@hiero-ledger/sdk";
+import { assets, PrintwrightClient } from "@printwright/client";
 
 const NET = process.env.HEDERA_NETWORK === "mainnet" ? "mainnet" : "testnet";
-const USDC = NET === "mainnet" ? "0.0.456858" : "0.0.429274"; // native USDC per network
-const ASSET_IDS = { usdc: USDC, hbar: "0.0.0" };
+const USDC = assets[NET].usdc;
 
 const args = parseArgs(process.argv.slice(2));
 const BASE = (process.env.PRINTWRIGHT_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -29,12 +22,13 @@ if (!args.query) die("--query is required");
 if (!args.dryRun && (!ACCOUNT_ID || !PRIVATE_KEY)) {
   die("BUYER_ACCOUNT_ID and BUYER_PRIVATE_KEY env vars are required to pay");
 }
+const printwright = new PrintwrightClient({
+  baseUrl: BASE, accountId: ACCOUNT_ID, privateKey: PRIVATE_KEY, network: NET,
+});
 
 // ---- 1. search ------------------------------------------------------------
 step(`searching for "${args.query}"`);
-const searchParams = new URLSearchParams({ q: args.query });
-if (args.maxPrice) searchParams.set("max_price_cents", args.maxPrice);
-const search = await getJson(`${BASE}/api/v1/models?${searchParams}`);
+const search = await printwright.search({ query: args.query, maxPriceCents: args.maxPrice });
 if (search.count === 0) die("no models matched");
 
 for (const m of search.models.slice(0, 5)) {
@@ -49,15 +43,12 @@ console.log(`   -> buying #${model.id} "${model.title}" (${args.license}, ${mone
 // ---- 2. hit the paywall ---------------------------------------------------
 const resourceUrl = `${BASE}/api/v1/models/${model.id}/download?license=${args.license}`;
 step(`GET ${resourceUrl}`);
-const leg1 = await fetch(resourceUrl, { headers: { accept: "application/json" } });
-if (leg1.status !== 402) die(`expected 402 Payment Required, got ${leg1.status}: ${await leg1.text()}`);
-const paymentRequired402 = await leg1.json();
+const quote = await printwright.quote({ modelId: model.id, license: args.license, asset: args.asset });
+const paymentRequired402 = quote.paymentRequired;
 console.log("   402 Payment Required — the server's PaymentRequired object:");
 console.log(indent(JSON.stringify(paymentRequired402, null, 2), 3));
 
-const wanted = args.asset ? ASSET_IDS[args.asset] : paymentRequired402.accepts[0].asset;
-const accept = paymentRequired402.accepts.find((a) => a.asset === wanted);
-if (!accept) die(`server does not accept asset "${args.asset}"`);
+const accept = quote.accepted;
 console.log(`   paying with ${accept.asset === USDC ? "USDC" : "HBAR"}: ${accept.amount} base units -> ${accept.payTo}`);
 
 if (args.dryRun) {
@@ -65,23 +56,9 @@ if (args.dryRun) {
   process.exit(0);
 }
 
-// ---- 3. USDC association (first run only) ---------------------------------
-if (accept.asset === USDC) await ensureAssociated();
-
-// ---- 4. sign & retry ------------------------------------------------------
-step("building + signing the TransferTransaction (buyer signature only; facilitator pays fees)");
-const signer = createClientHederaSigner(ACCOUNT_ID, PrivateKey.fromStringECDSA(PRIVATE_KEY), {
-  network: process.env.HEDERA_NETWORK === "mainnet" ? "hedera:mainnet" : "hedera:testnet",
-});
-const httpClient = new x402HTTPClient(new x402Client().register("hedera:*", new ExactHederaScheme(signer)));
-const paymentRequired = httpClient.getPaymentRequiredResponse((n) => leg1.headers.get(n), paymentRequired402);
-const payload = await httpClient.createPaymentPayload({ ...paymentRequired, accepts: [accept] });
-const headers = httpClient.encodePaymentSignatureHeader(payload);
-
-step("retrying with the signed payment attached");
-const leg2 = await fetch(resourceUrl, { headers: { accept: "application/json", ...headers } });
-const body = await leg2.json();
-if (leg2.status !== 200) die(`payment failed (${leg2.status}): ${JSON.stringify(body)}`);
+// ---- 3. associate if needed, sign & retry ---------------------------------
+step("associating USDC if needed, then signing + retrying (buyer signature only; facilitator pays fees)");
+const body = await printwright.buy({ quote });
 
 // ---- 5. deliverables ------------------------------------------------------
 step("payment settled on Hedera — downloading deliverables");
@@ -122,7 +99,7 @@ function parseArgs(argv) {
     else if (a === "--help" || a === "-h") usage();
     else die(`unknown argument: ${a}`);
   }
-  if (out.asset && !ASSET_IDS[out.asset]) die("--asset must be usdc or hbar");
+  if (out.asset && ![ "usdc", "hbar" ].includes(out.asset)) die("--asset must be usdc or hbar");
   return out;
 }
 
@@ -134,43 +111,14 @@ function money(offer) {
   return `$${(offer.price_cents / 100).toFixed(2)} (${offer.currency}-lead)`;
 }
 
-async function getJson(url) {
-  let res;
-  try {
-    res = await fetch(url, { headers: { accept: "application/json" } });
-  } catch (e) {
-    // A raw ECONNREFUSED stack is the first thing a new integrator sees if the
-    // marketplace isn't up yet. Name the cause and the knob instead.
-    if (e?.cause?.code === "ECONNREFUSED") {
-      die(`cannot reach ${new URL(url).origin} — is it running? (start it with bin/dev, or set PRINTWRIGHT_URL)`);
-    }
-    die(`GET ${url} failed: ${e.message}`);
-  }
-  if (!res.ok) die(`GET ${url} -> ${res.status}`);
-  return res.json();
-}
-
-async function ensureAssociated() {
-  const mirror = `https://${NET}.mirrornode.hedera.com/api/v1/accounts/${ACCOUNT_ID}/tokens?token.id=${USDC}`;
-  const { tokens } = await getJson(mirror);
-  if (tokens?.length) return;
-  step(`associating ${ACCOUNT_ID} with testnet USDC (one-time)`);
-  const client = HederaClient.forName(NET).setOperator(ACCOUNT_ID, PrivateKey.fromStringECDSA(PRIVATE_KEY));
-  const response = await new TokenAssociateTransaction()
-    .setAccountId(ACCOUNT_ID).setTokenIds([USDC]).execute(client);
-  await response.getReceipt(client);
-  console.log(`   associated: ${response.transactionId.toString()}`);
-  client.close();
-}
-
 async function waitForCertificate(certId, attempts = 10) {
   for (let i = 0; i < attempts; i++) {
-    const cert = await getJson(`${BASE}/api/v1/certificates/${certId}`);
+    const cert = await printwright.verify(certId);
     if (cert.status === "anchored") return cert;
     if (i === 0) step("waiting for the HCS certificate to anchor (mirror-node lag is a few seconds)");
     await new Promise((r) => setTimeout(r, 2000));
   }
-  return getJson(`${BASE}/api/v1/certificates/${certId}`); // still minting — return as-is
+  return printwright.verify(certId); // still minting — return as-is
 }
 
 function step(msg) {

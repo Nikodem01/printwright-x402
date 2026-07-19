@@ -4,7 +4,9 @@ An [MCP](https://modelcontextprotocol.io) server that exposes the [Printwright](
 marketplace — licensed 3D-printable models, paid over [x402](https://www.x402.org/) on Hedera —
 to any MCP client (Claude Code, Claude Desktop, ...). It is a thin wrapper over the public REST
 API: every tool call is a `fetch` to `PRINTWRIGHT_URL`, plus the x402 payment negotiation for
-`buy_license`. No account with Printwright, no card — just a funded Hedera testnet account.
+`buy_license`. Catalog, payment, and certificate behavior is delegated to the same
+`@printwright/client` package as the command-line buyer so those consumers cannot drift. No
+account with Printwright, no card — just a funded Hedera testnet account.
 
 ## Tools
 

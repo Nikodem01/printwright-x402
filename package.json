@@ -8,12 +8,12 @@
     "buy": "node scripts/buy.mjs"
   },
   "dependencies": {
-    "@hiero-ledger/sdk": "2.85.0",
-    "@x402/core": "2.18.0",
-    "@x402/hedera": "2.18.0",
+    "@printwright/client": "file:client",
     "dotenv": "^17.4.2"
   },
   "overrides": {
+    "@grpc/grpc-js": "1.14.4",
+    "protobufjs": "8.7.1",
     "ethers": {
       "ws": "8.21.1"
     }

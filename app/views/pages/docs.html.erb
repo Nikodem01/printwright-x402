@@ -38,6 +38,23 @@ curl -i "http://localhost:3000/api/v1/models/5/download?license=personal" \
 #   { "files": [...], "license": {"cert_id": "pw-000036", "serial": 3, "kind": "personal"},
 #     "certificate": {...}, "transaction_id": "...", "hashscan_url": "https://hashscan.io/..." }</pre>
 
+  <h2>JavaScript client</h2>
+  <p class="t-small"><code class="mono">@printwright/client</code> wraps catalog reads, the
+    x402 Hedera signature, optional first-use USDC association, and HCS certificate comparison.
+    From this repository install it with <code class="mono">npm install ./client</code>; the
+    registry command after release is <code class="mono">npm install @printwright/client</code>.
+    This five-line read-only quickstart needs no funded account:</p>
+  <pre class="mono t-small" style="overflow-x:auto">import { PrintwrightClient } from "@printwright/client";
+const printwright = new PrintwrightClient({ baseUrl: "http://localhost:3000" });
+const { models } = await printwright.search({ query: "cable clip", maxPriceCents: 300 });
+const model = await printwright.get(models[0].id);
+console.log(model.title, model.license_offers);</pre>
+  <p class="t-small">Add <code class="mono">accountId</code> and
+    <code class="mono">privateKey</code> to the constructor to call
+    <code class="mono">buy()</code>. The key remains local. Use <code class="mono">quote()</code>
+    for an unsigned approval/dry-run view and <code class="mono">verify(certId)</code> to compare
+    the marketplace certificate with its public mirror-node message.</p>
+
   <h2>Endpoint reference</h2>
   <p class="t-small muted">Generated from <%= link_to "/openapi.json", "/openapi.json" %> at request
     time — the tables below are that file, not a hand-kept copy.</p>

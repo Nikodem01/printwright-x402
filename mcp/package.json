@@ -10,7 +10,6 @@
   },
   "files": [
     "server.mjs",
-    "purchase.mjs",
     "README.md",
     "LICENSE"
   ],
@@ -29,14 +28,14 @@
   },
   "homepage": "https://github.com/Nikodem01/printwright-x402",
   "dependencies": {
-    "@hiero-ledger/sdk": "^2.85.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@x402/core": "^2.18.0",
-    "@x402/hedera": "^2.18.0",
+    "@printwright/client": "file:../client",
     "dotenv": "^17.4.2",
     "zod": "^4.4.3"
   },
   "overrides": {
+    "@grpc/grpc-js": "1.14.4",
+    "protobufjs": "8.7.1",
     "ethers": {
       "ws": "8.21.1"
     }

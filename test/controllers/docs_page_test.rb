@@ -8,6 +8,9 @@ class DocsPageTest < ActionDispatch::IntegrationTest
     get docs_path
     assert_response :success
     assert_match "Quickstart", response.body
+    assert_match "@printwright/client", response.body
+    assert_match "printwright.search", response.body
+    assert_match "printwright.get", response.body
     assert_match "PAYMENT-SIGNATURE", response.body
     assert_match "Error contract", response.body
     assert_match "duplicate_payment", response.body

@@ -1,0 +1,54 @@
+{
+  "name": "@printwright/client",
+  "version": "0.1.0",
+  "description": "JavaScript client for searching, buying, and verifying licensed 3D models from Printwright over x402 on Hedera.",
+  "type": "module",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js"
+    }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "x402",
+    "hedera",
+    "3d-printing",
+    "payments"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nikodem01/printwright-x402.git",
+    "directory": "client"
+  },
+  "homepage": "https://github.com/Nikodem01/printwright-x402/tree/main/client",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@hiero-ledger/sdk": "^2.85.0",
+    "@x402/core": "^2.19.0",
+    "@x402/hedera": "^2.19.0"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.14.4",
+    "protobufjs": "8.7.1",
+    "ethers": {
+      "ws": "8.21.1"
+    }
+  }
+}

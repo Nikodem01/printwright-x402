@@ -23,6 +23,24 @@ GET ... + PAYMENT-SIGNATURE header
   -> 200: file bundle + license + certificate + HashScan links
 ```
 
+## JavaScript client
+
+The reusable client used by both command-line and MCP buyers lives in [`client/`](client/).
+From a checkout, install it with `npm install ./client` (the release package name is
+`@printwright/client`):
+
+```js
+import { PrintwrightClient } from "@printwright/client";
+const printwright = new PrintwrightClient({ baseUrl: "http://localhost:3000" });
+const { models } = await printwright.search({ query: "cable clip", maxPriceCents: 300 });
+const model = await printwright.get(models[0].id);
+console.log(model.title, model.license_offers);
+```
+
+`search()` and `get()` need no credentials. `quote()` exposes the unsigned 402 for approval,
+`buy()` signs locally with the configured Hedera account, and `verify()` compares the issued
+certificate with its public HCS mirror message.
+
 ## Buy a model from the command line (Scene 1a)
 
 ```bash

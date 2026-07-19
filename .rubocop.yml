@@ -10,6 +10,7 @@ inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 AllCops:
   Exclude:
     - "sidecar/node_modules/**/*"
+    - "client/node_modules/**/*"
     - "scripts/**/*"
     - "mcp/node_modules/**/*"
     - "selfhost-facilitator/node_modules/**/*"
