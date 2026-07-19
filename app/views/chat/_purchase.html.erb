@@ -1,0 +1,33 @@
+<div id="chat_purchase">
+  <% if proposal.present? && %w[pending approved].include?(proposal["state"]) %>
+    <section class="chat-purchase-card" aria-labelledby="chat_purchase_title"
+             data-controller="checkout"
+             data-checkout-download-url-value="<%= proposal["purchase_path"] %>"
+             data-checkout-approval-url-value="<%= approve_chat_purchase_path %>"
+             data-checkout-button-prefix-value="Approve and buy"
+             <% if (wallet_url = ENV["DEMO_WALLET_URL"].presence) %>data-checkout-wallet-url-value="<%= wallet_url %>"<% end %>>
+      <p class="t-caption muted" style="margin:0">Human approval required · Hedera testnet</p>
+      <h2 id="chat_purchase_title" style="margin:var(--s-1) 0"><%= proposal["title"] %></h2>
+      <div data-checkout-target="offer" data-price-cents="<%= proposal["price_cents"] %>"
+           data-price-display="<%= proposal["display_price"] %>">
+        <input type="radio" name="chat_license" value="<%= proposal["license_kind"] %>" checked hidden>
+        <p class="t-small" style="margin:0 0 var(--s-2)">
+          <strong><%= proposal["license_kind"].to_s.humanize %></strong> · <%= proposal["display_price"] %> USDC
+        </p>
+      </div>
+      <button class="btn btn-primary" type="button" data-checkout-target="button" data-action="checkout#buy">
+        Approve and buy · <%= proposal["display_price"] %>
+      </button>
+      <div data-checkout-target="status" aria-live="polite" tabindex="-1"
+           style="margin-top:var(--s-2);min-height:24px"></div>
+      <div data-checkout-target="receipt" hidden tabindex="-1"></div>
+      <p class="t-caption muted" style="margin-bottom:0">
+        The assistant cannot click this button. Approval is re-priced, cap-checked, and bound to this model and license.
+      </p>
+    </section>
+  <% elsif proposal["state"] == "submitting" %>
+    <p class="chat-cap-banner t-small">This approved payment is being reconciled. The same signed transaction may be retried; a new signature is refused.</p>
+  <% elsif proposal["state"] == "completed" %>
+    <p class="chat-cap-banner t-small"><strong>Purchase completed.</strong> The receipt and download grant were shown directly by the checkout and were not sent to Gemini.</p>
+  <% end %>
+</div>

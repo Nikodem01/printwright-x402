@@ -18,6 +18,8 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     matched = requirements.match(payload["accepted"])
     return payment_required(requirements, error: "invalid_payment_requirements") unless matched
 
+    authorize_chat_purchase!(offer, payload, matched) if request.headers[Chat::PurchaseIntent::HEADER].present?
+
     # Replay detection must precede the sold-out gate: an already-paid
     # purchase keeps its recovery path even when the offer sells out.
     return replay(payload) if Purchase.exists?(replay_key: replay_key(payload))
@@ -31,6 +33,8 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     render json: { error: "not_found" }, status: :not_found
   rescue X402::PaymentHeader::InvalidPayload
     render json: { error: "invalid_payload" }, status: :bad_request
+  rescue Chat::PurchaseIntent::Invalid => e
+    render json: { error: e.code }, status: :forbidden
   end
 
   private
@@ -74,6 +78,7 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     purchase = Purchase.find_by!(replay_key: replay_key(payload))
     case purchase.status
     when "delivered"
+      complete_chat_purchase_intent!
       render json: delivery_payload(purchase), status: :conflict
     when "settled" # paid but delivery previously crashed — finish the job
       deliver(purchase, { "transaction" => purchase.payment_tx_id, "network" => X402::Requirements.network })
@@ -142,6 +147,7 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     license = purchase.license || License.allocate!(purchase)
     purchase.transition_to!(:delivered)
     CertMintJob.perform_later(license.id)
+    complete_chat_purchase_intent!
     response.set_header("PAYMENT-RESPONSE", Base64.strict_encode64(JSON.generate(settlement)))
     response.set_header("X-PAYMENT-RESPONSE", response.get_header("PAYMENT-RESPONSE"))
     render json: delivery_payload(purchase), status: :ok
@@ -166,5 +172,19 @@ class Api::V1::DownloadsController < Api::V1::BaseController
       transaction_id: purchase.payment_tx_id,
       hashscan_url: "#{Hedera::Network.hashscan_base}/transaction/#{purchase.payment_tx_id}"
     }
+  end
+
+  def authorize_chat_purchase!(offer, payload, matched)
+    @chat_purchase_context = Chat::PurchaseIntent.authorize!(
+      token: request.headers[Chat::PurchaseIntent::HEADER],
+      offer: offer,
+      request_path: request.fullpath,
+      payload: payload,
+      matched: matched
+    )
+  end
+
+  def complete_chat_purchase_intent!
+    Chat::PurchaseIntent.complete!(@chat_purchase_context) if @chat_purchase_context
   end
 end

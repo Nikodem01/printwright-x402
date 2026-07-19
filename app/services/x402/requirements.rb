@@ -31,10 +31,10 @@ module X402
     end
 
     # HBAR quotes drift with the live rate; a payment signed against a quote
-    # that moved before the retry landed must still verify. The floor bounds
-    # the platform's worst case to 3% on HBAR offers; overpaying is always
-    # accepted. USDC stays exact.
+    # that moved before the retry landed must still verify. The bounds limit
+    # either side's worst case to 3% on HBAR offers. USDC stays exact.
     HBAR_TOLERANCE_FLOOR = Rational(97, 100)
+    HBAR_TOLERANCE_CEILING = Rational(103, 100)
 
     def accepts
       options = [ usdc_option, hbar_option ].compact
@@ -77,7 +77,7 @@ module X402
       theirs = accepted["amount"].to_s
       return false unless theirs.match?(/\A[1-9]\d*\z/)
       return theirs.to_i == ours unless option[:asset] == HBAR_ASSET
-      theirs.to_i >= ours * HBAR_TOLERANCE_FLOOR
+      theirs.to_i.between?(ours * HBAR_TOLERANCE_FLOOR, ours * HBAR_TOLERANCE_CEILING)
     end
 
     def base_option

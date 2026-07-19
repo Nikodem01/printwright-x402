@@ -6,8 +6,9 @@ module Chat
   # a bounded timeout, and any network/parse/non-200 failure degrades to nil
   # rather than raising — a provider hiccup must not 500 a chat request.
   class Gemini
-    ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent".freeze
+    ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent".freeze
     TIMEOUT_SECONDS = 15
+    MAX_RESPONSE_BYTES = 32.kilobytes
 
     def initialize(api_key: ENV["GOOGLE_GENERATIVE_AI_API_KEY"])
       @api_key = api_key
@@ -42,6 +43,7 @@ module Chat
       ) { |http| http.request(req) }
 
       return nil unless response.code.to_i == 200
+      return nil if response.body.bytesize > MAX_RESPONSE_BYTES
 
       JSON.parse(response.body).dig("candidates", 0, "content", "parts")
     rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED, Errno::ECONNRESET,

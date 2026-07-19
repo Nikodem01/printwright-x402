@@ -2,7 +2,7 @@ require "test_helper"
 require "webmock/minitest"
 
 class Chat::GeminiTest < ActiveSupport::TestCase
-  ENDPOINT = %r{\Ahttps://generativelanguage\.googleapis\.com/v1beta/models/gemini-2\.5-flash:generateContent}
+  ENDPOINT = %r{\Ahttps://generativelanguage\.googleapis\.com/v1beta/models/gemini-3\.1-flash-lite:generateContent}
 
   test "no API key: unavailable, and generate returns nil without making a request" do
     client = Chat::Gemini.new(api_key: nil)
@@ -39,6 +39,15 @@ class Chat::GeminiTest < ActiveSupport::TestCase
 
   test "network failure degrades to nil instead of raising" do
     stub_request(:post, ENDPOINT).to_timeout
+
+    client = Chat::Gemini.new(api_key: "test-key")
+    assert_nil client.generate(turns: [], tools: [], system_instruction: "x")
+  end
+
+  test "an oversized provider response is rejected before it reaches storage or the browser" do
+    stub_request(:post, ENDPOINT).to_return(
+      body: { candidates: [ { content: { parts: [ { text: "x" * Chat::Gemini::MAX_RESPONSE_BYTES } ] } } ] }.to_json
+    )
 
     client = Chat::Gemini.new(api_key: "test-key")
     assert_nil client.generate(turns: [], tools: [], system_instruction: "x")

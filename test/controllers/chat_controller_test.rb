@@ -2,7 +2,22 @@ require "test_helper"
 require "webmock/minitest"
 
 class ChatControllerTest < ActionDispatch::IntegrationTest
-  GEMINI = %r{\Ahttps://generativelanguage\.googleapis\.com/v1beta/models/gemini-2\.5-flash:generateContent}
+  GEMINI = %r{\Ahttps://generativelanguage\.googleapis\.com/v1beta/models/gemini-3\.1-flash-lite:generateContent}
+
+  setup do
+    ENV["CHAT_PURCHASES_ENABLED"] = "false"
+    ENV["CHAT_MAX_SPEND_CENTS"] = "0"
+    ENV["CHAT_DAILY_SPEND_CENTS"] = "0"
+    ENV["CHAT_DAILY_MESSAGE_LIMIT"] = "500"
+  end
+
+  teardown do
+    ENV.delete("CHAT_PURCHASES_ENABLED")
+    ENV.delete("CHAT_MAX_SPEND_CENTS")
+    ENV.delete("CHAT_DAILY_SPEND_CENTS")
+    ENV.delete("CHAT_DAILY_MESSAGE_LIMIT")
+    RateLimitStore.backend = nil
+  end
 
   test "the chat page renders publicly, with no session required" do
     get chat_path
@@ -46,19 +61,19 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
   end
 
-  test "declines a buy request honestly instead of pretending to purchase" do
+  test "renders an out-of-scope assistant response without inventing a tool action" do
     ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
     stub_request(:post, GEMINI).to_return(
       body: { candidates: [ { content: { parts: [
-        { text: "Buying isn't wired up in chat yet — visit the model's page to buy it." }
+        { text: "I can help with this marketplace catalog, but not that request." }
       ] } } ] }.to_json,
       headers: { "content-type" => "application/json" }
     )
 
-    post chat_path, params: { message: "buy me the cheapest one" }, as: :turbo_stream
+    post chat_path, params: { message: "write my tax return" }, as: :turbo_stream
 
     assert_turbo_stream action: "append", target: "chat_messages" do
-      assert_select ".chat-msg-assistant", text: /isn't wired up/
+      assert_select ".chat-msg-assistant", text: /marketplace catalog/
     end
   ensure
     ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
@@ -70,7 +85,7 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     assert_no_turbo_stream action: "append", target: "chat_messages"
   end
 
-  test "a long conversation is trimmed so the session cookie never overflows" do
+  test "a long conversation persists in the database while the cookie keeps only its id" do
     ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
     # A realistic-sized answer, repeated across many exchanges, is exactly
     # what blew the ~4KB cookie budget in manual testing (CookieOverflow).
@@ -84,8 +99,130 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
       20.times { |i| post chat_path, params: { message: "question #{i}" }, as: :turbo_stream }
     end
     assert_response :success
-    assert_operator JSON.generate(session[:chat_turns]).bytesize, :<=, ChatController::MAX_SESSION_BYTES
+    conversation = ChatConversation.find(session[:chat_conversation_id])
+    assert_nil session[:chat_turns]
+    assert_operator JSON.generate(conversation.turns).bytesize, :>, 2500
+    assert_operator JSON.generate(conversation.turns).bytesize, :<=, ChatConversation::MAX_TURNS_BYTES
+    assert_operator response.headers["Set-Cookie"].to_s.bytesize, :<, 4096
   ensure
     ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
+  end
+
+
+  test "a proposal card uses canonical tool data and creates no purchase before approval" do
+    enable_purchases
+    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
+    stub_request(:post, GEMINI).to_return(
+      { body: { candidates: [ { content: { parts: [
+          { functionCall: { name: "propose_purchase", args: { id: "5", license_kind: "personal" }, id: "p1" } }
+        ] } } ] }.to_json, headers: { "content-type" => "application/json" } },
+      { body: { candidates: [ { content: { parts: [ { text: "Please use the approval card." } ] } } ] }.to_json,
+        headers: { "content-type" => "application/json" } }
+    )
+    stub_request(:get, "http://localhost:3000/api/v1/models/5").to_return(
+      body: { id: 5, title: "Canonical Clip", license_offers: [ { kind: "personal", price_cents: 90 } ] }.to_json,
+      headers: { "content-type" => "application/json" }
+    )
+
+    assert_no_difference("Purchase.count") do
+      post chat_path, params: { message: "Buy model 5 personal." }, as: :turbo_stream
+    end
+
+    assert_turbo_stream action: "replace", target: "chat_purchase" do
+      assert_select ".chat-purchase-card", text: /Canonical Clip/
+      assert_select "button", text: /Approve and buy.*\$0\.90/
+    end
+    assert_not_requested :get, %r{/download}
+    assert_not_requested :post, %r{/sign|/verify|/settle}
+  ensure
+    ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
+  end
+
+  test "approval ignores forged purchase parameters and returns the stored cap-checked quote" do
+    enable_purchases
+    get chat_path
+    conversation = ChatConversation.find(session[:chat_conversation_id])
+    conversation.update!(purchase_proposal: proposal)
+    quote = payment_required
+    stub_request(:get, "http://www.example.com#{proposal['purchase_path']}").to_return(
+      status: 402, body: quote.to_json, headers: { "content-type" => "application/json" }
+    )
+
+    post approve_chat_purchase_path,
+      params: { model_id: 999, license_kind: "commercial_unit", price_cents: 1, amount: "1" }, as: :json
+
+    assert_response :success
+    assert_equal "http://www.example.com#{proposal['purchase_path']}", response.parsed_body["purchase_url"]
+    assert_equal [ "900000" ], response.parsed_body.dig("payment_required", "accepts").pluck("amount")
+    assert response.parsed_body["purchase_intent"].present?
+    assert_equal 90, conversation.reload.approved_spend_cents
+  end
+
+  test "oversized input is rejected before Gemini and chat requests are rate limited" do
+    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
+    post chat_path, params: { message: "x" * (ChatController::MAX_MESSAGE_BYTES + 1) }, as: :turbo_stream
+    assert_response :success
+    assert_match(/too long/i, ChatConversation.find(session[:chat_conversation_id]).turns.last.dig("parts", 0, "text"))
+    assert_not_requested :post, GEMINI
+
+    RateLimitStore.backend = ActiveSupport::Cache::MemoryStore.new
+    20.times { post chat_path, params: { message: "" }, as: :turbo_stream }
+    post chat_path, params: { message: "" }, as: :turbo_stream
+    assert_response :too_many_requests
+    assert_equal "60", response.headers["Retry-After"]
+  ensure
+    ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
+  end
+
+  test "the global daily provider budget fails closed without a second Gemini call" do
+    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
+    ENV["CHAT_DAILY_MESSAGE_LIMIT"] = "1"
+    RateLimitStore.backend = ActiveSupport::Cache::MemoryStore.new
+    stub_request(:post, GEMINI).to_return(
+      body: { candidates: [ { content: { parts: [ { text: "First answer." } ] } } ] }.to_json,
+      headers: { "content-type" => "application/json" }
+    )
+
+    post chat_path, params: { message: "first" }, as: :turbo_stream
+    post chat_path, params: { message: "second" }, as: :turbo_stream
+
+    assert_response :success
+    assert_match(/daily message budget/i, ChatConversation.find(session[:chat_conversation_id]).turns.last.dig("parts", 0, "text"))
+    assert_requested :post, GEMINI, times: 1
+  ensure
+    ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
+  end
+
+  private
+
+  def enable_purchases
+    ENV["CHAT_PURCHASES_ENABLED"] = "true"
+    ENV["CHAT_MAX_SPEND_CENTS"] = "500"
+    ENV["CHAT_DAILY_SPEND_CENTS"] = "1000"
+  end
+
+  def proposal
+    {
+      "nonce" => "controller-proposal",
+      "state" => "pending",
+      "model_id" => 5,
+      "title" => "Stored Clip",
+      "license_kind" => "personal",
+      "price_cents" => 90,
+      "display_price" => "$0.90",
+      "purchase_path" => "/api/v1/models/5/download?license=personal",
+      "expires_at" => 10.minutes.from_now.iso8601
+    }
+  end
+
+  def payment_required
+    {
+      x402Version: 2,
+      resource: { url: "http://www.example.com#{proposal['purchase_path']}" },
+      accepts: [
+        { scheme: "exact", network: X402::Requirements.network, amount: "900000",
+          asset: X402::Requirements.usdc_asset, payTo: "0.0.123", extra: { feePayer: "0.0.456" } }
+      ]
+    }
   end
 end

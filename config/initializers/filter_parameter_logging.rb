@@ -5,5 +5,6 @@
 # See the ActiveSupport::ParameterFilter documentation for supported notations and behaviors.
 Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc,
-  :payment, :signature, :transaction, :payload  # x402 payment material never belongs in logs
+  :payment, :signature, :transaction, :payload, :purchase_intent,
+  :message, :turns, :purchase_proposal # x402 material and private chat text never belong in logs
 ]

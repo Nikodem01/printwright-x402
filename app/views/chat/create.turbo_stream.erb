@@ -9,3 +9,7 @@
 <%= turbo_stream.replace "chat_form" do %>
   <%= render "chat/form" %>
 <% end %>
+
+<%= turbo_stream.replace "chat_purchase" do %>
+  <%= render "chat/purchase", proposal: @purchase_proposal %>
+<% end %>

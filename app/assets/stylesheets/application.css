@@ -272,6 +272,14 @@ fieldset.field { border: 1px solid var(--border); border-radius: var(--radius-s)
   border: 1px solid var(--border); border-radius: var(--radius-s);
   background: var(--bg-raised); color: var(--text);
 }
+.chat-cap-banner {
+  padding: var(--s-2) var(--s-3); border: 1px solid var(--border);
+  border-radius: var(--radius-s); background: var(--bg-raised);
+}
+.chat-purchase-card {
+  margin: 0 0 var(--s-3); padding: var(--s-3); border: 2px solid var(--action);
+  border-radius: var(--radius-m); background: var(--bg-raised);
+}
 
 @media print {
   .site-header, .site-footer, .copy-btn, .evidence-footer p { display: none; }

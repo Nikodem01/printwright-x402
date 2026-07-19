@@ -1,55 +1,111 @@
-# The shopkeeper chat (door 3, V30 part 1): search and inspect the catalog
-# in conversation, via the tool loop over our own public API. Read-only —
-# buying is a later slice. No accounts, no persistence: the conversation
-# lives entirely in the session, Gemini's own turn shape end to end.
+# Public shopkeeper chat. The signed session cookie carries only an opaque
+# conversation id; provider turns and purchase authorization state stay in a
+# dedicated, expiring database row.
 class ChatController < ApplicationController
   allow_unauthenticated_access
 
-  # A cookie session has a hard ~4KB budget once signed and encoded — a real
-  # multi-question conversation (each answer carrying tool-call + search-result
-  # turns) hits that within a handful of exchanges. Bound by serialized size,
-  # not turn count, so it actually stays under the limit instead of just
-  # under some arbitrary count that still overflows.
-  MAX_SESSION_BYTES = 2500
+  MAX_MESSAGE_BYTES = 4.kilobytes
+
+  rate_limit to: 20, within: 1.minute, only: :create, store: RateLimitStore,
+    name: "messages", with: :chat_rate_limited
+  rate_limit to: 5, within: 1.minute, only: :approve, store: RateLimitStore,
+    name: "approvals", with: :chat_rate_limited
+
+  before_action :load_conversation
 
   def show
-    @turns = session[:chat_turns] ||= []
+    assign_conversation
   end
 
   def create
     text = params[:message].to_s.strip
-    turns = session[:chat_turns] ||= []
+    @new_turns = []
 
     if text.present?
-      start = turns.length
-      turns << { "role" => "user", "parts" => [ { "text" => text } ] }
-      result = Chat::ToolLoop.new(turns: turns).run
-      @new_turns = result.turns[start..] || []
-      session[:chat_turns] = trim(result.turns)
-    else
-      @new_turns = []
+      # Active Record's development SQL log prints JSONB bind values in full;
+      # parameter filtering alone cannot redact a transcript embedded in an
+      # UPDATE. Silence this thread's non-error logs across the persistence
+      # block so private chat text and opaque thought signatures never land in
+      # logs. Request metadata remains logged with params filtered.
+      Rails.logger.silence do
+        @conversation.with_lock do
+          turns = @conversation.turns.deep_dup
+          start = turns.length
+          if text.bytesize > MAX_MESSAGE_BYTES
+            turns.concat([
+              { "role" => "user", "parts" => [ { "text" => "[message rejected: over 4 KiB]" } ] },
+              { "role" => "model", "parts" => [ { "text" => "That message is too long. Please keep it under 4 KiB." } ] }
+            ])
+          else
+            turns << { "role" => "user", "parts" => [ { "text" => text } ] }
+            if Chat::UsageBudget.consume?
+              turns = Chat::ToolLoop.new(turns: turns).run.turns
+            else
+              turns << { "role" => "model", "parts" => [ {
+                "text" => "The shopkeeper's daily message budget is reached. Please try again tomorrow."
+              } ] }
+            end
+          end
+          @new_turns = turns[start..] || []
+
+          proposal = proposal_from(@new_turns, current: @conversation.purchase_proposal)
+          @conversation.update!(turns: turns, purchase_proposal: proposal)
+        end
+      end
     end
 
-    respond_to do |format|
-      format.turbo_stream
-    end
+    assign_conversation
+    respond_to { |format| format.turbo_stream }
+  end
+
+  # No model, license, URL, price, asset, or amount parameters are accepted.
+  # All authority comes from the current conversation's stored proposal.
+  def approve
+    result = Chat::PurchaseApproval.call(conversation: @conversation, base_url: request.base_url)
+    render json: {
+      payment_required: result.payment_required,
+      purchase_url: result.purchase_url,
+      purchase_intent: result.purchase_intent
+    }
+  rescue Chat::PurchaseApproval::Failure => e
+    response.set_header("Retry-After", e.retry_after.to_s) if e.retry_after
+    render json: { error: e.code, retry_after: e.retry_after }.compact, status: e.status
   end
 
   private
 
-  # Drops whole oldest exchanges — never mid functionCall/functionResponse
-  # pair — until the serialized history fits the session budget. Falls back
-  # to keeping just the most recent exchange if even that alone doesn't fit.
-  def trim(turns)
-    boundaries = turns.each_index.select { |i| user_message?(turns[i]) }
-    boundaries.each do |start|
-      remaining = turns[start..]
-      return remaining if JSON.generate(remaining).bytesize <= MAX_SESSION_BYTES
-    end
-    boundaries.any? ? turns[boundaries.last..] : turns
+  def load_conversation
+    session.delete(:chat_turns)
+    @conversation = ChatConversation.active.find_by(id: session[:chat_conversation_id])
+    return if @conversation
+
+    @conversation = ChatConversation.create!
+    session[:chat_conversation_id] = @conversation.id
   end
 
-  def user_message?(turn)
-    turn["role"] == "user" && turn["parts"]&.first&.key?("text")
+  def assign_conversation
+    @turns = @conversation.turns
+    @purchase_proposal = @conversation.purchase_proposal.deep_stringify_keys
+    @chat_spend_cap_cents = Chat::PurchasePolicy.max_spend_cents
+  end
+
+  def proposal_from(turns, current:)
+    responses = turns.flat_map { |turn| Array(turn["parts"]) }
+      .filter_map { |part| part["functionResponse"] }
+      .select { |response| response["name"] == "propose_purchase" }
+    return current if responses.empty?
+
+    proposals = responses.filter_map { |response| response["response"]&.deep_stringify_keys&.fetch("proposal", nil) }
+    return {} unless proposals.one?
+
+    proposals.first.merge(
+      "nonce" => SecureRandom.hex(16),
+      "state" => "pending"
+    )
+  end
+
+  def chat_rate_limited
+    response.set_header("Retry-After", "60")
+    render json: { error: "rate_limited", retry_after: 60 }, status: :too_many_requests
   end
 end

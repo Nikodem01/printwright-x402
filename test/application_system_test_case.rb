@@ -1,6 +1,7 @@
 require "test_helper"
 
 Capybara.default_max_wait_time = 5
+Selenium::WebDriver.logger.level = :warn
 
 # JS-capable base: headless Chrome for flows that run Stimulus (checkout).
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase

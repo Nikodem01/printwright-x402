@@ -3,21 +3,25 @@ module ChatHelper
   # result (not shown — the call above it already made the trace visible),
   # or the model's prose answer.
   def chat_turn_kind(turn)
-    part = turn["parts"]&.first
-    return :tool_call if part&.key?("functionCall")
-    return :tool_response if part&.key?("functionResponse")
+    parts = Array(turn["parts"])
+    return :tool_call if parts.any? { |part| part.key?("functionCall") }
+    return :tool_response if parts.any? { |part| part.key?("functionResponse") }
     turn["role"] == "user" ? :user_message : :assistant_message
   end
 
   def chat_turn_text(turn)
-    turn["parts"]&.first&.dig("text")
+    Array(turn["parts"]).filter_map { |part| part["text"] }.join
   end
 
   # e.g. search_models(query: "cable organizer") — the visible tool trace:
   # which tool ran, with what arguments, before the answer.
   def chat_tool_call_label(turn)
-    call = turn["parts"].first["functionCall"]
-    args = (call["args"] || {}).map { |k, v| "#{k}: #{v.inspect}" }.join(", ")
-    "#{call['name']}(#{args})"
+    Array(turn["parts"]).filter_map { |part|
+      call = part["functionCall"]
+      next unless call
+
+      args = (call["args"] || {}).map { |key, value| "#{key}: #{value.inspect}" }.join(", ")
+      "#{call['name']}(#{args})"
+    }.join("; ")
   end
 end

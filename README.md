@@ -92,6 +92,15 @@ is a working fallback you can run yourself, and switching is one env var
 (`BUYER_ACCOUNT_ID=... BUYER_PRIVATE_KEY=0x... node scripts/demo-wallet.mjs`) — a separate
 key-holding process, the drop-in upgrade point for HashPack pairing.
 
+**Shopkeeper chat:** `/chat` runs Gemini `gemini-3.1-flash-lite` server-side and dogfoods the
+same public catalog API. Search works with purchases disabled. To enable testnet proposals,
+set `CHAT_PURCHASES_ENABLED=true`, `CHAT_MAX_SPEND_CENTS`, and `CHAT_DAILY_SPEND_CENTS`.
+Gemini can only prepare a proposal: a separate human button re-prices it, reserves the caps,
+restricts settlement to exact USDC, and binds one signed transaction to that model/license.
+Private keys remain in the wallet process; payment headers, receipts, and bearer download URLs
+never enter the Gemini conversation. `CHAT_DAILY_MESSAGE_LIMIT` bounds total provider calls in
+addition to the per-IP request rate limit.
+
 Agent discovery: [`/openapi.json`](public/openapi.json) · [`/llms.txt`](public/llms.txt).
 
 ## Architecture
@@ -109,7 +118,7 @@ Agent discovery: [`/openapi.json`](public/openapi.json) · [`/llms.txt`](public/
 
 ```bash
 bin/rails test            # Rails suite (paywall error table runs against real captured wire bytes)
-bin/rails test:system     # Capybara: browser checkout (signer stubbed), designer publish, verify states
+bin/rails test:system     # Capybara: storefront + chat checkout, designer publish, verify states
 cd sidecar && npm test    # sidecar suite (SDK faked)
 cd mcp && npm test        # MCP stdio smoke (spawns the real server over stdio)
 ```
@@ -121,8 +130,8 @@ the build if key/token/signature material ever reaches a log.
 ## On-chain artifacts (testnet)
 
 - License certificate topic: [`0.0.9585069`](https://hashscan.io/testnet/topic/0.0.9585069)
-- Example settled purchase: [`0.0.7162784@1784141006.971945408`](https://hashscan.io/testnet/transaction/0.0.7162784@1784141006.971945408)
-  with its certificate at [mirror message 4](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/4)
+- Example chat-approved purchase: [`0.0.7162784@1784422894.242015235`](https://hashscan.io/testnet/transaction/0.0.7162784@1784422894.242015235)
+  with certificate `pw-000044` at [mirror message 45](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/45)
 
 ## Why this needs Web3 (and Hedera specifically)
 
@@ -141,12 +150,11 @@ Hedera account.
 - Print-server royalty hook (OctoPrint): one `commercial_unit` purchase per job start
 - On-chain royalty splits (designer + marketplace legs in one transfer)
 - Mainnet + listing in the x402 ecosystem directory / x402scan
-- A conversational shopkeeper over the same agent API
 
 ## Status / usage so far
 
-Built solo during the Hedera x402 bounty week. Testnet receipts to date: 6 settled x402
-purchases (HBAR and USDC), 7 anchored license certificates on
+Built solo during the Hedera x402 bounty week. Testnet receipts to date: 45 settled x402
+purchases (HBAR and USDC), 45 anchored license certificates on
 [topic 0.0.9585069](https://hashscan.io/testnet/topic/0.0.9585069), plus a fresh-clone
 reproducibility rehearsal that reached a real settlement using only this README. Feedback
 and issues welcome.

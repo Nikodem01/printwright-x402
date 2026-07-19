@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_18_212711) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_19_100549) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -42,6 +42,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_212711) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "chat_conversations", force: :cascade do |t|
+    t.integer "approved_spend_cents", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.jsonb "purchase_proposal", default: {}, null: false
+    t.jsonb "turns", default: [], null: false
+    t.datetime "updated_at", null: false
+    t.index ["expires_at"], name: "index_chat_conversations_on_expires_at"
   end
 
   create_table "designers", force: :cascade do |t|

@@ -296,7 +296,7 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     # 402 was issued at 250 c/hbar (fixture amount 10000000 tinybars); the
     # rate moves ~3% before the signed retry lands. Payment must still clear,
     # and the purchase must record what the buyer actually signed.
-    ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "258"
+    ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "257"
     stub_verify_ok
     stub_settle(body: fixture("settle_ok.json"))
 
@@ -305,6 +305,40 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "10000000", Purchase.sole.amount_base_units
   ensure
     ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "250"
+  end
+
+  test "HBAR tolerance includes its exact lower boundary" do
+    payload = @payload.deep_dup
+    payload["accepted"]["amount"] = "9700000"
+    stub_verify_ok
+    stub_settle(body: fixture("settle_ok.json"))
+
+    get download_path, headers: payment_headers(payload)
+    assert_response :success
+    assert_equal "9700000", Purchase.sole.amount_base_units
+  end
+
+  test "HBAR tolerance includes its exact upper boundary" do
+    payload = @payload.deep_dup
+    payload["accepted"]["amount"] = "10300000"
+    stub_verify_ok
+    stub_settle(body: fixture("settle_ok.json"))
+
+    get download_path, headers: payment_headers(payload)
+    assert_response :success
+    assert_equal "10300000", Purchase.sole.amount_base_units
+  end
+
+  test "HBAR tolerance rejects amounts outside either boundary and enormous overpayment" do
+    [ "9699999", "10300001", "999999999999999999999999" ].each do |amount|
+      payload = @payload.deep_dup
+      payload["accepted"]["amount"] = amount
+
+      get download_path, headers: payment_headers(payload)
+      assert_response :payment_required
+      assert_equal "invalid_payment_requirements", response.parsed_body["error"]
+    end
+    assert_equal 0, Purchase.count
   end
 
   test "a quote drift beyond tolerance rejects the payment before any money moves" do
@@ -350,6 +384,46 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     stub_settle(body: fixture("settle_ok.json"))
     get download_path, headers: payment_headers(@payload)
     assert_response :success
+  end
+
+  test "chat intent binds the signed retry to one approved route and completes with delivery" do
+    get download_path, params: { license: "personal" }
+    usdc = response.parsed_body["accepts"].find { |accept| accept["asset"] == X402::Requirements.usdc_asset }
+    payload = @payload.deep_dup
+    payload["accepted"] = usdc
+    purchase_path = "#{download_path}?license=personal"
+    proposal = {
+      "nonce" => "download-intent",
+      "state" => "approved",
+      "model_id" => @model.id,
+      "license_kind" => "personal",
+      "price_cents" => 25,
+      "purchase_path" => purchase_path,
+      "expires_at" => 10.minutes.from_now.iso8601,
+      "approved_asset" => usdc["asset"],
+      "approved_amount" => usdc["amount"]
+    }
+    conversation = ChatConversation.create!(purchase_proposal: proposal, approved_spend_cents: 25)
+    intent = Chat::PurchaseIntent.issue(conversation: conversation, proposal: proposal)
+    stub_verify_ok
+    stub_settle(body: fixture("settle_ok.json"))
+
+    get download_path, params: { license: "personal" },
+      headers: payment_headers(payload).merge(Chat::PurchaseIntent::HEADER => intent)
+
+    assert_response :success
+    assert_equal "completed", conversation.reload.purchase_proposal["state"]
+    assert Purchase.sole.delivered?
+  end
+
+  test "tampered chat intent is refused before a purchase or facilitator call" do
+    get download_path, params: { license: "personal" },
+      headers: payment_headers(@payload).merge(Chat::PurchaseIntent::HEADER => "tampered")
+
+    assert_response :forbidden
+    assert_equal "invalid_purchase_intent", response.parsed_body["error"]
+    assert_equal 0, Purchase.count
+    assert_not_requested :post, "#{FACILITATOR}/verify"
   end
 
   private

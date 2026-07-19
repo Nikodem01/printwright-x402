@@ -10,6 +10,7 @@ import { createClientHederaSigner, PrivateKey } from "@x402/hedera";
 import { ExactHederaScheme } from "@x402/hedera/exact/client";
 
 const PORT = Number(process.env.DEMO_WALLET_PORT || 4022);
+const ALLOWED_ORIGIN = process.env.DEMO_WALLET_ORIGIN || "http://localhost:3000";
 const ACCOUNT_ID = process.env.BUYER_ACCOUNT_ID || process.env.HEDERA_ACCOUNT_ID;
 const PRIVATE_KEY = process.env.BUYER_PRIVATE_KEY || process.env.HEDERA_PRIVATE_KEY;
 if (!ACCOUNT_ID || !PRIVATE_KEY) throw new Error("BUYER_ACCOUNT_ID / BUYER_PRIVATE_KEY required");
@@ -20,7 +21,7 @@ const signer = createClientHederaSigner(ACCOUNT_ID, PrivateKey.fromStringECDSA(P
 const httpClient = new x402HTTPClient(new x402Client().register("hedera:*", new ExactHederaScheme(signer)));
 
 const CORS = {
-  "access-control-allow-origin": "http://localhost:3000",
+  "access-control-allow-origin": ALLOWED_ORIGIN,
   "access-control-allow-methods": "POST, GET, OPTIONS",
   "access-control-allow-headers": "content-type",
 };
@@ -35,6 +36,9 @@ http
       return send(200, { ok: true, account: ACCOUNT_ID });
     }
     if (req.method !== "POST" || req.url !== "/sign") return send(404, { error: "not_found" });
+    if (req.headers.origin && req.headers.origin !== ALLOWED_ORIGIN) {
+      return send(403, { error: "origin_not_allowed" });
+    }
 
     try {
       const chunks = [];

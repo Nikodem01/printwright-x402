@@ -15,12 +15,24 @@ const FAILURE_COPY = {
   invalid_payload: () =>
     "The payment could not be read by the server. Retrying this exact request won't help.",
   wallet_refused: () => "You declined the payment request in your wallet.",
+  purchases_disabled: () => "Chat purchases are currently disabled.",
+  spend_cap_exceeded: () => "This proposal exceeds the configured conversation spend cap.",
+  daily_spend_cap_exceeded: () => "The chat purchase budget for today has been reached.",
+  approval_expired: () => "This approval expired. Ask the shopkeeper for a fresh proposal.",
+  stale_proposal: () => "The offer changed. Ask the shopkeeper for a fresh proposal before paying.",
+  approval_already_used: () => "This approval has already been used.",
+  invalid_purchase_intent: () => "The server could not verify this purchase approval.",
+  payment_intent_replayed: () => "This approval is already bound to a different signed payment.",
 }
 
 // These are terminal for the purchase attempt: no retry button. Everything
 // else (facilitator_unavailable, rate_limited, wallet_refused, and unmapped
 // codes) keeps the "Try again" affordance.
-const TERMINAL_ERRORS = new Set(["sold_out", "duplicate_payment", "invalid_payload"])
+const TERMINAL_ERRORS = new Set([
+  "sold_out", "duplicate_payment", "invalid_payload", "purchases_disabled", "spend_cap_exceeded",
+  "daily_spend_cap_exceeded", "approval_expired", "stale_proposal", "approval_already_used",
+  "invalid_purchase_intent", "payment_intent_replayed",
+])
 const TERMINAL_LABELS = { sold_out: "Sold out", duplicate_payment: "Already submitted", invalid_payload: "Unavailable" }
 
 // S3 checkout state machine (plan 06): idle -> quoting -> wallet -> settling
@@ -28,7 +40,12 @@ const TERMINAL_LABELS = { sold_out: "Sold out", duplicate_payment: "Already subm
 // copy and receipt are exactly what a HashPack-backed signer would use.
 export default class extends Controller {
   static targets = ["offer", "button", "status", "receipt"]
-  static values = { downloadUrl: String, walletUrl: { type: String, default: "http://localhost:4022" } }
+  static values = {
+    downloadUrl: String,
+    walletUrl: { type: String, default: "http://localhost:4022" },
+    approvalUrl: String,
+    buttonPrefix: { type: String, default: "Buy license" },
+  }
 
   connect() {
     this.updatePrice()
@@ -49,7 +66,7 @@ export default class extends Controller {
     // Prefer the server-rendered price: HBAR-lead offers show "ℏ · $" at the
     // live rate, which a client-side cents-to-dollars format would discard.
     const display = offer.dataset.priceDisplay || `$${(offer.dataset.priceCents / 100).toFixed(2)}`
-    this.buttonTarget.textContent = `Buy license · ${display}`
+    this.buttonTarget.textContent = `${this.buttonPrefixValue} · ${display}`
   }
 
   selectedOffer() {
@@ -57,16 +74,39 @@ export default class extends Controller {
   }
 
   async buy() {
-    const kind = this.selectedOffer().querySelector("input").value
-    const url = `${this.downloadUrlValue}?license=${kind}`
     try {
-      this.setState("quoting", "Fetching payment terms…")
-      const leg1 = await fetch(url, { headers: { accept: "application/json" } })
-      if (leg1.status !== 402) {
-        const body = await leg1.json().catch(() => ({}))
-        return this.fail(body.error, `expected a 402 quote, got ${leg1.status}`, body.retry_after)
+      // A timeout after signing may mean the same transaction settled. Never
+      // ask for a second signature in that state; retry the identical bytes so
+      // Door 1 can reconcile by transaction digest.
+      if (this.pendingPayment) return await this.submitPendingPayment()
+
+      const kind = this.selectedOffer().querySelector("input").value
+      let url = `${this.downloadUrlValue}?license=${kind}`
+      let quote
+      let purchaseIntent
+      if (this.hasApprovalUrlValue) {
+        this.setState("quoting", "Checking the proposal and reserving its spend cap…")
+        const approval = await fetch(this.approvalUrlValue, {
+          method: "POST",
+          headers: { accept: "application/json", "x-csrf-token": this.csrfToken() },
+        })
+        const body = await approval.json().catch(() => ({}))
+        if (!approval.ok) {
+          return this.fail(body.error, body.error || `approval failed (${approval.status})`, body.retry_after)
+        }
+
+        quote = body.payment_required
+        url = body.purchase_url
+        purchaseIntent = body.purchase_intent
+      } else {
+        this.setState("quoting", "Fetching payment terms…")
+        const leg1 = await fetch(url, { headers: { accept: "application/json" } })
+        if (leg1.status !== 402) {
+          const body = await leg1.json().catch(() => ({}))
+          return this.fail(body.error, `expected a 402 quote, got ${leg1.status}`, body.retry_after)
+        }
+        quote = await leg1.json()
       }
-      const quote = await leg1.json()
       const accept = quote.accepts[0]
 
       this.setState("wallet",
@@ -82,17 +122,29 @@ export default class extends Controller {
       }
       const { headers } = await signed.json()
 
-      this.setState("settling", "Submitting to Hedera…")
-      const leg2 = await fetch(url, { headers: { accept: "application/json", ...headers } })
-      const body = await leg2.json()
-      if (leg2.status !== 200) {
-        return this.fail(body.error, body.error || `settlement failed (${leg2.status})`, body.retry_after)
-      }
-
-      this.success(body)
+      const paymentHeaders = { accept: "application/json", ...headers }
+      if (purchaseIntent) paymentHeaders["X-Printwright-Purchase-Intent"] = purchaseIntent
+      this.pendingPayment = { url, headers: paymentHeaders }
+      await this.submitPendingPayment()
     } catch (error) {
       this.fail(null, error.message)
     }
+  }
+
+  async submitPendingPayment() {
+    const { url, headers } = this.pendingPayment
+    this.setState("settling", "Submitting to Hedera…")
+    const leg2 = await fetch(url, { headers })
+    const body = await leg2.json()
+    if (leg2.status !== 200) {
+      // These failures can be recovered only by replaying this same signed
+      // transaction. Other failures need a fresh attempt/proposal.
+      if (!["facilitator_unavailable", "rate_limited"].includes(body.error)) this.pendingPayment = null
+      return this.fail(body.error, body.error || `settlement failed (${leg2.status})`, body.retry_after)
+    }
+
+    this.pendingPayment = null
+    this.success(body)
   }
 
   setState(state, message) {
@@ -148,5 +200,9 @@ export default class extends Controller {
     const div = document.createElement("div")
     div.textContent = String(text)
     return div.innerHTML
+  }
+
+  csrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.content || ""
   }
 }

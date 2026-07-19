@@ -33,6 +33,42 @@ module Chat
       summarize(body, detailed: true)
     end
 
+    # This tool prepares trusted display data for a separate human approval
+    # step. It never requests a 402 quote, contacts a wallet, or submits a
+    # payment. Catalog prose is deliberately omitted from the proposal.
+    def propose_purchase(id, license_kind)
+      return { error: "purchases_disabled" } unless Chat::PurchasePolicy.enabled?
+      return { error: "invalid_model_id" } unless id.to_s.match?(/\A[1-9]\d*\z/)
+
+      kind = license_kind.to_s
+      return { error: "invalid_license" } unless kind.match?(/\A[a-z_]+\z/)
+
+      body = get("/api/v1/models/#{id}")
+      return { error: "not_found" } unless body
+
+      offer = Array(body["license_offers"]).find { |candidate| candidate["kind"] == kind }
+      return { error: "offer_not_found" } unless offer
+
+      price_cents = strict_positive_integer(offer["price_cents"])
+      return { error: "invalid_price" } unless price_cents
+      if price_cents > Chat::PurchasePolicy.max_spend_cents
+        return { error: "spend_cap_exceeded", max_spend_cents: Chat::PurchasePolicy.max_spend_cents }
+      end
+
+      {
+        approval_required: true,
+        proposal: {
+          model_id: id.to_i,
+          title: body["title"].to_s.first(200),
+          license_kind: kind,
+          price_cents: price_cents,
+          display_price: format("$%.2f", price_cents / 100.0),
+          purchase_path: "/api/v1/models/#{id}/download?#{URI.encode_www_form(license: kind)}",
+          expires_at: Chat::PurchasePolicy::PROPOSAL_LIFETIME.from_now.iso8601
+        }
+      }
+    end
+
     # Trimmed to what a chat answer actually needs — the full API payload
     # (files, license terms text, hedera account id, ...) would waste tokens
     # and bury the answer in noise.
@@ -75,5 +111,12 @@ module Chat
       Rails.logger.warn("Chat::Tools: #{e.class} — #{e.message}")
       nil
     end
+
+
+    def strict_positive_integer(value)
+      string = value.to_s
+      string.match?(/\A[1-9]\d*\z/) ? string.to_i : nil
+    end
+    private_class_method :strict_positive_integer
   end
 end

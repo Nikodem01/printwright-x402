@@ -53,4 +53,5 @@ Rails.application.routes.draw do
   get "pricing", to: "pages#pricing", as: :pricing
   get "chat", to: "chat#show", as: :chat
   post "chat", to: "chat#create"
+  post "chat/approve", to: "chat#approve", as: :approve_chat_purchase
 end

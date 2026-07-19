@@ -4,7 +4,17 @@
   <h1>Ask the shopkeeper</h1>
   <p class="muted t-small">
     Search the catalog in conversation — the same public API any outside agent calls, so every
-    answer traces back to a real tool call. Hedera testnet demo; buying isn't wired up in chat yet.
+    answer traces back to a real tool call. Purchases require a separate human approval and settle
+    on Hedera testnet.
+  </p>
+
+  <p class="chat-cap-banner t-small">
+    <% if Chat::PurchasePolicy.enabled? %>
+      <strong>Spend guard:</strong> at most <%= number_to_currency(@chat_spend_cap_cents / 100.0) %>
+      per conversation, exact USDC only. Chat can prepare a proposal; only your button click can approve it.
+    <% else %>
+      <strong>Purchases are disabled.</strong> Catalog search remains available.
+    <% end %>
   </p>
 
   <div id="chat_messages" class="chat-messages">
@@ -15,6 +25,8 @@
     <% end %>
     <%= render partial: "chat/turn", collection: @turns, as: :turn %>
   </div>
+
+  <%= render "chat/purchase", proposal: @purchase_proposal %>
 
   <%= render "chat/form" %>
 </div>
