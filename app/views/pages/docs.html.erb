@@ -55,6 +55,39 @@ curl -i "http://localhost:3000/api/v1/models/5/download?license=personal" \
 # Retry this POST and identical JSON with PAYMENT-SIGNATURE: &lt;base64 PaymentPayload&gt;
 # 200: {"transaction_id":"...","licenses":[{"cert_id":"pw-...","verify_url":"..."}, ...]}</pre>
 
+  <h2>Signed lifecycle webhooks</h2>
+  <p class="t-small">Webhooks are outbound notifications for licenses already paid through x402;
+    they cannot create a purchase, license, certificate, or ledger entry. A designer can add a
+    public HTTPS endpoint under <strong>Designer → Webhooks</strong> and receives
+    <code class="mono">sale.completed</code> after paid delivery. A batch buyer can include the
+    optional callback below in the body used for both the 402 probe and signed retry; it receives
+    <code class="mono">certificate.anchored</code> only after each PWC-1 certificate lands on HCS.
+    Sandbox purchases emit neither event.</p>
+  <pre class="mono t-small" style="overflow-x:auto">{
+  "items": [{"model_id": 5, "license": "commercial_unit"}],
+  "webhook": {
+    "url": "https://farm.example/printwright-events",
+    "secret": "at-least-32-bytes-known-only-to-the-buyer"
+  }
+}</pre>
+  <p class="t-small">Delivery uses stable event IDs, JSON request bodies, bounded retries, and
+    these headers: <code class="mono">Webhook-Id</code>,
+    <code class="mono">Webhook-Timestamp</code>, and <code class="mono">Webhook-Signature</code>.
+    Verify the signature against the raw request bytes before parsing them:</p>
+  <pre class="mono t-small" style="overflow-x:auto">import { createHmac, timingSafeEqual } from "node:crypto";
+
+export function verifyPrintwrightWebhook(rawBody, headers, secret) {
+  const id = headers["webhook-id"];
+  const timestamp = headers["webhook-timestamp"];
+  const received = Buffer.from(headers["webhook-signature"].replace(/^v1=/, ""), "hex");
+  const signed = `${id}.${timestamp}.${rawBody}`;
+  const expected = Buffer.from(createHmac("sha256", secret).update(signed).digest("hex"), "hex");
+  const fresh = Math.abs(Date.now() / 1000 - Number(timestamp)) &lt;= 300;
+  return fresh &amp;&amp; received.length === expected.length &amp;&amp; timingSafeEqual(received, expected);
+}
+
+// Return any 2xx only after recording event.id idempotently. Duplicate IDs are normal on retry.</pre>
+
   <h2>JavaScript client</h2>
   <p class="t-small"><code class="mono">@printwright/client</code> wraps catalog reads, the
     x402 Hedera signature, optional first-use USDC association, and HCS certificate comparison.
@@ -156,6 +189,7 @@ console.log(receipt.warning, await sandbox.verify(receipt.license.cert_id));</pr
         <tr><td>409</td><td><code class="mono">duplicate_payment</code> (+ <code class="mono">status</code>)</td><td>download — replayed payment (a replay of an already-delivered purchase instead returns the original delivery payload, not this error)</td></tr>
         <tr><td>410</td><td><code class="mono">sold_out</code></td><td>download — offer <code class="mono">max_units</code> exhausted (may include <code class="mono">transaction_id</code> when it sold out after payment)</td></tr>
         <tr><td>410</td><td><code class="mono">grant_expired</code></td><td>files — download grant no longer usable</td></tr>
+        <tr><td>422</td><td><code class="mono">invalid_webhook</code></td><td>batch — callback is not public HTTPS or its secret is outside 32–256 bytes</td></tr>
         <tr><td>429</td><td><code class="mono">rate_limited</code> (+ <code class="mono">retry_after: 60</code>)</td><td>all API endpoints; also sets <code class="mono">Retry-After: 60</code></td></tr>
         <tr><td>503</td><td><code class="mono">facilitator_unavailable</code> (+ <code class="mono">retry_after: 5</code>)</td><td>download — facilitator down / circuit breaker open</td></tr>
       </tbody>

@@ -44,9 +44,17 @@ payment. Each item still receives its own file grant and independently verifiabl
 const batch = await buyer.buyBatch({
   items: Array.from({ length: 3 }, () => ({ modelId: model.id, license: "commercial_unit" })),
   asset: "usdc",
+  webhook: process.env.CERT_WEBHOOK_URL ? {
+    url: process.env.CERT_WEBHOOK_URL,
+    secret: process.env.CERT_WEBHOOK_SECRET,
+  } : undefined,
 });
 console.log(batch.transaction_id, batch.licenses.map(({ cert_id }) => cert_id));
 ```
+
+The optional public-HTTPS callback receives one signed `certificate.anchored` event per item
+after its paid license certificate lands on HCS. The webhook does not create or certify a sale;
+it only reports the result of this x402 batch.
 
 `can()` needs no account or key. It asks the public structured-policy endpoint whether one
 certificate permits a named use and quantity, and returns a boolean, stable reason code, the

@@ -1,0 +1,20 @@
+<% content_for :title, "Webhooks — Printwright designer" %>
+<h1>Webhooks</h1>
+<p class="muted">Receive a signed <code class="mono">sale.completed</code> event after an x402 payment delivers a license.</p>
+<p><%= link_to "Add endpoint", new_designer_webhook_endpoint_path, class: "button" %></p>
+
+<% if @endpoints.any? %>
+  <table class="facts-table" style="width:100%">
+    <tr><th>endpoint</th><th>events</th><th>status</th><th></th></tr>
+    <% @endpoints.each do |endpoint| %>
+      <tr>
+        <td class="mono"><%= endpoint.url %></td>
+        <td><%= endpoint.events.join(", ") %></td>
+        <td><%= endpoint.active? ? "active" : "paused" %></td>
+        <td><%= button_to "Remove", designer_webhook_endpoint_path(endpoint), method: :delete, class: "linklike" %></td>
+      </tr>
+    <% end %>
+  </table>
+<% else %>
+  <p class="muted">No webhook endpoints configured.</p>
+<% end %>

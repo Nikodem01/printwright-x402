@@ -66,8 +66,14 @@ export interface BatchItem {
   license?: "personal" | "commercial_unit" | string;
 }
 
+export interface BatchWebhook {
+  url: string;
+  secret: string;
+}
+
 export interface BatchPaymentQuote {
   items: ReadonlyArray<{ model_id: number; license: string }>;
+  webhook?: Readonly<BatchWebhook>;
   resourceUrl: string;
   requestBody: string;
   paymentRequired: Record<string, unknown> & { accepts?: Array<Record<string, unknown>> };
@@ -146,8 +152,8 @@ export class PrintwrightClient {
   get(modelId: number): Promise<ModelDetails>;
   quote(options: QuoteOptions): Promise<PaymentQuote>;
   buy(options: PurchaseOptions): Promise<PurchaseReceipt>;
-  quoteBatch(options: { items: BatchItem[]; asset?: Asset }): Promise<BatchPaymentQuote>;
-  buyBatch(options: { items?: BatchItem[]; asset?: Asset; quote?: BatchPaymentQuote }): Promise<BatchPurchaseReceipt>;
+  quoteBatch(options: { items: BatchItem[]; asset?: Asset; webhook?: BatchWebhook }): Promise<BatchPaymentQuote>;
+  buyBatch(options: { items?: BatchItem[]; asset?: Asset; webhook?: BatchWebhook; quote?: BatchPaymentQuote }): Promise<BatchPurchaseReceipt>;
   can(options: { certId: string; use: LicenseUse | string; qty?: number }): Promise<LicenseDecision>;
   verify(certId: string): Promise<CertificateProof>;
 }

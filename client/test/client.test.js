@@ -216,10 +216,15 @@ test("posts an identical batch body across one aggregate x402 negotiation", asyn
     privateKey: PrivateKey.generateECDSA().toStringRaw(),
   });
   const items = Array.from({ length: 3 }, () => ({ modelId: 7, license: "commercial_unit" }));
+  const webhook = {
+    url: "https://buyer.example/certificates",
+    secret: "buyer_webhook_secret_32_bytes_long",
+  };
 
-  const quote = await client.quoteBatch({ items, asset: "hbar" });
+  const quote = await client.quoteBatch({ items, asset: "hbar", webhook });
   assert.equal(quote.paymentRequired.batch.license_count, 3);
   assert.equal(quote.accepted.amount, "3");
+  assert.deepEqual(JSON.parse(quote.requestBody).webhook, webhook);
   const receipt = await client.buyBatch({ quote });
 
   assert.equal(receipt.licenses.length, 3);
@@ -267,6 +272,12 @@ test("rejects malformed ids, networks, and missing buyer credentials", async () 
     (error) => error instanceof PrintwrightError && /accountId and privateKey/.test(error.message)
   );
   await assert.rejects(() => new PrintwrightClient({ baseUrl }).quoteBatch({ items: [] }), /1 to 20/);
+  await assert.rejects(
+    () => new PrintwrightClient({ baseUrl }).quoteBatch({
+      items: [ { modelId: 7 } ], webhook: { url: "http://127.0.0.1", secret: "short" },
+    }),
+    /HTTPS on port 443/
+  );
 });
 
 async function requestBody(request) {

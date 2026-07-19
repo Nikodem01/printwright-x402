@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_19_220000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_19_223000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -230,6 +230,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_220000) do
     t.boolean "sandbox", default: false, null: false
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
+    t.text "webhook_secret_ciphertext"
+    t.string "webhook_url"
     t.index ["payment_tx_id"], name: "index_purchase_batches_on_payment_tx_id", unique: true, where: "(payment_tx_id IS NOT NULL)"
     t.index ["replay_key"], name: "index_purchase_batches_on_replay_key", unique: true
     t.index ["status"], name: "index_purchase_batches_on_status"
@@ -269,6 +271,41 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_220000) do
     t.index ["designer_id"], name: "index_sessions_on_designer_id"
   end
 
+  create_table "webhook_deliveries", force: :cascade do |t|
+    t.integer "attempts", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "delivered_at"
+    t.string "event_id", null: false
+    t.string "event_key", null: false
+    t.string "event_type", null: false
+    t.text "last_error"
+    t.bigint "license_id", null: false
+    t.jsonb "payload", default: {}, null: false
+    t.integer "response_code"
+    t.text "secret_ciphertext", null: false
+    t.string "status", default: "pending", null: false
+    t.string "target_kind", null: false
+    t.datetime "updated_at", null: false
+    t.string "url", null: false
+    t.bigint "webhook_endpoint_id"
+    t.index ["event_key"], name: "index_webhook_deliveries_on_event_key", unique: true
+    t.index ["license_id"], name: "index_webhook_deliveries_on_license_id"
+    t.index ["status", "created_at"], name: "index_webhook_deliveries_on_status_and_created_at"
+    t.index ["webhook_endpoint_id"], name: "index_webhook_deliveries_on_webhook_endpoint_id"
+  end
+
+  create_table "webhook_endpoints", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.bigint "designer_id", null: false
+    t.string "events", default: ["sale.completed"], null: false, array: true
+    t.text "secret_ciphertext", null: false
+    t.datetime "updated_at", null: false
+    t.string "url", null: false
+    t.index ["designer_id", "url"], name: "index_webhook_endpoints_on_designer_id_and_url", unique: true
+    t.index ["designer_id"], name: "index_webhook_endpoints_on_designer_id"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "admin_audit_logs", "designers", column: "actor_designer_id", on_delete: :nullify
@@ -285,4 +322,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_220000) do
   add_foreign_key "purchases", "license_offers"
   add_foreign_key "purchases", "purchase_batches"
   add_foreign_key "sessions", "designers"
+  add_foreign_key "webhook_deliveries", "licenses"
+  add_foreign_key "webhook_deliveries", "webhook_endpoints"
+  add_foreign_key "webhook_endpoints", "designers"
 end

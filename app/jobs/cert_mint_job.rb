@@ -8,7 +8,10 @@ class CertMintJob < ApplicationJob
   def perform(license_id)
     license = License.find(license_id)
     return if license.purchase.sandbox?
-    return if license.anchored?
+    if license.anchored?
+      WebhookFanoutJob.perform_later(license.id, "certificate.anchored")
+      return
+    end
 
     license.update!(cert_json: Certificates::Builder.call(license)) if license.cert_json.blank?
 
@@ -17,6 +20,7 @@ class CertMintJob < ApplicationJob
       hcs_topic_id: receipt["topicId"],
       hcs_sequence_number: receipt["sequenceNumber"]
     )
+    WebhookFanoutJob.perform_later(license.id, "certificate.anchored")
     # The anchored cert is the record; the NFT is the holdable proof of it.
     NftMintJob.perform_later(license.id)
   end

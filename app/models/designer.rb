@@ -4,6 +4,7 @@ class Designer < ApplicationRecord
   has_many :models3d, class_name: "Model3d", dependent: :destroy
   has_many :catalog_imports, dependent: :destroy
   has_many :profile_verifications, dependent: :destroy
+  has_many :webhook_endpoints, dependent: :destroy
   has_many :admin_audit_logs, foreign_key: :actor_designer_id
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }

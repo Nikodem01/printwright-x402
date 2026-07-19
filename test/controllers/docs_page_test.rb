@@ -15,6 +15,10 @@ class DocsPageTest < ActionDispatch::IntegrationTest
     assert_match "Batch purchase", response.body
     assert_match "POST /api/v1/batches", response.body
     assert_match "incompatible_payees", response.body
+    assert_match "Signed lifecycle webhooks", response.body
+    assert_match "verifyPrintwrightWebhook", response.body
+    assert_match "cannot create a purchase", response.body
+    assert_match "certificate.anchored", response.body
     assert_match "sandbox: true", response.body
     assert_match "PAYMENT-SIGNATURE", response.body
     assert_match "Error contract", response.body

@@ -20,6 +20,12 @@ API base: /api/v1 — full spec at /openapi.json — human docs at /docs
 For 1-20 licenses sharing one payTo, POST {"items":[{"model_id":1,"license":"commercial_unit"}, ...]}
 to /api/v1/batches. Probe and retry the identical JSON body. One aggregate x402 settlement returns
 one certificate and verify_url per item; mixed direct-pay destinations are rejected.
+An optional `webhook` object (`url` public HTTPS, `secret` 32-256 bytes) in both identical batch
+bodies receives a signed certificate.anchored event only after each paid certificate lands on HCS.
+Designer-configured endpoints receive sale.completed only after paid delivery. Webhooks report
+x402 lifecycle results; they never create purchases, licenses, certificates, or ledger entries,
+and sandbox flows emit no webhooks. Verify HMAC-SHA256 over
+`Webhook-Id.Webhook-Timestamp.raw_body` using the `Webhook-Signature: v1=<hex>` header.
 
 Example 402 probe:
 curl -i "https://<host>/api/v1/models/1/download?license=personal"

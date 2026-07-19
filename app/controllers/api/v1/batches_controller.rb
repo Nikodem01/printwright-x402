@@ -6,6 +6,7 @@ class Api::V1::BatchesController < Api::V1::BaseController
 
   def create
     items = normalized_items
+    webhook = normalized_webhook
     offers = items.map { |item| offer_for(item) }
     sandbox = request.headers["X-Sandbox"] == "true"
     response.set_header("X-Printwright-Sandbox", "true") if sandbox
@@ -25,13 +26,15 @@ class Api::V1::BatchesController < Api::V1::BaseController
     key = replay_key(payload)
     return replay_existing(key, payload) if Purchase.exists?(replay_key: key)
 
-    batch = reserve(offers, matched, key, sandbox: sandbox)
+    batch = reserve(offers, matched, key, sandbox: sandbox, webhook: webhook)
     return replay_existing(key, payload) if batch.nil?
     return render json: { error: "sold_out" }, status: :gone if batch == :sold_out
 
     verify_and_settle(batch, payload)
   rescue X402::BatchRequirements::IncompatiblePayees
     render json: { error: "incompatible_payees" }, status: :unprocessable_entity
+  rescue Webhooks::Target::Invalid => error
+    render json: { error: "invalid_webhook", message: error.message }, status: :unprocessable_entity
   rescue InvalidBatch, ActionController::ParameterMissing
     render json: { error: "invalid_batch" }, status: :bad_request
   rescue X402::PaymentHeader::InvalidPayload
@@ -58,6 +61,14 @@ class Api::V1::BatchesController < Api::V1::BaseController
     Model3d.published.find(item[:model_id]).license_offers.find_by!(kind: item[:license])
   end
 
+  def normalized_webhook
+    return nil if params[:webhook].blank?
+
+    webhook = params.require(:webhook).permit(:url, :secret)
+    Webhooks::Target.validate!(url: webhook[:url], secret: webhook[:secret])
+    { url: webhook[:url], secret: webhook[:secret] }
+  end
+
   def payment_required(requirements, error: "payment required")
     body = requirements.payment_required(error: error)
     response.set_header("PAYMENT-REQUIRED", Base64.strict_encode64(JSON.generate(body)))
@@ -76,7 +87,7 @@ class Api::V1::BatchesController < Api::V1::BaseController
     Digest::SHA256.hexdigest(payload.dig("payload", "transaction"))
   end
 
-  def reserve(offers, matched, key, sandbox:)
+  def reserve(offers, matched, key, sandbox:, webhook:)
     PurchaseBatch.transaction do
       locked = LicenseOffer.where(id: offers.map(&:id).uniq).order(:id).lock.index_by(&:id)
       resolved = offers.map { |offer| locked.fetch(offer.id) }
@@ -86,7 +97,9 @@ class Api::V1::BatchesController < Api::V1::BaseController
         replay_key: key, asset: matched.requirement[:asset],
         amount_base_units: matched.requirement[:amount],
         requirements_json: matched.requirement.deep_stringify_keys,
-        sandbox: sandbox
+        sandbox: sandbox,
+        webhook_url: webhook&.fetch(:url, nil),
+        webhook_secret_ciphertext: webhook && Webhooks::SecretBox.encrypt(webhook.fetch(:secret))
       )
       resolved.each_with_index do |offer, position|
         child_requirement = matched.requirement.merge(amount: matched.item_amounts.fetch(position))
@@ -211,6 +224,7 @@ class Api::V1::BatchesController < Api::V1::BaseController
       batch.update!(status: "delivered")
     end
     licenses.each { |license| CertMintJob.perform_later(license.id) } unless batch.sandbox?
+    licenses.each { |license| WebhookFanoutJob.perform_later(license.id, "sale.completed") } unless batch.sandbox?
     response.set_header("PAYMENT-RESPONSE", Base64.strict_encode64(JSON.generate(settlement)))
     response.set_header("X-PAYMENT-RESPONSE", response.get_header("PAYMENT-RESPONSE"))
     render json: delivery_payload(batch.reload), status: :ok

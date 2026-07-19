@@ -47,6 +47,37 @@ class NftMintJobTest < ActiveSupport::TestCase
     assert_requested mint, times: 1
   end
 
+  test "concurrent licenses share one locked designer collection" do
+    second_purchase = @license.purchase.dup
+    second_purchase.replay_key = SecureRandom.hex(32)
+    second_purchase.payment_tx_id = "0.0.7162784@2.3"
+    second_purchase.save!
+    second_license = License.allocate!(second_purchase)
+    second_license.update!(
+      cert_json: { "v" => 1 }, hcs_topic_id: "0.0.9585069", hcs_sequence_number: 43
+    )
+    collection = stub_request(:post, "#{SIDECAR}/create-collection").to_return do
+      sleep 0.1
+      { body: { tokenId: "0.0.777", transactionId: "0.0.1@7.7" }.to_json,
+        headers: { "content-type" => "application/json" } }
+    end
+    serial = 0
+    serial_lock = Mutex.new
+    stub_request(:post, "#{SIDECAR}/mint-airdrop").to_return do
+      next_serial = serial_lock.synchronize { serial += 1 }
+      { body: { serial: next_serial, airdropTransactionId: "0.0.1@9.#{next_serial}", pending: true }.to_json,
+        headers: { "content-type" => "application/json" } }
+    end
+
+    errors = [ @license.id, second_license.id ].map do |license_id|
+      Thread.new { NftMintJob.perform_now(license_id) }
+    end.map { |thread| thread.value rescue $ERROR_INFO }.select { |result| result.is_a?(Exception) }
+
+    assert_empty errors
+    assert_requested collection, times: 1
+    assert_equal [ "0.0.777" ], License.where(id: [ @license.id, second_license.id ]).distinct.pluck(:nft_token_id)
+  end
+
   test "unverified designer's collection routes royalties to treasury; verified to the designer" do
     stub_mint
     treasury_stub = stub_request(:post, "#{SIDECAR}/create-collection")

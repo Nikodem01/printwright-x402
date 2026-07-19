@@ -38,6 +38,19 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
       JSON.parse(Base64.strict_decode64(response.headers.fetch("PAYMENT-REQUIRED")))
   end
 
+  test "machine POST receives JSON x402 challenge when browser CSRF protection is enabled" do
+    previous = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+
+    post api_v1_batches_path, params: { items: @items }, as: :json
+
+    assert_response :payment_required
+    assert_equal "application/json", response.media_type
+    assert_equal 2, response.parsed_body["x402Version"]
+  ensure
+    ActionController::Base.allow_forgery_protection = previous
+  end
+
   test "one settlement delivers three licenses and queues three certificates" do
     accepted = challenge.fetch("accepts").find { |option| option["asset"] == X402::Requirements.usdc_asset }
     payload = payment_payload(accepted)
@@ -59,6 +72,7 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "0.0.7162784@1784457000.123456789" ], Purchase.distinct.pluck(:payment_tx_id)
     assert_equal 6, LedgerEntry.count
     assert_equal 750_000, LedgerEntry.where(entry_kind: %w[designer_share platform_fee]).sum { |row| row.amount_base_units.to_i }
+    assert_equal 3, enqueued_jobs.count { |entry| entry[:job] == WebhookFanoutJob }
   end
 
   test "replay returns the original three licenses without double settlement" do
@@ -202,6 +216,31 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
     assert(Purchase.all.all? { |purchase| purchase.license.cert_json["sandbox"] == true })
   end
 
+  test "simulated 50-job farm burst settles cleanly across max-size batches" do
+    assert_no_enqueued_jobs do
+      [ 20, 20, 10 ].each do |size|
+        items = Array.new(size) { @items.first }
+        headers = { "X-Sandbox" => "true" }
+        post api_v1_batches_path, params: { items: items }, as: :json, headers: headers
+        assert_response :payment_required
+        payload = {
+          "x402Version" => 2,
+          "accepted" => response.parsed_body.fetch("accepts").sole,
+          "payload" => { "transaction" => "sandbox:#{SecureRandom.uuid}" }
+        }
+
+        post api_v1_batches_path, params: { items: items }, as: :json,
+          headers: headers.merge("PAYMENT-SIGNATURE" => encode(payload))
+        assert_response :success
+        assert_equal size, response.parsed_body.fetch("licenses").size
+      end
+    end
+
+    assert_equal [ 3, 50, 50 ], [ PurchaseBatch.count, Purchase.count, License.count ]
+    assert PurchaseBatch.all.all?(&:sandbox?)
+    assert Purchase.all.all?(&:delivered?)
+  end
+
   test "a payment already presented to the single-license rail cannot be reused as a one-item batch" do
     one_item = [ @items.first ]
     post api_v1_batches_path, params: { items: one_item }, as: :json
@@ -220,10 +259,31 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 0, PurchaseBatch.count
   end
 
+  test "buyer certificate callback is validated and encrypted with the paid batch" do
+    secret = "buyer_#{SecureRandom.hex(32)}"
+    body = {
+      items: @items,
+      webhook: { url: "https://buyer.example/certificates", secret: secret }
+    }
+    accepted = challenge(body).fetch("accepts").find { |option| option["asset"] == X402::Requirements.usdc_asset }
+    payload = payment_payload(accepted)
+    stub_verify(payload, accepted)
+    stub_settle(payload, accepted)
+
+    post api_v1_batches_path, params: body, as: :json,
+      headers: { "PAYMENT-SIGNATURE" => encode(payload) }
+
+    assert_response :success
+    batch = PurchaseBatch.sole
+    assert_equal "https://buyer.example/certificates", batch.webhook_url
+    assert_not_includes batch.webhook_secret_ciphertext, secret
+    assert_equal secret, Webhooks::SecretBox.decrypt(batch.webhook_secret_ciphertext)
+  end
+
   private
 
-  def challenge
-    post api_v1_batches_path, params: { items: @items }, as: :json
+  def challenge(body = { items: @items })
+    post api_v1_batches_path, params: body, as: :json
     assert_response :payment_required
     response.parsed_body
   end

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Printwright API",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; every purchase mints a public HCS license certificate.",
     "contact": { "url": "https://github.com/Nikodem01/printwright-x402" },
     "x-guidance": "Search GET /api/v1/models, inspect offers, then buy one license with GET /api/v1/models/{id}/download or up to 20 licenses with POST /api/v1/batches. An unpaid request returns an x402 v2 challenge; sign one exact payment option and retry the identical request. Batch items must share one payTo account. For a zero-funds rehearsal, send X-Sandbox: true on both requests; sandbox artifacts are explicitly not payments or licenses."
@@ -13,7 +13,7 @@
       "post": {
         "operationId": "buyLicenseBatch",
         "summary": "Buy up to 20 licenses with one x402 settlement",
-        "description": "Send the same JSON body for both legs. The first returns one aggregate x402 challenge; the signed retry settles once and returns one independently verifiable certificate per item. All items must resolve to the same payTo account; Printwright never reroutes a mixed-payee batch through custody.",
+        "description": "Send the same JSON body for both legs. The first returns one aggregate x402 challenge; the signed retry settles once and returns one independently verifiable certificate per item. All items must resolve to the same payTo account; Printwright never reroutes a mixed-payee batch through custody. An optional buyer webhook reports certificate.anchored only after the paid certificate lands on HCS; it never creates a license.",
         "security": [],
         "x-payment-info": {
           "price": { "mode": "dynamic", "currency": "USD", "min": "0.01", "max": "200000.00" },
@@ -48,7 +48,7 @@
           "404": { "$ref": "#/components/responses/NotFound" },
           "409": { "description": "Replayed payment; delivered batches return the original BatchDelivery", "content": { "application/json": { "schema": { "oneOf": [ { "$ref": "#/components/schemas/BatchDelivery" }, { "$ref": "#/components/schemas/Error" } ] } } } },
           "410": { "description": "At least one requested offer is sold out", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "422": { "description": "incompatible_payees — the items do not share one direct settlement destination", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "422": { "description": "incompatible_payees or invalid_webhook", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
           "429": { "$ref": "#/components/responses/RateLimited" },
           "503": { "description": "facilitator_unavailable; retry the identical signed batch", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
@@ -439,6 +439,16 @@
                 "model_id": { "type": "integer", "minimum": 1 },
                 "license": { "type": "string", "enum": ["personal", "commercial_unit"], "default": "personal" }
               }
+            }
+          },
+          "webhook": {
+            "type": "object",
+            "description": "Optional buyer callback for certificate.anchored events after real HCS anchoring. Include identical values in the probe and signed retry. Sandbox emits no callback.",
+            "required": ["url", "secret"],
+            "additionalProperties": false,
+            "properties": {
+              "url": { "type": "string", "format": "uri", "description": "Public HTTPS URL on port 443" },
+              "secret": { "type": "string", "minLength": 32, "maxLength": 256, "writeOnly": true }
             }
           }
         }

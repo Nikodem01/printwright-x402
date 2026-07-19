@@ -165,6 +165,7 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     Sandbox::Topic.anchor!(license) if purchase.sandbox? && !license.anchored?
     purchase.transition_to!(:delivered)
     CertMintJob.perform_later(license.id) unless purchase.sandbox?
+    WebhookFanoutJob.perform_later(license.id, "sale.completed") unless purchase.sandbox?
     complete_chat_purchase_intent!
     response.set_header("PAYMENT-RESPONSE", Base64.strict_encode64(JSON.generate(settlement)))
     response.set_header("X-PAYMENT-RESPONSE", response.get_header("PAYMENT-RESPONSE"))

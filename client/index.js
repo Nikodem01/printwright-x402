@@ -107,10 +107,11 @@ export class PrintwrightClient {
     return body;
   }
 
-  async quoteBatch({ items, asset } = {}) {
+  async quoteBatch({ items, asset, webhook } = {}) {
     const normalized = normalizeBatchItems(items);
+    const normalizedWebhook = normalizeWebhook(webhook);
     const resourceUrl = this.url("api/v1/batches");
-    const requestBody = JSON.stringify({ items: normalized });
+    const requestBody = JSON.stringify(batchBody(normalized, normalizedWebhook));
     const headers = { accept: "application/json", "content-type": "application/json" };
     if (this.sandbox) headers["X-Sandbox"] = "true";
     const response = await this.fetch(resourceUrl, { method: "POST", headers, body: requestBody });
@@ -126,6 +127,7 @@ export class PrintwrightClient {
 
     const quote = Object.freeze({
       items: deepFreeze(normalized),
+      webhook: deepFreeze(normalizedWebhook),
       resourceUrl: resourceUrl.toString(),
       requestBody,
       paymentRequired,
@@ -137,8 +139,8 @@ export class PrintwrightClient {
     return quote;
   }
 
-  async buyBatch({ items, asset, quote } = {}) {
-    const purchaseQuote = quote || await this.quoteBatch({ items, asset });
+  async buyBatch({ items, asset, webhook, quote } = {}) {
+    const purchaseQuote = quote || await this.quoteBatch({ items, asset, webhook });
     this.validateBatchQuote(purchaseQuote);
     if (purchaseQuote.sandbox) return this.buySandbox(purchaseQuote);
 
@@ -264,7 +266,7 @@ export class PrintwrightClient {
     if (quote.resourceUrl !== this.url("api/v1/batches").toString()) {
       throw new TypeError("quote belongs to a different Printwright endpoint");
     }
-    if (quote.requestBody !== JSON.stringify({ items: quote.items })) {
+    if (quote.requestBody !== JSON.stringify(batchBody(quote.items, quote.webhook))) {
       throw new TypeError("batch quote body changed after negotiation");
     }
     const offered = quote.paymentRequired.accepts?.some((candidate) =>
@@ -339,6 +341,28 @@ function normalizeBatchItems(items) {
     model_id: integerId(item?.modelId ?? item?.model_id, `items[${index}].modelId`),
     license: item?.license || "personal",
   }));
+}
+
+function normalizeWebhook(webhook) {
+  if (webhook === undefined) return undefined;
+  let url;
+  try {
+    url = new URL(webhook?.url);
+  } catch {
+    throw new TypeError("webhook.url must be a valid public HTTPS URL");
+  }
+  if (url.protocol !== "https:" || url.port || url.username || url.password || url.hash) {
+    throw new TypeError("webhook.url must use HTTPS on port 443 without credentials or a fragment");
+  }
+  const secretBytes = typeof webhook?.secret === "string" ? Buffer.byteLength(webhook.secret) : 0;
+  if (secretBytes < 32 || secretBytes > 256) {
+    throw new TypeError("webhook.secret must be 32 to 256 bytes");
+  }
+  return { url: webhook.url, secret: webhook.secret };
+}
+
+function batchBody(items, webhook) {
+  return webhook ? { items, webhook } : { items };
 }
 
 async function jsonBody(response) {

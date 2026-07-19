@@ -15,6 +15,7 @@ Rails.application.routes.draw do
     end
     resource :takedown_packet, only: %i[new create]
     resources :sales, only: :index
+    resources :webhook_endpoints, only: %i[index new create destroy]
   end
 
   namespace :admin do

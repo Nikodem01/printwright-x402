@@ -36,7 +36,9 @@ class CertMintJobTest < ActiveJob::TestCase
       .to_return(body: JSON.generate(topicId: "0.0.9585069", sequenceNumber: 7, transactionId: "0.0.1@2.3"),
                  headers: { "content-type" => "application/json" })
 
-    CertMintJob.perform_now(@license.id)
+    assert_enqueued_with(job: WebhookFanoutJob, args: [ @license.id, "certificate.anchored" ]) do
+      CertMintJob.perform_now(@license.id)
+    end
     @license.reload
     assert @license.anchored?
     assert_equal [ "0.0.9585069", 7 ], [ @license.hcs_topic_id, @license.hcs_sequence_number ]
@@ -69,7 +71,9 @@ class CertMintJobTest < ActiveJob::TestCase
 
   test "anchored license is a no-op (idempotent)" do
     @license.update!(hcs_topic_id: "0.0.9585069", hcs_sequence_number: 3, cert_json: { "v" => 1 })
-    CertMintJob.perform_now(@license.id)
+    assert_enqueued_with(job: WebhookFanoutJob, args: [ @license.id, "certificate.anchored" ]) do
+      CertMintJob.perform_now(@license.id)
+    end
     assert_not_requested :post, "#{SIDECAR}/submit-cert"
   end
 

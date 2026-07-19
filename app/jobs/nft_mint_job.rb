@@ -41,16 +41,18 @@ class NftMintJob < ApplicationJob
   private
 
   def ensure_collection(designer)
-    return designer.nft_collection_id if designer.nft_collection_id.present?
+    designer.with_lock do
+      return designer.nft_collection_id if designer.nft_collection_id.present?
 
-    collector = designer.payout_account_verified? ? designer.hedera_account_id : ENV.fetch("X402_PAY_TO")
-    created = SidecarClient.new.create_collection(
-      name: "Printwright Licenses — #{designer.display_name}".truncate(100),
-      symbol: "PWL",
-      royalty_collector: collector,
-      royalty_percent: ROYALTY_PERCENT
-    )
-    designer.update!(nft_collection_id: created.fetch("tokenId"))
-    designer.nft_collection_id
+      collector = designer.payout_account_verified? ? designer.hedera_account_id : ENV.fetch("X402_PAY_TO")
+      created = SidecarClient.new.create_collection(
+        name: "Printwright Licenses — #{designer.display_name}".truncate(100),
+        symbol: "PWL",
+        royalty_collector: collector,
+        royalty_percent: ROYALTY_PERCENT
+      )
+      designer.update!(nft_collection_id: created.fetch("tokenId"))
+      designer.nft_collection_id
+    end
   end
 end

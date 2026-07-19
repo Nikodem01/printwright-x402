@@ -101,6 +101,7 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert purchase.delivered?
     assert_equal "0.0.9067781", purchase.buyer_hint
     assert_equal "0.0.0", purchase.asset
+    assert_enqueued_with(job: WebhookFanoutJob, args: [ purchase.license.id, "sale.completed" ])
 
     settle = JSON.parse(Base64.strict_decode64(response.headers["PAYMENT-RESPONSE"]))
     assert settle["success"]
