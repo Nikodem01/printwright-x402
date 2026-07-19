@@ -11,13 +11,15 @@ module Purchases
     Result = Struct.new(:purchase_id, :action, keyword_init: true)
 
     def self.call(older_than: 30.minutes)
-      Purchase.where(status: %w[pending verified])
+      Purchase.where(sandbox: false, status: %w[pending verified])
         .where(created_at: ..older_than.ago)
         .order(:id)
         .map { |purchase| reconcile(purchase) }
     end
 
     def self.reconcile(purchase)
+      return Result.new(purchase_id: purchase.id, action: "skipped_sandbox") if purchase.sandbox?
+
       if (tx_id = X402::MirrorReconciler.call(purchase))
         roll_forward(purchase, tx_id)
       elsif mirror_reachable?

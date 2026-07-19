@@ -73,6 +73,15 @@ class CertMintJobTest < ActiveJob::TestCase
     assert_not_requested :post, "#{SIDECAR}/submit-cert"
   end
 
+  test "sandbox license can never be submitted to the signing sidecar" do
+    @license.purchase.update!(sandbox: true)
+
+    CertMintJob.perform_now(@license.id)
+
+    assert_empty @license.reload.cert_json
+    assert_not_requested :post, "#{SIDECAR}/submit-cert"
+  end
+
   test "sidecar rejection (non-200) does not retry forever" do
     stub_request(:post, "#{SIDECAR}/submit-cert")
       .to_return(status: 422, body: '{"error":"cert_too_large"}')

@@ -34,6 +34,7 @@ class LedgerEntry < ApplicationRecord
   # designer_share is owed out; payTo=designer means the platform_fee is a
   # receivable held by the designer.
   def self.record_settle!(purchase)
+    return if purchase.sandbox?
     return if exists?(purchase: purchase)
 
     gross = Integer(purchase.amount_base_units)

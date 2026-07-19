@@ -52,4 +52,12 @@ class Ledger::RefunderTest < ActiveSupport::TestCase
     assert_raises(Ledger::Refunder::NotRefundable) { Ledger::Refunder.call(@purchase) }
     assert @purchase.reload.settled?, "a refused refund must change nothing"
   end
+
+  test "refuses sandbox rows even if their state is settled" do
+    @purchase.update!(sandbox: true, buyer_hint: "0.0.9067781")
+
+    error = assert_raises(Ledger::Refunder::NotRefundable) { Ledger::Refunder.call(@purchase) }
+    assert_match(/sandbox/, error.message)
+    assert @purchase.reload.settled?
+  end
 end

@@ -1,0 +1,138 @@
+<% content_for :title, "Operations — Printwright" %>
+<h1>Operations</h1>
+<p class="t-small muted">Authenticated controls over the same services documented in
+  <code>docs/OPERATIONS.md</code>. Every attempted mutation writes an immutable audit row.</p>
+
+<div class="doors-grid">
+  <div class="door">
+    <h3>Stuck purchases</h3>
+    <p><strong><%= @stuck_count %></strong> pending or verified for more than 30 minutes.</p>
+  </div>
+  <div class="door">
+    <h3>Certificates waiting</h3>
+    <p><strong><%= @minting_licenses.length %></strong> delivered licenses lack an HCS sequence.</p>
+  </div>
+  <div class="door">
+    <h3>Sandbox isolation</h3>
+    <p><strong><%= @sandbox_count %></strong> rehearsals excluded from money operations.</p>
+  </div>
+</div>
+
+<h2>Runbook actions</h2>
+<div class="steps-strip">
+  <%= button_to "Reap stale purchases", reap_admin_purchases_path,
+        params: { minutes: 30 }, class: "btn",
+        form: { data: { turbo_confirm: "Check every stale payment against the mirror now?" } } %>
+  <%= button_to "Preview designer payouts", preview_admin_payout_path, class: "btn" %>
+  <%= button_to "Run designer payouts", run_admin_payout_path,
+        params: { confirm: 1 }, class: "btn",
+        form: { data: { turbo_confirm: "This sends treasury funds on Hedera. Continue?" } } %>
+</div>
+
+<h2>Ledger totals</h2>
+<div class="table-scroll">
+  <table class="facts-table" style="width:100%">
+    <thead><tr><th>kind</th><th>asset</th><th>total</th><th>currently owed</th></tr></thead>
+    <tbody>
+      <% @ledger_totals.each do |(kind, asset), amount| %>
+        <tr>
+          <td><%= kind.humanize %></td><td class="mono"><%= asset %></td>
+          <td><%= format_base_units(amount, asset) %></td>
+          <td><%= format_base_units(@owed_totals.fetch(asset, 0), asset) if kind == "designer_share" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<h2>Purchases</h2>
+<nav class="filters" aria-label="Purchase status">
+  <%= link_to "All", admin_root_path, class: "pill", aria: { pressed: @status.nil? } %>
+  <% Purchase.statuses.each_key do |status| %>
+    <%= link_to status.humanize, admin_root_path(status: status), class: "pill",
+          aria: { pressed: @status == status } %>
+  <% end %>
+</nav>
+<div class="table-scroll">
+  <table class="facts-table" style="width:100%">
+    <thead><tr><th>id</th><th>age</th><th>model</th><th>status</th><th>buyer / tx</th><th>actions</th></tr></thead>
+    <tbody>
+      <% @purchases.each do |purchase| %>
+        <tr>
+          <td class="mono">#<%= purchase.id %></td>
+          <td><%= time_ago_in_words(purchase.created_at) %></td>
+          <td><%= purchase.model3d.title %></td>
+          <td><span class="badge <%= purchase.delivered? ? "badge-ok" : "badge-pending" %>"><%= purchase.status %></span></td>
+          <td class="t-small"><span class="mono"><%= purchase.buyer_hint.presence || "unknown" %></span><br><%= hashscan_tx_link(purchase.payment_tx_id) %></td>
+          <td>
+            <% if purchase.pending? || purchase.verified? %>
+              <%= button_to "Reconcile ##{purchase.id}", reconcile_admin_purchase_path(purchase),
+                    class: "linklike", form: { data: { turbo_confirm: "Check this payment against the mirror?" } } %>
+            <% elsif purchase.settled? %>
+              <%= button_to "Refund ##{purchase.id}", refund_admin_purchase_path(purchase),
+                    class: "linklike", form: { data: { turbo_confirm: "Refund the full gross on Hedera?" } } %>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<h2>Certificates waiting for HCS</h2>
+<% if @minting_licenses.any? %>
+  <div class="table-scroll">
+    <table class="facts-table" style="width:100%">
+      <% @minting_licenses.each do |license| %>
+        <tr>
+          <td class="mono"><%= license.cert_id %></td>
+          <td><%= license.purchase.model3d.title %></td>
+          <td><%= button_to "Retry #{license.cert_id}", retry_certificate_admin_license_path(license), class: "linklike" %></td>
+        </tr>
+      <% end %>
+    </table>
+  </div>
+<% else %>
+  <p class="t-small muted">No delivered certificate is waiting.</p>
+<% end %>
+
+<h2>Designers</h2>
+<div class="table-scroll">
+  <table class="facts-table" style="width:100%">
+    <thead><tr><th>designer</th><th>identity</th><th>payout account</th><th>actions</th></tr></thead>
+    <tbody>
+      <% @designers.each do |designer| %>
+        <tr>
+          <td><%= designer.display_name %><br><span class="t-caption muted"><%= designer.email_address %></span></td>
+          <td><span class="badge <%= designer.verified? ? "badge-ok" : "badge-pending" %>"><%= designer.verified? ? "verified" : "unverified" %></span></td>
+          <td><span class="mono"><%= designer.hedera_account_id.presence || "none" %></span><br><span class="t-caption"><%= designer.payout_account_verified? ? "mirror-ready" : "not verified" %></span></td>
+          <td>
+            <%= button_to(designer.verified? ? "Mark unverified" : "Mark verified",
+                  toggle_verification_admin_designer_path(designer), class: "linklike") %>
+            <% if designer.hedera_account_id.present? %>
+              <%= button_to "Recheck payout", verify_payout_admin_designer_path(designer), class: "linklike" %>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<h2>Operator audit</h2>
+<div class="table-scroll">
+  <table class="facts-table" style="width:100%">
+    <thead><tr><th>time</th><th>actor</th><th>action</th><th>subject</th><th>result</th></tr></thead>
+    <tbody>
+      <% @audit_logs.each do |log| %>
+        <tr>
+          <td><%= log.created_at.strftime("%b %-d %H:%M:%S") %></td>
+          <td><%= log.actor_designer&.email_address || "deleted admin" %></td>
+          <td class="mono"><%= log.action %></td>
+          <td class="mono"><%= [log.subject_type, log.subject_id].compact.join("#") %></td>
+          <td class="t-small"><%= log.details.to_json %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>

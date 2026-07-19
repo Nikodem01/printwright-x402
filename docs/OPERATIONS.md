@@ -6,6 +6,28 @@ run from the app root. The sidecar must be running (started **from `sidecar/`**,
 it reads `sidecar/.env` for its keys) — and restarted after any migration or
 topic change.
 
+## Operator panel
+
+The application-state procedures in this runbook—stale-purchase reconciliation, refunds,
+certificate retries, payout previews/runs, designer identity and payout verification, and
+ledger inspection—are also available at `/admin`. They call the same service objects as the
+commands below; there is no second recovery implementation. Every attempted mutation records
+the authenticated operator, request id, source address, subject and result in the immutable
+`AdminAuditLog` table. Sandbox rehearsals are excluded from every money control.
+
+Bootstrap or revoke an operator from the shell (the panel cannot grant its own access):
+
+```bash
+ADMIN_EMAIL=operator@example.com bin/rails admin:grant
+ADMIN_EMAIL=operator@example.com bin/rails admin:revoke
+```
+
+The panel is session-authenticated, requires the separate `admin` grant, keeps Rails CSRF
+protection, and rate-limits both views and mutations. Actions that change process configuration
+or require a demo buyer key—smoke, buyer funding, facilitator startup and network switching—
+remain external-only by design. Moving those keys into Rails to make them web buttons would
+violate the custody map at the end of this document.
+
 ## Daily / after any incident: smoke
 
 ```bash
@@ -16,6 +38,9 @@ Green = app, sidecar, facilitator, a real settle, and a mirror-confirmed cert.
 A red smoke outranks every other task.
 
 ## Designer payouts
+
+Panel: `/admin` → **Preview designer payouts** or **Run designer payouts**. The run button has
+an explicit confirmation and the same database advisory lock as the command.
 
 ```bash
 DRY_RUN=1 bin/rails ledger:payout   # preview per-designer totals per asset
@@ -30,6 +55,8 @@ bin/rails ledger:payout             # one batched tx per asset, HashScan links p
   HashScan for a payout tx with today's memo **before** re-running.
 
 ## Refunds
+
+Panel: `/admin` → filter purchases to **Settled** → **Refund #…**.
 
 Qualifies: `settled` (paid, never delivered) purchases — typically
 `error_reason=sold_out_after_payment` from the pre-V5 window or a reaper
@@ -48,6 +75,8 @@ also removes the share from the owed balance), and moves the purchase to
 
 ## Stale in-flight purchases (capacity holders)
 
+Panel: `/admin` → **Reap stale purchases** for the batch, or **Reconcile #…** for one row.
+
 Signed payments whose settle never concluded hold `max_units` capacity.
 
 ```bash
@@ -59,6 +88,10 @@ Per stale purchase: mirror shows the credit -> rolled forward to delivered
 skipped (never fail blind).
 
 ## Stuck certificate (license minting forever)
+
+Panel: `/admin` → **Certificates waiting for HCS** → **Retry pw-…**. The persistent web process
+enqueues the idempotent job; the shell fallback below uses `perform_now` because a runner's
+in-process queue is not persistent.
 
 `no_topic_configured` retries automatically once the sidecar restarts with
 `HEDERA_HCS_TOPIC_ID` set. To re-anchor manually:

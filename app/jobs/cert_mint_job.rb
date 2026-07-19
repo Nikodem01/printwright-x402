@@ -7,6 +7,7 @@ class CertMintJob < ApplicationJob
 
   def perform(license_id)
     license = License.find(license_id)
+    return if license.purchase.sandbox?
     return if license.anchored?
 
     license.update!(cert_json: Certificates::Builder.call(license)) if license.cert_json.blank?

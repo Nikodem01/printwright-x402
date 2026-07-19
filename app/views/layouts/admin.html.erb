@@ -1,13 +1,11 @@
 <% content_for :content do %>
   <div class="dash">
-    <nav class="dash-nav" aria-label="Designer">
-      <div class="t-caption muted" style="margin-bottom: var(--s-2)">
-        <%= Current.designer&.display_name %>
-      </div>
-      <%= link_to "Models", designer_models_path %>
-      <%= link_to "Upload", new_designer_model_path %>
-      <%= link_to "Sales", designer_sales_path %>
-      <%= link_to "Operator", admin_root_path if Current.designer&.admin? %>
+    <nav class="dash-nav" aria-label="Operator">
+      <strong>Operator</strong>
+      <span class="t-caption muted"><%= Current.designer&.email_address %></span>
+      <%= link_to "Operations", admin_root_path %>
+      <%= link_to "Designer dashboard", designer_models_path %>
+      <%= link_to "Public storefront", root_path %>
       <%= button_to "Sign out", session_path, method: :delete, class: "linklike" %>
     </nav>
     <section class="dash-content">

@@ -1,7 +1,7 @@
 namespace :ledger do
   desc "Write missing ledger entries for already-settled purchases (idempotent)"
   task backfill: :environment do
-    scope = Purchase.where(status: %w[settled delivered])
+    scope = Purchase.where(sandbox: false, status: %w[settled delivered])
     scope.find_each do |purchase|
       next if LedgerEntry.exists?(purchase: purchase)
 

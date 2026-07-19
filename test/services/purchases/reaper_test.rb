@@ -72,4 +72,14 @@ class Purchases::ReaperTest < ActiveSupport::TestCase
     )
     assert_empty Purchases::Reaper.call
   end
+
+  test "sandbox rows are excluded and cannot be reconciled directly" do
+    sandbox = stale_purchase(status: "pending")
+    sandbox.update!(sandbox: true)
+
+    assert_empty Purchases::Reaper.call
+    assert_equal "skipped_sandbox", Purchases::Reaper.reconcile(sandbox).action
+    assert sandbox.reload.pending?
+    assert_not_requested :get, %r{#{MIRROR}/api/v1/transactions}
+  end
 end

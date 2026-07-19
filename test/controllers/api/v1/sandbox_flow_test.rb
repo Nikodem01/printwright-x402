@@ -57,6 +57,7 @@ class Api::V1::SandboxFlowTest < ActionDispatch::IntegrationTest
     assert_equal true, license.cert_json["sandbox"]
     assert_equal 0, LedgerEntry.where(purchase: purchase).count
     assert_equal 0, DownloadGrant.where(license: license).count
+    assert_no_difference("LedgerEntry.count") { LedgerEntry.record_settle!(purchase) }
 
     get URI(delivery.dig("files", 0, "url")).request_uri
     assert_response :success

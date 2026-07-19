@@ -10,6 +10,30 @@ Rails.application.routes.draw do
     resources :sales, only: :index
   end
 
+  namespace :admin do
+    root "dashboard#index"
+    resources :purchases, only: [] do
+      member do
+        post :reconcile
+        post :refund
+      end
+      collection { post :reap }
+    end
+    resources :licenses, only: [] do
+      member { post :retry_certificate }
+    end
+    resources :designers, only: [] do
+      member do
+        post :toggle_verification
+        post :verify_payout
+      end
+    end
+    resource :payout, only: [] do
+      post :preview
+      post :run
+    end
+  end
+
   namespace :api do
     namespace :v1 do
       resources :models, only: %i[index show]

@@ -42,6 +42,13 @@ class LedgerEntryTest < ActiveSupport::TestCase
     end
   end
 
+  test "sandbox settles and direct backfill calls never write revenue" do
+    @purchase.update!(sandbox: true)
+
+    assert_no_difference("LedgerEntry.count") { @purchase.transition_to!(:settled) }
+    assert_no_difference("LedgerEntry.count") { LedgerEntry.record_settle!(@purchase) }
+  end
+
   test "entries are immutable once written" do
     @purchase.transition_to!(:settled)
     entry = LedgerEntry.where(purchase: @purchase).first

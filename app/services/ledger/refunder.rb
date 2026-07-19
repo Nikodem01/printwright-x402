@@ -8,6 +8,7 @@ module Ledger
     class NotRefundable < StandardError; end
 
     def self.call(purchase)
+      raise NotRefundable, "sandbox rehearsals never moved funds" if purchase.sandbox?
       raise NotRefundable, "status is #{purchase.status}, only settled refunds" unless purchase.settled?
       unless purchase.buyer_hint.to_s.match?(/\A0\.0\.\d+\z/)
         raise NotRefundable, "buyer account unknown (buyer_hint=#{purchase.buyer_hint.inspect})"
