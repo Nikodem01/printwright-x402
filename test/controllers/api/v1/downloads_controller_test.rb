@@ -330,7 +330,7 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "HBAR tolerance rejects amounts outside either boundary and enormous overpayment" do
-    [ "9699999", "10300001", "999999999999999999999999" ].each do |amount|
+    [ "-1", "0", "9699999", "10300001", "999999999999999999999999" ].each do |amount|
       payload = @payload.deep_dup
       payload["accepted"]["amount"] = amount
 

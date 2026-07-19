@@ -41,10 +41,9 @@ module Designers
     end
 
     def self.fetch_json(path)
-      base = Hedera::Network.mirror_base
-      response = Net::HTTP.get_response(URI("#{base}#{path}"))
+      response = Hedera::Network.get(path)
       response.code.to_i == 200 ? JSON.parse(response.body) : nil
-    rescue StandardError
+    rescue Hedera::Network::Unavailable, JSON::ParserError
       nil # unreachable mirror = unverified, never an exception in the publish flow
     end
   end

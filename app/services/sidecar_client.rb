@@ -49,6 +49,7 @@ class SidecarClient
 
     response = Net::HTTP.start(
       @base.host, @base.port,
+      use_ssl: @base.scheme == "https",
       open_timeout: TIMEOUT_SECONDS, read_timeout: TIMEOUT_SECONDS
     ) { |http| http.request(req) }
 

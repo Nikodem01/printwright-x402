@@ -33,14 +33,13 @@ module Hedera
       private
 
       def refresh
-        base = Hedera::Network.mirror_base
-        response = Net::HTTP.get_response(URI("#{base}/api/v1/network/exchangerate"))
-        raise "exchange rate fetch failed: #{response.code}" unless response.code.to_i == 200
+        response = Hedera::Network.get("/api/v1/network/exchangerate")
+        raise Hedera::Network::Unavailable, "exchange rate fetch failed: #{response.code}" unless response.code.to_i == 200
 
         current = JSON.parse(response.body).fetch("current_rate")
         @rate = Rational(current.fetch("cent_equivalent"), current.fetch("hbar_equivalent"))
         @fetched_at = Time.current
-      rescue StandardError
+      rescue Hedera::Network::Unavailable, JSON::ParserError, KeyError, ArgumentError
         @fetched_at = Time.current # back off for a TTL, keep serving @rate (may be nil)
         @rate
       end

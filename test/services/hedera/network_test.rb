@@ -27,6 +27,17 @@ class Hedera::NetworkTest < ActiveSupport::TestCase
     assert_equal "https://hashscan.io/mainnet", Hedera::Network.hashscan_base
   end
 
+  test "mirror requests use the shared bounded client and normalize transport failures" do
+    stub_request(:get, "https://testnet.mirrornode.hedera.com/api/v1/network/nodes?limit=1")
+      .to_return(status: 200, body: "{}")
+    assert_equal "200", Hedera::Network.get("/api/v1/network/nodes?limit=1").code
+
+    stub_request(:get, "https://testnet.mirrornode.hedera.com/api/v1/network/nodes?limit=1").to_timeout
+    assert_raises(Hedera::Network::Unavailable) do
+      Hedera::Network.get("/api/v1/network/nodes?limit=1")
+    end
+  end
+
   test "under mainnet config a 402 quotes mainnet requirements without spending" do
     ENV["HEDERA_NETWORK"] = "mainnet"
     ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "250"

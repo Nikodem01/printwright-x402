@@ -11,7 +11,7 @@ module Certificates
       return Result.new(state: :minting) unless license.anchored?
 
       mirror_url = "#{mirror_base}/api/v1/topics/#{license.hcs_topic_id}/messages/#{license.hcs_sequence_number}"
-      response = Net::HTTP.get_response(URI(mirror_url))
+      response = Hedera::Network.get(URI(mirror_url))
       # Sequence known but the mirror hasn't indexed it yet: still propagating.
       return Result.new(state: :minting, mirror_url: mirror_url) unless response.code.to_i == 200
 
@@ -27,7 +27,7 @@ module Certificates
         consensus_timestamp: message["consensus_timestamp"],
         mirror_url: mirror_url
       )
-    rescue StandardError
+    rescue Hedera::Network::Unavailable, JSON::ParserError
       Result.new(state: :minting, mirror_url: mirror_url) # mirror hiccup: poll again shortly
     end
 

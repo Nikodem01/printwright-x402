@@ -41,14 +41,16 @@ class License < ApplicationRecord
 
     mirror = Hedera::Network.mirror_base
     owner = purchase.buyer_hint
-    response = Net::HTTP.get_response(
+    return nft_claim_state unless owner&.match?(/\A0\.0\.\d+\z/)
+
+    response = Hedera::Network.get(
       URI("#{mirror}/api/v1/accounts/#{owner}/nfts?token.id=#{nft_token_id}&serialnumber=#{nft_serial}")
     )
     if response.code.to_i == 200 && JSON.parse(response.body)["nfts"].to_a.any?
       update!(nft_claim_state: "claimed")
     end
     nft_claim_state
-  rescue StandardError
+  rescue Hedera::Network::Unavailable, JSON::ParserError
     nft_claim_state # mirror hiccup: stay pending, check again next view
   end
 end

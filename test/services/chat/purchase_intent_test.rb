@@ -27,8 +27,9 @@ class Chat::PurchaseIntentTest < ActiveSupport::TestCase
     assert_equal "completed", @conversation.reload.purchase_proposal["state"]
   end
 
-  test "tampered route, amount, and token are rejected without claiming the proposal" do
+  test "tampered route, asset, amount, and token are rejected without claiming the proposal" do
     assert_raises(Chat::PurchaseIntent::Invalid) { authorize(path: "/api/v1/models/999/download?license=personal") }
+    assert_raises(Chat::PurchaseIntent::Invalid) { authorize(matched: @matched.merge(asset: "0.0.0")) }
     assert_raises(Chat::PurchaseIntent::Invalid) { authorize(matched: @matched.merge(amount: "910000")) }
     assert_raises(Chat::PurchaseIntent::Invalid) do
       Chat::PurchaseIntent.authorize!(

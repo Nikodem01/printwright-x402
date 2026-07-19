@@ -13,13 +13,13 @@ module X402
 
       url = URI("#{mirror_base}/api/v1/transactions" \
                 "?account.id=#{pay_to}&timestamp=gte:#{purchase.created_at.to_i}&order=asc&limit=100")
-      body = JSON.parse(Net::HTTP.get(url))
+      body = JSON.parse(Hedera::Network.get(url).body)
 
       match = body.fetch("transactions", []).find do |tx|
         tx["result"] == "SUCCESS" && credited?(tx, pay_to, amount, asset)
       end
       match && match["transaction_id"].sub("-", "@").sub("-", ".")
-    rescue StandardError
+    rescue Hedera::Network::Unavailable, JSON::ParserError
       nil # mirror unavailable == not reconciled; the caller may retry later
     end
 

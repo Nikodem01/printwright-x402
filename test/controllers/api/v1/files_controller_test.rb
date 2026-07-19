@@ -39,4 +39,13 @@ class Api::V1::FilesControllerTest < ActionDispatch::IntegrationTest
     get api_v1_file_url("nope")
     assert_response :not_found
   end
+
+  test "random grant-token guesses do not consume a real grant" do
+    64.times do
+      get api_v1_file_url(SecureRandom.urlsafe_base64(32))
+      assert_response :not_found
+    end
+
+    assert_equal 0, @grant.reload.uses
+  end
 end

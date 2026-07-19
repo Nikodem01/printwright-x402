@@ -51,4 +51,10 @@ class Hedera::ExchangeRateTest < ActiveSupport::TestCase
       assert_equal Rational(200_000, 30_000), Hedera::ExchangeRate.cents_per_hbar
     end
   end
+
+  test "mirror non-success response is treated as unavailable" do
+    stub_request(:get, "#{MIRROR}/api/v1/network/exchangerate").to_return(status: 503)
+
+    assert_nil Hedera::ExchangeRate.cents_per_hbar
+  end
 end
