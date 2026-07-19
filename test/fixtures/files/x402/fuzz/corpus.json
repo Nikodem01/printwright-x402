@@ -1,0 +1,147 @@
+[
+  {
+    "name": "header is not a string",
+    "raw": 42,
+    "expected": "invalid_payload"
+  },
+  {
+    "name": "invalid base64",
+    "raw": "not base64!!!",
+    "expected": "invalid_payload"
+  },
+  {
+    "name": "base64 non-JSON",
+    "text": "not json",
+    "expected": "invalid_payload"
+  },
+  {
+    "name": "JSON scalar",
+    "json": 42,
+    "expected": "invalid_payload"
+  },
+  {
+    "name": "JSON array",
+    "json": [],
+    "expected": "invalid_payload"
+  },
+  {
+    "name": "payload array crash regression",
+    "path": ["payload"],
+    "value": [],
+    "expected": "invalid_payload"
+  },
+  {
+    "name": "payload string",
+    "path": ["payload"],
+    "value": "transaction",
+    "expected": "invalid_payload"
+  },
+  {
+    "name": "accepted array",
+    "path": ["accepted"],
+    "value": [],
+    "expected": "invalid_payload"
+  },
+  {
+    "name": "blank transaction",
+    "path": ["payload", "transaction"],
+    "value": "",
+    "expected": "invalid_payload"
+  },
+  {
+    "name": "non-string transaction",
+    "path": ["payload", "transaction"],
+    "value": {},
+    "expected": "invalid_payload"
+  },
+  {
+    "name": "extra array crash regression",
+    "path": ["accepted", "extra"],
+    "value": [],
+    "expected": "requirements_mismatch"
+  },
+  {
+    "name": "extra string",
+    "path": ["accepted", "extra"],
+    "value": "0.0.7162784",
+    "expected": "requirements_mismatch"
+  },
+  {
+    "name": "zero amount",
+    "path": ["accepted", "amount"],
+    "value": "0",
+    "expected": "requirements_mismatch"
+  },
+  {
+    "name": "negative amount",
+    "path": ["accepted", "amount"],
+    "value": "-1",
+    "expected": "requirements_mismatch"
+  },
+  {
+    "name": "enormous amount",
+    "path": ["accepted", "amount"],
+    "value": "999999999999999999999999999999999999",
+    "expected": "requirements_mismatch"
+  },
+  {
+    "name": "object amount",
+    "path": ["accepted", "amount"],
+    "value": {"baseUnits": "10000000"},
+    "expected": "requirements_mismatch"
+  },
+  {
+    "name": "asset substitution",
+    "path": ["accepted", "asset"],
+    "value": "0.0.9999999",
+    "expected": "requirements_mismatch"
+  },
+  {
+    "name": "asset object",
+    "path": ["accepted", "asset"],
+    "value": {"token": "0.0.0"},
+    "expected": "requirements_mismatch"
+  },
+  {
+    "name": "recipient substitution",
+    "path": ["accepted", "payTo"],
+    "value": "0.0.1",
+    "expected": "requirements_mismatch"
+  },
+  {
+    "name": "network substitution",
+    "path": ["accepted", "network"],
+    "value": "hedera:mainnet",
+    "expected": "requirements_mismatch"
+  },
+  {
+    "name": "scheme substitution",
+    "path": ["accepted", "scheme"],
+    "value": "permit",
+    "expected": "requirements_mismatch"
+  },
+  {
+    "name": "fee payer substitution",
+    "path": ["accepted", "extra", "feePayer"],
+    "value": "0.0.1",
+    "expected": "requirements_mismatch"
+  },
+  {
+    "name": "transaction leg order permutation",
+    "path": ["payload", "transaction"],
+    "value": "signed-transaction:fee-leg,asset-leg,payment-leg",
+    "expected": "decoded"
+  },
+  {
+    "name": "transaction payment and fee legs swapped",
+    "path": ["payload", "transaction"],
+    "value": "signed-transaction:payment-leg,fee-leg",
+    "expected": "decoded"
+  },
+  {
+    "name": "unusual but opaque transaction bytes",
+    "path": ["payload", "transaction"],
+    "value": "AAECAwQFBgcICQ==",
+    "expected": "decoded"
+  }
+]

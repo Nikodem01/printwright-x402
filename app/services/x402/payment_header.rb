@@ -11,10 +11,14 @@ module X402
 
     def self.decode(request)
       encoded = raw(request) or raise InvalidPayload, "missing payment header"
+      raise InvalidPayload, "payment header is not a string" unless encoded.is_a?(String)
+
       payload = JSON.parse(Base64.strict_decode64(encoded))
       raise InvalidPayload, "payload is not an object" unless payload.is_a?(Hash)
-      transaction = payload.dig("payload", "transaction")
-      unless payload["accepted"].is_a?(Hash) && transaction.is_a?(String) && transaction.present?
+      accepted = payload["accepted"]
+      details = payload["payload"]
+      transaction = details["transaction"] if details.is_a?(Hash)
+      unless accepted.is_a?(Hash) && details.is_a?(Hash) && transaction.is_a?(String) && transaction.present?
         raise InvalidPayload, "payload missing accepted/transaction"
       end
       payload

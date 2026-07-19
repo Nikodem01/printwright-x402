@@ -33,6 +33,8 @@ jobs:
         run: bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error --skip-files node_modules/,sidecar/node_modules/,mcp/node_modules/,scripts/spike/ -i config/brakeman.ignore
       - name: Rails tests
         run: bin/rails test
+      - name: Payment decoder fuzz and state-machine properties
+        run: bin/rails test test/fuzz
       - name: System tests (headless Chrome)
         run: bin/rails test:system
       - name: Seeds boot

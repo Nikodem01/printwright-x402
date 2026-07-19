@@ -47,9 +47,11 @@ module X402
     # amount becomes the requirement, since the signed tx must match it).
     def match(accepted)
       return nil unless accepted.is_a?(Hash)
+      return nil unless accepted["extra"].is_a?(Hash)
+
       option = accepts.find do |candidate|
         (MATCH_KEYS - %w[amount]).all? { |key| candidate[key.to_sym].to_s == accepted[key].to_s } &&
-          candidate.dig(:extra, :feePayer) == accepted.dig("extra", "feePayer") &&
+          candidate.dig(:extra, :feePayer) == accepted["extra"]["feePayer"] &&
           amount_acceptable?(candidate, accepted)
       end
       option && option.merge(amount: accepted["amount"].to_s)
