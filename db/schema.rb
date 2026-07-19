@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_19_203000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_19_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -218,14 +218,33 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_203000) do
     t.index ["designer_id"], name: "index_profile_verifications_on_designer_id"
   end
 
-  create_table "purchases", force: :cascade do |t|
+  create_table "purchase_batches", force: :cascade do |t|
     t.string "amount_base_units"
     t.string "asset"
     t.string "buyer_hint"
     t.datetime "created_at", null: false
     t.string "error_reason"
+    t.string "payment_tx_id"
+    t.string "replay_key", null: false
+    t.jsonb "requirements_json", default: {}, null: false
+    t.boolean "sandbox", default: false, null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.index ["payment_tx_id"], name: "index_purchase_batches_on_payment_tx_id", unique: true, where: "(payment_tx_id IS NOT NULL)"
+    t.index ["replay_key"], name: "index_purchase_batches_on_replay_key", unique: true
+    t.index ["status"], name: "index_purchase_batches_on_status"
+  end
+
+  create_table "purchases", force: :cascade do |t|
+    t.string "amount_base_units"
+    t.string "asset"
+    t.integer "batch_position"
+    t.string "buyer_hint"
+    t.datetime "created_at", null: false
+    t.string "error_reason"
     t.bigint "license_offer_id", null: false
     t.string "payment_tx_id"
+    t.bigint "purchase_batch_id"
     t.string "refund_tx_id"
     t.string "replay_key", null: false
     t.jsonb "requirements_json", default: {}, null: false
@@ -233,7 +252,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_203000) do
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
     t.index ["license_offer_id"], name: "index_purchases_on_license_offer_id"
-    t.index ["payment_tx_id"], name: "index_purchases_on_payment_tx_id", unique: true, where: "(payment_tx_id IS NOT NULL)"
+    t.index ["payment_tx_id"], name: "index_purchases_on_payment_tx_id", unique: true, where: "((payment_tx_id IS NOT NULL) AND (purchase_batch_id IS NULL))"
+    t.index ["purchase_batch_id", "batch_position"], name: "index_purchases_on_purchase_batch_id_and_batch_position", unique: true, where: "(purchase_batch_id IS NOT NULL)"
+    t.index ["purchase_batch_id"], name: "index_purchases_on_purchase_batch_id"
     t.index ["replay_key"], name: "index_purchases_on_replay_key", unique: true
     t.index ["sandbox"], name: "index_purchases_on_sandbox"
     t.index ["status"], name: "index_purchases_on_status"
@@ -262,5 +283,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_203000) do
   add_foreign_key "models3d", "designers"
   add_foreign_key "profile_verifications", "designers"
   add_foreign_key "purchases", "license_offers"
+  add_foreign_key "purchases", "purchase_batches"
   add_foreign_key "sessions", "designers"
 end

@@ -15,6 +15,7 @@ class Purchase < ApplicationRecord
   }.freeze
 
   belongs_to :license_offer
+  belongs_to :purchase_batch, optional: true
   has_one :license, dependent: :destroy
   has_one :model3d, through: :license_offer
 

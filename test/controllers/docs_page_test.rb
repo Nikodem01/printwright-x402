@@ -12,6 +12,9 @@ class DocsPageTest < ActionDispatch::IntegrationTest
     assert_match "printwright.search", response.body
     assert_match "printwright.get", response.body
     assert_match "Try the whole flow free", response.body
+    assert_match "Batch purchase", response.body
+    assert_match "POST /api/v1/batches", response.body
+    assert_match "incompatible_payees", response.body
     assert_match "sandbox: true", response.body
     assert_match "PAYMENT-SIGNATURE", response.body
     assert_match "Error contract", response.body

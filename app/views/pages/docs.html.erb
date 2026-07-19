@@ -38,6 +38,23 @@ curl -i "http://localhost:3000/api/v1/models/5/download?license=personal" \
 #   { "files": [...], "license": {"cert_id": "pw-000036", "serial": 3, "kind": "personal"},
 #     "certificate": {...}, "transaction_id": "...", "hashscan_url": "https://hashscan.io/..." }</pre>
 
+  <h2>Batch purchase</h2>
+  <p class="t-small">Print farms can acquire up to 20 licenses with one x402 negotiation and one
+    settlement. Probe and retry the identical <code class="mono">POST /api/v1/batches</code>
+    body. Every item receives its own serial, file grant, PWC-1 certificate, and verify URL. Items
+    must share a direct <code class="mono">payTo</code>; mixed-payee batches return
+    <code class="mono">incompatible_payees</code> instead of silently changing settlement custody.</p>
+  <pre class="mono t-small" style="overflow-x:auto">curl -i -X POST http://localhost:3000/api/v1/batches \
+  -H "Content-Type: application/json" \
+  -d '{"items":[
+    {"model_id":5,"license":"commercial_unit"},
+    {"model_id":5,"license":"commercial_unit"},
+    {"model_id":5,"license":"commercial_unit"}
+  ]}'
+# 402: one PaymentRequired whose amount is the exact sum
+# Retry this POST and identical JSON with PAYMENT-SIGNATURE: &lt;base64 PaymentPayload&gt;
+# 200: {"transaction_id":"...","licenses":[{"cert_id":"pw-...","verify_url":"..."}, ...]}</pre>
+
   <h2>JavaScript client</h2>
   <p class="t-small"><code class="mono">@printwright/client</code> wraps catalog reads, the
     x402 Hedera signature, optional first-use USDC association, and HCS certificate comparison.

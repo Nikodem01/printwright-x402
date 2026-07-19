@@ -84,6 +84,9 @@ class Api::V1::DownloadsController < Api::V1::BaseController
   # duplicates and dead purchases get 409.
   def replay(payload)
     purchase = Purchase.find_by!(replay_key: replay_key(payload))
+    if purchase.purchase_batch
+      return render json: { error: "duplicate_payment", status: purchase.purchase_batch.status }, status: :conflict
+    end
     case purchase.status
     when "delivered"
       complete_chat_purchase_intent!

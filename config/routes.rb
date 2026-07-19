@@ -44,6 +44,7 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       resources :models, only: %i[index show]
+      resources :batches, only: :create
       get "models/:model_id/download", to: "downloads#show", as: :model_download
       get "files/:token", to: "files#show", as: :file
       get "certificates/:cert_id", to: "certificates#show", as: :certificate

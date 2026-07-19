@@ -27,8 +27,12 @@ module Sandbox
           description: "SANDBOX #{@offer.kind} rehearsal — no printable model is delivered",
           mimeType: "application/json"
         },
-        accepts: [ option ]
+        accepts: accepts
       }
+    end
+
+    def accepts
+      [ option ]
     end
 
     def match(accepted)

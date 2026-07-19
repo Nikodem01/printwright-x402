@@ -2,13 +2,58 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Printwright API",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; every purchase mints a public HCS license certificate.",
     "contact": { "url": "https://github.com/Nikodem01/printwright-x402" },
-    "x-guidance": "Search GET /api/v1/models, inspect an offer with GET /api/v1/models/{id}, then call GET /api/v1/models/{id}/download?license=personal or commercial_unit. The unpaid download returns an x402 v2 challenge; sign one exact payment option and retry the same URL. For a zero-funds rehearsal, send X-Sandbox: true on both download requests; this returns hedera:sandbox artifacts that are explicitly not payments or licenses."
+    "x-guidance": "Search GET /api/v1/models, inspect offers, then buy one license with GET /api/v1/models/{id}/download or up to 20 licenses with POST /api/v1/batches. An unpaid request returns an x402 v2 challenge; sign one exact payment option and retry the identical request. Batch items must share one payTo account. For a zero-funds rehearsal, send X-Sandbox: true on both requests; sandbox artifacts are explicitly not payments or licenses."
   },
   "servers": [{ "url": "/api/v1" }],
   "paths": {
+    "/batches": {
+      "post": {
+        "operationId": "buyLicenseBatch",
+        "summary": "Buy up to 20 licenses with one x402 settlement",
+        "description": "Send the same JSON body for both legs. The first returns one aggregate x402 challenge; the signed retry settles once and returns one independently verifiable certificate per item. All items must resolve to the same payTo account; Printwright never reroutes a mixed-payee batch through custody.",
+        "security": [],
+        "x-payment-info": {
+          "price": { "mode": "dynamic", "currency": "USD", "min": "0.01", "max": "200000.00" },
+          "protocols": [{ "x402": {} }]
+        },
+        "parameters": [
+          { "name": "PAYMENT-SIGNATURE", "in": "header", "schema": { "type": "string" }, "description": "base64 x402 PaymentPayload from the aggregate challenge" },
+          { "name": "X-Sandbox", "in": "header", "schema": { "type": "string", "const": "true" }, "description": "zero-funds rehearsal; no printable files or Hedera records" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BatchRequest" } } }
+        },
+        "responses": {
+          "200": {
+            "description": "One settlement and one delivery/certificate link per requested license",
+            "headers": {
+              "PAYMENT-RESPONSE": { "schema": { "type": "string" }, "description": "base64 settlement response" },
+              "X-Printwright-Sandbox": { "schema": { "type": "string", "const": "true" } }
+            },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BatchDelivery" } } }
+          },
+          "400": { "description": "invalid_batch or invalid_payload", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "402": {
+            "description": "Aggregate PaymentRequired challenge",
+            "headers": {
+              "PAYMENT-REQUIRED": { "schema": { "type": "string" }, "description": "base64 of the same PaymentRequired JSON" },
+              "WWW-Authenticate": { "schema": { "type": "string", "const": "x402" } }
+            },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaymentRequired" } } }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "description": "Replayed payment; delivered batches return the original BatchDelivery", "content": { "application/json": { "schema": { "oneOf": [ { "$ref": "#/components/schemas/BatchDelivery" }, { "$ref": "#/components/schemas/Error" } ] } } } },
+          "410": { "description": "At least one requested offer is sold out", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "422": { "description": "incompatible_payees — the items do not share one direct settlement destination", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "503": { "description": "facilitator_unavailable; retry the identical signed batch", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
     "/models": {
       "get": {
         "operationId": "searchModels",
@@ -379,6 +424,44 @@
             "maxTimeoutSeconds": { "type": "integer" },
             "extra": { "type": "object", "properties": { "feePayer": { "type": "string" } } }
           } } }
+        }
+      },
+      "BatchRequest": {
+        "type": "object",
+        "required": ["items"],
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array", "minItems": 1, "maxItems": 20,
+            "items": {
+              "type": "object", "required": ["model_id"], "additionalProperties": false,
+              "properties": {
+                "model_id": { "type": "integer", "minimum": 1 },
+                "license": { "type": "string", "enum": ["personal", "commercial_unit"], "default": "personal" }
+              }
+            }
+          }
+        }
+      },
+      "BatchDelivery": {
+        "type": "object",
+        "properties": {
+          "batch_id": { "type": "integer" },
+          "sandbox": { "type": "boolean" },
+          "transaction_id": { "type": "string" },
+          "hashscan_url": { "type": ["string", "null"] },
+          "licenses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "model_id": { "type": "integer" }, "kind": { "type": "string" },
+                "cert_id": { "type": "string" }, "serial": { "type": "integer" },
+                "verify_url": { "type": "string" },
+                "files": { "type": "array", "items": { "type": "object" } }
+              }
+            }
+          }
         }
       },
       "Delivery": {

@@ -7,7 +7,7 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
     spec = JSON.parse(response.body)
     assert_equal "3.1.0", spec["openapi"]
     assert spec.dig("info", "x-guidance").present?
-    assert_equal [ "/certificates/{cert_id}", "/files/{token}", "/licenses/{id}/can", "/models", "/models/{id}", "/models/{id}/download",
+    assert_equal [ "/batches", "/certificates/{cert_id}", "/files/{token}", "/licenses/{id}/can", "/models", "/models/{id}", "/models/{id}/download",
                    "/sandbox/files/{cert_id}", "/sandbox/topics/{topic_id}/messages/{sequence_number}",
                    "/sandbox/transactions/{transaction_id}", "/stats" ],
                  spec["paths"].keys.sort
@@ -27,6 +27,8 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
     assert_equal "checkLicense", spec.dig("paths", "/licenses/{id}/can", "get", "operationId")
     assert_equal "1", spec.dig("components", "schemas", "LicensePermissions", "properties", "schema_version", "const")
     assert_equal "getOpenBooks", spec.dig("paths", "/stats", "get", "operationId")
+    assert_equal "buyLicenseBatch", spec.dig("paths", "/batches", "post", "operationId")
+    assert_equal 20, spec.dig("components", "schemas", "BatchRequest", "properties", "items", "maxItems")
     assert_equal %w[hedera:testnet hedera:mainnet],
       spec.dig("components", "schemas", "OpenBooksStats", "properties", "network", "enum")
   end

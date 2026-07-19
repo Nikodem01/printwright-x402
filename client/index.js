@@ -42,6 +42,7 @@ export class PrintwrightClient {
     this.autoAssociate = autoAssociate;
     this.sandbox = sandbox;
     this.quotes = new WeakSet();
+    this.batchQuotes = new WeakSet();
   }
 
   async search({ query, maxPriceCents, material, supports, category, collection } = {}) {
@@ -95,31 +96,61 @@ export class PrintwrightClient {
     this.validateQuote(purchaseQuote);
     if (purchaseQuote.sandbox) return this.buySandbox(purchaseQuote);
 
-    this.requireSigner();
-
-    if (this.autoAssociate && purchaseQuote.accepted.asset === USDC_IDS[this.network]) {
-      await this.ensureUsdcAssociated();
-    }
-
-    const key = typeof this.privateKey === "string"
-      ? PrivateKey.fromStringECDSA(this.privateKey)
-      : this.privateKey;
-    const signer = createClientHederaSigner(this.accountId, key, { network: `hedera:${this.network}` });
-    const httpClient = new x402HTTPClient(
-      new x402Client().register("hedera:*", new ExactHederaScheme(signer))
-    );
-    const required = httpClient.getPaymentRequiredResponse(
-      (name) => purchaseQuote.responseHeaders[name.toLowerCase()] || null,
-      purchaseQuote.paymentRequired
-    );
-    const payload = await httpClient.createPaymentPayload({ ...required, accepts: [ purchaseQuote.accepted ] });
-    const headers = httpClient.encodePaymentSignatureHeader(payload);
+    const headers = await this.paymentHeaders(purchaseQuote);
     const response = await this.fetch(purchaseQuote.resourceUrl, {
       headers: { accept: "application/json", ...headers },
     });
     const body = await jsonBody(response);
     if (!response.ok) {
       throw new PrintwrightError(`payment failed (${response.status})`, { status: response.status, body });
+    }
+    return body;
+  }
+
+  async quoteBatch({ items, asset } = {}) {
+    const normalized = normalizeBatchItems(items);
+    const resourceUrl = this.url("api/v1/batches");
+    const requestBody = JSON.stringify({ items: normalized });
+    const headers = { accept: "application/json", "content-type": "application/json" };
+    if (this.sandbox) headers["X-Sandbox"] = "true";
+    const response = await this.fetch(resourceUrl, { method: "POST", headers, body: requestBody });
+    const paymentRequired = deepFreeze(await jsonBody(response));
+    if (response.status !== 402) {
+      throw new PrintwrightError(`expected 402 from ${resourceUrl}, got ${response.status}`, {
+        status: response.status, body: paymentRequired,
+      });
+    }
+    if (this.sandbox && paymentRequired.sandbox !== true) {
+      throw new PrintwrightError("server did not return a sandbox payment requirement");
+    }
+
+    const quote = Object.freeze({
+      items: deepFreeze(normalized),
+      resourceUrl: resourceUrl.toString(),
+      requestBody,
+      paymentRequired,
+      accepted: selectAsset(paymentRequired, asset, this.network),
+      sandbox: paymentRequired.sandbox === true,
+      responseHeaders: Object.freeze(Object.fromEntries(response.headers)),
+    });
+    this.batchQuotes.add(quote);
+    return quote;
+  }
+
+  async buyBatch({ items, asset, quote } = {}) {
+    const purchaseQuote = quote || await this.quoteBatch({ items, asset });
+    this.validateBatchQuote(purchaseQuote);
+    if (purchaseQuote.sandbox) return this.buySandbox(purchaseQuote);
+
+    const paymentHeaders = await this.paymentHeaders(purchaseQuote);
+    const response = await this.fetch(purchaseQuote.resourceUrl, {
+      method: "POST",
+      headers: { accept: "application/json", "content-type": "application/json", ...paymentHeaders },
+      body: purchaseQuote.requestBody,
+    });
+    const body = await jsonBody(response);
+    if (!response.ok) {
+      throw new PrintwrightError(`batch payment failed (${response.status})`, { status: response.status, body });
     }
     return body;
   }
@@ -194,8 +225,11 @@ export class PrintwrightClient {
       payload: { transaction: `sandbox:${randomUUID()}` },
     };
     const response = await this.fetch(quote.resourceUrl, {
+      method: quote.requestBody ? "POST" : "GET",
+      body: quote.requestBody,
       headers: {
         accept: "application/json",
+        ...(quote.requestBody ? { "content-type": "application/json" } : {}),
         "X-Sandbox": "true",
         "PAYMENT-SIGNATURE": Buffer.from(JSON.stringify(payload)).toString("base64"),
       },
@@ -221,6 +255,42 @@ export class PrintwrightClient {
     const offered = quote.paymentRequired.accepts?.some((candidate) =>
       canonical(candidate) === canonical(quote.accepted));
     if (!offered) throw new TypeError("quote selection is not in the server payment requirements");
+  }
+
+  validateBatchQuote(quote) {
+    if (!quote || !this.batchQuotes.has(quote)) {
+      throw new TypeError("quote must come from this client.quoteBatch()");
+    }
+    if (quote.resourceUrl !== this.url("api/v1/batches").toString()) {
+      throw new TypeError("quote belongs to a different Printwright endpoint");
+    }
+    if (quote.requestBody !== JSON.stringify({ items: quote.items })) {
+      throw new TypeError("batch quote body changed after negotiation");
+    }
+    const offered = quote.paymentRequired.accepts?.some((candidate) =>
+      canonical(candidate) === canonical(quote.accepted));
+    if (!offered) throw new TypeError("quote selection is not in the server payment requirements");
+  }
+
+  async paymentHeaders(quote) {
+    this.requireSigner();
+    if (this.autoAssociate && quote.accepted.asset === USDC_IDS[this.network]) {
+      await this.ensureUsdcAssociated();
+    }
+
+    const key = typeof this.privateKey === "string"
+      ? PrivateKey.fromStringECDSA(this.privateKey)
+      : this.privateKey;
+    const signer = createClientHederaSigner(this.accountId, key, { network: `hedera:${this.network}` });
+    const httpClient = new x402HTTPClient(
+      new x402Client().register("hedera:*", new ExactHederaScheme(signer))
+    );
+    const required = httpClient.getPaymentRequiredResponse(
+      (name) => quote.responseHeaders[name.toLowerCase()] || null,
+      quote.paymentRequired
+    );
+    const payload = await httpClient.createPaymentPayload({ ...required, accepts: [ quote.accepted ] });
+    return httpClient.encodePaymentSignatureHeader(payload);
   }
 
   async ensureUsdcAssociated() {
@@ -259,6 +329,16 @@ function integerId(value, name) {
   const id = Number(value);
   if (!Number.isSafeInteger(id) || id <= 0) throw new TypeError(`${name} must be a positive integer`);
   return id;
+}
+
+function normalizeBatchItems(items) {
+  if (!Array.isArray(items) || items.length < 1 || items.length > 20) {
+    throw new TypeError("items must contain 1 to 20 licenses");
+  }
+  return items.map((item, index) => ({
+    model_id: integerId(item?.modelId ?? item?.model_id, `items[${index}].modelId`),
+    license: item?.license || "personal",
+  }));
 }
 
 async function jsonBody(response) {

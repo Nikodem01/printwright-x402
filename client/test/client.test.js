@@ -7,6 +7,8 @@ import { PrintwrightClient, PrintwrightError } from "../index.js";
 let server;
 let baseUrl;
 let paidRequests = 0;
+let paidBatchRequests = 0;
+let lastBatchBodies = [];
 let lastSearchParams;
 
 const certificate = {
@@ -26,6 +28,34 @@ before(async () => {
     }
     if (url.pathname === "/api/v1/models/7") {
       return response.end(JSON.stringify({ id: 7, title: "Gear", license_offers: [] }));
+    }
+    if (url.pathname === "/api/v1/batches" && request.method === "POST") {
+      const body = await requestBody(request);
+      lastBatchBodies.push(body);
+      if (request.headers["payment-signature"]) {
+        paidBatchRequests += 1;
+        return response.end(JSON.stringify({
+          batch_id: 3, transaction_id: "0.0.7@1.2", hashscan_url: "https://hashscan.example/tx",
+          sandbox: false,
+          licenses: body.items.map((item, index) => ({
+            model_id: item.model_id, kind: item.license, cert_id: `pw-00001${index}`,
+            serial: index + 1, verify_url: `${baseUrl}/verify/pw-00001${index}`, files: [],
+          })),
+        }));
+      }
+      response.statusCode = 402;
+      const paymentRequired = {
+        x402Version: 2,
+        resource: { url: `${baseUrl}/api/v1/batches`, description: "batch", mimeType: "application/json" },
+        accepts: [ {
+          scheme: "exact", network: "hedera:testnet", payTo: "0.0.5678",
+          maxTimeoutSeconds: 180, extra: { feePayer: "0.0.5678" },
+          amount: "3", asset: "0.0.0",
+        } ],
+        batch: { license_count: body.items.length },
+      };
+      response.setHeader("payment-required", Buffer.from(JSON.stringify(paymentRequired)).toString("base64"));
+      return response.end(JSON.stringify(paymentRequired));
     }
     if (url.pathname === "/api/v1/models/7/download") {
       if (request.headers["x-sandbox"] === "true") {
@@ -179,6 +209,28 @@ test("completes a labeled sandbox purchase without an account or private key", a
   assert.equal(proof.onchain.sandbox, true);
 });
 
+test("posts an identical batch body across one aggregate x402 negotiation", async () => {
+  const client = new PrintwrightClient({
+    baseUrl,
+    accountId: "0.0.1234",
+    privateKey: PrivateKey.generateECDSA().toStringRaw(),
+  });
+  const items = Array.from({ length: 3 }, () => ({ modelId: 7, license: "commercial_unit" }));
+
+  const quote = await client.quoteBatch({ items, asset: "hbar" });
+  assert.equal(quote.paymentRequired.batch.license_count, 3);
+  assert.equal(quote.accepted.amount, "3");
+  const receipt = await client.buyBatch({ quote });
+
+  assert.equal(receipt.licenses.length, 3);
+  assert.equal(paidBatchRequests, 1);
+  assert.deepEqual(lastBatchBodies.at(-2), lastBatchBodies.at(-1));
+  await assert.rejects(
+    () => new PrintwrightClient({ baseUrl }).buyBatch({ quote }),
+    /this client\.quoteBatch/
+  );
+});
+
 test("verifies an anchored certificate independent of JSON key order", async () => {
   const proof = await new PrintwrightClient({ baseUrl }).verify("pw-000007");
 
@@ -214,4 +266,11 @@ test("rejects malformed ids, networks, and missing buyer credentials", async () 
     () => new PrintwrightClient({ baseUrl }).buy({ modelId: 7 }),
     (error) => error instanceof PrintwrightError && /accountId and privateKey/.test(error.message)
   );
+  await assert.rejects(() => new PrintwrightClient({ baseUrl }).quoteBatch({ items: [] }), /1 to 20/);
 });
+
+async function requestBody(request) {
+  const chunks = [];
+  for await (const chunk of request) chunks.push(chunk);
+  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+}

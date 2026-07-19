@@ -61,6 +61,32 @@ export interface PurchaseOptions extends Partial<QuoteOptions> {
   quote?: PaymentQuote;
 }
 
+export interface BatchItem {
+  modelId: number;
+  license?: "personal" | "commercial_unit" | string;
+}
+
+export interface BatchPaymentQuote {
+  items: ReadonlyArray<{ model_id: number; license: string }>;
+  resourceUrl: string;
+  requestBody: string;
+  paymentRequired: Record<string, unknown> & { accepts?: Array<Record<string, unknown>> };
+  accepted: Record<string, unknown> & { asset: string; amount: string; payTo: string };
+  sandbox: boolean;
+  responseHeaders: Record<string, string>;
+}
+
+export interface BatchPurchaseReceipt {
+  batch_id: number;
+  transaction_id: string;
+  hashscan_url: string | null;
+  sandbox: boolean;
+  licenses: Array<{
+    model_id: number; kind: string; cert_id: string; serial: number;
+    verify_url: string; files: Array<{ kind: string; url: string; expires_at?: string | null }>;
+  }>;
+}
+
 export interface PaymentQuote {
   modelId: number;
   license: string;
@@ -120,6 +146,8 @@ export class PrintwrightClient {
   get(modelId: number): Promise<ModelDetails>;
   quote(options: QuoteOptions): Promise<PaymentQuote>;
   buy(options: PurchaseOptions): Promise<PurchaseReceipt>;
+  quoteBatch(options: { items: BatchItem[]; asset?: Asset }): Promise<BatchPaymentQuote>;
+  buyBatch(options: { items?: BatchItem[]; asset?: Asset; quote?: BatchPaymentQuote }): Promise<BatchPurchaseReceipt>;
   can(options: { certId: string; use: LicenseUse | string; qty?: number }): Promise<LicenseDecision>;
   verify(certId: string): Promise<CertificateProof>;
 }

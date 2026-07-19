@@ -71,4 +71,22 @@ class PurchaseTest < ActiveSupport::TestCase
     dupe = Purchase.new(license_offer: @offer, replay_key: SecureRandom.hex(32), payment_tx_id: "0.0.7@1.2")
     assert_raises(ActiveRecord::RecordNotUnique) { dupe.save!(validate: false) }
   end
+
+  test "one batch transaction may back several ordered purchases" do
+    batch = PurchaseBatch.create!(replay_key: SecureRandom.hex(32))
+    transaction_id = "0.0.7@9.8"
+    2.times do |position|
+      Purchase.create!(
+        license_offer: @offer, purchase_batch: batch, batch_position: position,
+        replay_key: SecureRandom.hex(32), payment_tx_id: transaction_id
+      )
+    end
+
+    assert_equal 2, Purchase.where(payment_tx_id: transaction_id).count
+    duplicate_position = Purchase.new(
+      license_offer: @offer, purchase_batch: batch, batch_position: 1,
+      replay_key: SecureRandom.hex(32), payment_tx_id: transaction_id
+    )
+    assert_raises(ActiveRecord::RecordNotUnique) { duplicate_position.save!(validate: false) }
+  end
 end

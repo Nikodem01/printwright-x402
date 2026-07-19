@@ -37,6 +37,17 @@ const proof = await buyer.verify(receipt.license.cert_id);
 console.log(receipt.hashscan_url, decision.allowed, decision.reason_code, proof.match);
 ```
 
+Print farms can settle up to 20 licenses sharing one direct payout destination with one x402
+payment. Each item still receives its own file grant and independently verifiable certificate:
+
+```js
+const batch = await buyer.buyBatch({
+  items: Array.from({ length: 3 }, () => ({ modelId: model.id, license: "commercial_unit" })),
+  asset: "usdc",
+});
+console.log(batch.transaction_id, batch.licenses.map(({ cert_id }) => cert_id));
+```
+
 `can()` needs no account or key. It asks the public structured-policy endpoint whether one
 certificate permits a named use and quantity, and returns a boolean, stable reason code, the
 permission object, and the anchored prose references. The prose remains the governing grant.
