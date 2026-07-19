@@ -194,6 +194,11 @@ class Api::V1::DownloadsController < Api::V1::BaseController
         url: api_v1_license_print_reports_url(license.cert_id),
         receipt_token: license.signed_id(purpose: "print-feedback")
       },
+      model_updates: {
+        url: api_v1_license_latest_version_url(license.cert_id),
+        download_url: api_v1_license_latest_version_file_url(license.cert_id),
+        receipt_token: license.signed_id(purpose: "model-updates")
+      },
       transaction_id: purchase.payment_tx_id,
       hashscan_url: "#{Hedera::Network.hashscan_base}/transaction/#{purchase.payment_tx_id}"
     }

@@ -6,3 +6,32 @@
   <p class="mono t-small">bundle <%= @model.file_hash.truncate(28) %></p>
 <% end %>
 <%= render "form", model: @model %>
+
+<% if @model.published? %>
+  <section class="section-stack">
+    <h2>Publish a file update</h2>
+    <p class="t-small">Paid x402 license holders can fetch the newest version. The original certified bundle stays unchanged.</p>
+    <%= form_with url: designer_model_versions_path(@model), scope: :model_version, multipart: true do |form| %>
+      <div class="field">
+        <%= form.label :file, "Printable file (STL, 3MF, or STEP)" %>
+        <%= form.file_field :file, accept: ".stl,.3mf,.step", required: true %>
+      </div>
+      <div class="field">
+        <%= form.label :changelog %>
+        <%= form.text_area :changelog, rows: 3, required: true %>
+      </div>
+      <%= form.submit "Publish update", class: "button" %>
+    <% end %>
+
+    <% if @model.model_versions.any? %>
+      <h3>Version history</h3>
+      <ul>
+        <% @model.model_versions.reverse_each do |version| %>
+          <li>v<%= version.number %> — <%= version.changelog %>
+            <span class="mono t-small"><%= version.anchored? ? "HCS ##{version.hcs_sequence_number}" : "HCS pending" %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+  </section>
+<% end %>

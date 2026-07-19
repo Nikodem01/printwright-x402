@@ -79,6 +79,23 @@ test("submit-cert serializes compactly and returns sequence number", async () =>
   assert.equal(calls.at(-1)[2], JSON.stringify(cert)); // no whitespace
 });
 
+test("submit-version accepts only a compact pwv-1 update event", async () => {
+  const version = { schema: "pwv-1", model_id: 48, version: 2, file_hash: `sha256:${"a".repeat(64)}` };
+  const res = await post("/submit-version", { version });
+  assert.equal(res.status, 200);
+  assert.equal(calls.at(-1)[2], JSON.stringify(version));
+
+  const invalid = await post("/submit-version", { version: { schema: "pwc-1" } });
+  assert.equal(invalid.status, 400);
+  assert.deepEqual(await invalid.json(), { error: "invalid_version_event" });
+});
+
+test("submit-version enforces the single-message limit", async () => {
+  const res = await post("/submit-version", { version: { schema: "pwv-1", pad: "x".repeat(1100) } });
+  assert.equal(res.status, 422);
+  assert.equal((await res.json()).error, "version_event_too_large");
+});
+
 test("submit-cert without cert is a 400", async () => {
   const res = await post("/submit-cert", {});
   assert.equal(res.status, 400);

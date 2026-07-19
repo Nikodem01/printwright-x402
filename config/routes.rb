@@ -8,6 +8,7 @@ Rails.application.routes.draw do
   namespace :designer do
     resources :models, except: %i[destroy show] do
       member { post :publish }
+      resources :versions, only: :create, controller: :model_versions
     end
     resources :imports, only: %i[index new create destroy]
     resource :identity, only: %i[show create], controller: :identity do
@@ -51,6 +52,8 @@ Rails.application.routes.draw do
       get "certificates/:cert_id", to: "certificates#show", as: :certificate
       get "licenses/:id/can", to: "licenses#can", as: :license_permission
       post "licenses/:cert_id/print_reports", to: "print_reports#create", as: :license_print_reports
+      get "licenses/:cert_id/latest-version", to: "model_versions#show", as: :license_latest_version
+      get "licenses/:cert_id/latest-version/file", to: "model_versions#file", as: :license_latest_version_file
       get "stats", to: "stats#show", as: :stats
       get "sandbox/topics/:topic_id/messages/:sequence_number", to: "sandbox#message",
           as: :sandbox_message

@@ -2,19 +2,19 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Nikodem01/printwright",
   "title": "Printwright",
-  "description": "Search and buy licensed 3D-printable models over x402 on Hedera, check structured permissions, then verify certificates.",
+  "description": "Search and buy licensed 3D-printable models over x402 on Hedera, check paid-holder updates and permissions, then verify certificates.",
   "repository": {
     "url": "https://github.com/Nikodem01/printwright-x402",
     "source": "github",
     "subfolder": "mcp"
   },
-  "version": "0.2.0",
+  "version": "0.3.0",
   "websiteUrl": "https://github.com/Nikodem01/printwright-x402",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "printwright-mcp",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "transport": {
         "type": "stdio"
       },

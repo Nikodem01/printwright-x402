@@ -211,6 +211,20 @@ export class PrintwrightClient {
     return body;
   }
 
+  async latestVersion({ certId, receiptToken } = {}) {
+    if (!certId?.trim()) throw new TypeError("certId is required");
+    if (!receiptToken?.trim()) throw new TypeError("receiptToken is required");
+    const url = this.url(`api/v1/licenses/${encodeURIComponent(certId)}/latest-version`);
+    const response = await this.fetch(url, {
+      headers: { accept: "application/json", authorization: `Bearer ${receiptToken}` },
+    });
+    const body = await jsonBody(response);
+    if (!response.ok) {
+      throw new PrintwrightError(`version check failed (${response.status})`, { status: response.status, body });
+    }
+    return body;
+  }
+
   url(path) {
     return new URL(path, this.baseUrl);
   }

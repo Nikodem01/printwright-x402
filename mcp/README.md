@@ -26,6 +26,9 @@ account with Printwright, no card — just a funded Hedera testnet account.
   named use and quantity, returning yes/no, a stable reason code, the permission object, and
   the anchored prose references. For example, one `commercial_unit` certificate permits one
   commercial print but not three. No payment credentials are needed.
+- **`get_latest_version`** — uses the `model_updates.receipt_token` from a paid x402 receipt to
+  compare the original certified hash with the latest file hash, read the changelog and HCS
+  anchor, and obtain the authenticated download endpoint. Version files are not public.
 
 ## Environment variables
 
@@ -39,7 +42,8 @@ account with Printwright, no card — just a funded Hedera testnet account.
 | `PRINTWRIGHT_SANDBOX` | no | `false` | Set exactly `true` to use Printwright's local mock facilitator and throwaway topic. No buyer credentials or funds are needed; receipts and artifacts are labeled sandbox and have no on-chain or license value. |
 
 `BUYER_ACCOUNT_ID` and `BUYER_PRIVATE_KEY` are only required to call `buy_license`;
-`search_models`, `get_model`, `check_license`, and `verify_certificate` need none of them.
+`search_models`, `get_model`, `check_license`, `get_latest_version`, and `verify_certificate`
+need none of them. `get_latest_version` does require the paid receipt capability.
 
 ## Mount it in Claude Code / Claude Desktop
 

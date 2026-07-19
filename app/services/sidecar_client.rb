@@ -21,6 +21,13 @@ class SidecarClient
     end
   end
 
+  # => { "topicId" => ..., "sequenceNumber" => ..., "transactionId" => ... }
+  def submit_version(version)
+    post("/submit-version", { version: version }) do |body|
+      raise Unavailable, body["error"] if body["error"] == "no_topic_configured"
+    end
+  end
+
   # => { "transactionId" => ... } — a batched treasury -> designers transfer.
   # Money moves on 200; the CALLER records it (nothing here is retried).
   def payout(token_id:, transfers:, memo: nil)

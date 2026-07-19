@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_19_230000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_19_233000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -169,6 +169,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_230000) do
     t.index ["model3d_id"], name: "index_model_files_on_model3d_id"
   end
 
+  create_table "model_versions", force: :cascade do |t|
+    t.text "changelog", null: false
+    t.string "changelog_hash", null: false
+    t.datetime "created_at", null: false
+    t.jsonb "event_json", default: {}, null: false
+    t.string "file_hash", null: false
+    t.string "file_kind", null: false
+    t.bigint "hcs_sequence_number"
+    t.string "hcs_topic_id"
+    t.string "hcs_transaction_id"
+    t.bigint "model3d_id", null: false
+    t.integer "number", null: false
+    t.datetime "published_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["model3d_id", "number"], name: "index_model_versions_on_model3d_id_and_number", unique: true
+    t.index ["model3d_id"], name: "index_model_versions_on_model3d_id"
+  end
+
   create_table "models3d", force: :cascade do |t|
     t.bigint "catalog_import_id"
     t.string "category"
@@ -323,6 +341,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_230000) do
   add_foreign_key "license_offers", "models3d"
   add_foreign_key "licenses", "purchases"
   add_foreign_key "model_files", "models3d"
+  add_foreign_key "model_versions", "models3d"
   add_foreign_key "models3d", "catalog_imports"
   add_foreign_key "models3d", "designers"
   add_foreign_key "print_reports", "licenses"

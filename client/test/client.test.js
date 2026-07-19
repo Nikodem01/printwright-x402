@@ -11,6 +11,7 @@ let paidBatchRequests = 0;
 let lastBatchBodies = [];
 let lastSearchParams;
 let lastPrintReport;
+let lastVersionAuthorization;
 
 const certificate = {
   cert_id: "pw-000007",
@@ -130,6 +131,15 @@ before(async () => {
       lastPrintReport = await requestBody(request);
       response.statusCode = 201;
       return response.end(JSON.stringify({ cert_id: "pw-000007", successful_prints: 1 }));
+    }
+    if (url.pathname === "/api/v1/licenses/pw-000007/latest-version") {
+      lastVersionAuthorization = request.headers.authorization;
+      return response.end(JSON.stringify({
+        cert_id: "pw-000007", version: 2, file_kind: "stl",
+        file_hash: "sha256:new", original_certificate_hash: "sha256:abc",
+        changelog: "Stronger hinge.", hcs_topic_id: "0.0.9", hcs_sequence_number: 61,
+        download_url: `${baseUrl}/api/v1/licenses/pw-000007/latest-version/file`,
+      }));
     }
     if (url.pathname === "/api/v1/certificates/pw-000008") {
       return response.end(JSON.stringify({
@@ -275,6 +285,16 @@ test("reports a successful print with the paid receipt capability", async () => 
 
   assert.deepEqual(lastPrintReport, { receipt_token: "receipt-7" });
   assert.deepEqual(result, { cert_id: "pw-000007", successful_prints: 1 });
+});
+
+test("checks the latest model version with the paid receipt capability", async () => {
+  const client = new PrintwrightClient({ baseUrl });
+  const result = await client.latestVersion({ certId: "pw-000007", receiptToken: "updates-7" });
+
+  assert.equal(lastVersionAuthorization, "Bearer updates-7");
+  assert.equal(result.version, 2);
+  assert.equal(result.original_certificate_hash, "sha256:abc");
+  assert.equal(result.file_hash, "sha256:new");
 });
 
 test("reports mirror indexing lag without turning an anchored certificate into an error", async () => {

@@ -41,6 +41,12 @@ await buyer.reportPrint({
   certId: receipt.license.cert_id,
   receiptToken: receipt.print_feedback.receipt_token,
 });
+
+const latest = await buyer.latestVersion({
+  certId: receipt.license.cert_id,
+  receiptToken: receipt.model_updates.receipt_token,
+});
+console.log(latest.version, latest.original_certificate_hash, latest.file_hash);
 ```
 
 The receipt capability is returned only by a real paid delivery. A successful-print report is

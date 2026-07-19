@@ -1,6 +1,6 @@
 {
   "name": "printwright-mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "mcpName": "io.github.Nikodem01/printwright",
   "description": "MCP server for Printwright: search, inspect, buy via x402 on Hedera, check structured license permissions, and verify certificates against the public mirror node.",
   "type": "module",

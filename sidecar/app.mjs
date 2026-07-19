@@ -1,7 +1,7 @@
 // HTTP layer, kept separate from the SDK so tests can inject a fake `hedera`.
 import http from "node:http";
 
-const MAX_CERT_BYTES = 1024; // HCS single-chunk message limit — certs must fit
+const MAX_MESSAGE_BYTES = 1024; // keep provenance records in one HCS message
 
 export function createApp({ hedera, token, topicId }) {
   async function handle(req, res) {
@@ -14,7 +14,7 @@ export function createApp({ hedera, token, topicId }) {
       return send(200, { ok: true, network: hedera.network, topicId: topicId() ?? null });
     }
 
-    const routes = ["/create-topic", "/submit-cert", "/payout", "/create-collection", "/mint-airdrop"];
+    const routes = ["/create-topic", "/submit-cert", "/submit-version", "/payout", "/create-collection", "/mint-airdrop"];
     if (req.method !== "POST" || !routes.includes(req.url)) {
       return send(404, { error: "not_found" });
     }
@@ -88,17 +88,25 @@ export function createApp({ hedera, token, topicId }) {
         }));
       }
 
-      // /submit-cert
-      if (!body.cert || typeof body.cert !== "object") {
+      // Certificate and version events share the configured provenance topic,
+      // but remain distinct schemas so one can never masquerade as the other.
+      const isVersion = req.url === "/submit-version";
+      if (isVersion && (!body.version || typeof body.version !== "object" || body.version.schema !== "pwv-1")) {
+        return send(400, { error: "invalid_version_event" });
+      }
+      if (!isVersion && (!body.cert || typeof body.cert !== "object")) {
         return send(400, { error: "missing_cert" });
       }
       const target = body.topicId || topicId();
       if (!target) {
         return send(400, { error: "no_topic_configured" });
       }
-      const message = JSON.stringify(body.cert); // compact, no whitespace
-      if (Buffer.byteLength(message, "utf8") > MAX_CERT_BYTES) {
-        return send(422, { error: "cert_too_large", limit: MAX_CERT_BYTES });
+      const message = JSON.stringify(isVersion ? body.version : body.cert); // compact, no whitespace
+      if (Buffer.byteLength(message, "utf8") > MAX_MESSAGE_BYTES) {
+        return send(422, {
+          error: isVersion ? "version_event_too_large" : "cert_too_large",
+          limit: MAX_MESSAGE_BYTES,
+        });
       }
       const result = await hedera.submitMessage(target, message);
       return send(200, result);

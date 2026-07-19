@@ -9,6 +9,16 @@ import http from "node:http";
 test("stdio handshake lists the tools and check_license delegates to the public API", async (t) => {
   const marketplace = http.createServer((request, response) => {
     const url = new URL(request.url, `http://${request.headers.host}`);
+    if (url.pathname === "/api/v1/licenses/pw-000007/latest-version") {
+      assert.equal(request.headers.authorization, "Bearer update-receipt-7");
+      response.setHeader("content-type", "application/json");
+      return response.end(JSON.stringify({
+        cert_id: "pw-000007", version: 2,
+        original_certificate_hash: "sha256:old", file_hash: "sha256:new",
+        changelog: "Stronger hinge.", hcs_topic_id: "0.0.9", hcs_sequence_number: 61,
+        download_url: "https://printwright.example/api/v1/licenses/pw-000007/latest-version/file",
+      }));
+    }
     assert.equal(url.pathname, "/api/v1/licenses/pw-000007/can");
     assert.equal(url.searchParams.get("use"), "commercial_print");
     assert.equal(url.searchParams.get("qty"), "3");
@@ -54,6 +64,7 @@ test("stdio handshake lists the tools and check_license delegates to the public 
   assert.ok(tools.some((t) => /buy/.test(t)), `no buy tool in ${tools}`);
   assert.ok(tools.some((t) => /search|list/.test(t)), `no search tool in ${tools}`);
   assert.ok(tools.includes("check_license"), `no check_license tool in ${tools}`);
+  assert.ok(tools.includes("get_latest_version"), `no get_latest_version tool in ${tools}`);
 
   send({ jsonrpc: "2.0", id: 3, method: "tools/call", params: {
     name: "check_license", arguments: { cert_id: "pw-000007", use: "commercial_print", qty: 3 } } });
@@ -63,6 +74,18 @@ test("stdio handshake lists the tools and check_license delegates to the public 
   const decision = JSON.parse(toolResult.content[0].text);
   assert.equal(decision.allowed, false);
   assert.equal(decision.reason_code, "commercial_unit_limit");
+
+  send({ jsonrpc: "2.0", id: 4, method: "tools/call", params: {
+    name: "get_latest_version", arguments: {
+      cert_id: "pw-000007", receipt_token: "update-receipt-7",
+    } } });
+  await waitFor(() => messages.some((m) => m.id === 4));
+  const versionResult = messages.find((m) => m.id === 4).result;
+  assert.notEqual(versionResult.isError, true, versionResult.content[0].text);
+  const version = JSON.parse(versionResult.content[0].text);
+  assert.equal(version.version, 2);
+  assert.equal(version.original_certificate_hash, "sha256:old");
+  assert.equal(version.file_hash, "sha256:new");
 });
 
 function waitFor(ready, ms = 5000) {

@@ -34,7 +34,7 @@ function parseSpendCap(raw) {
   return cap;
 }
 
-const server = new McpServer({ name: "printwright", version: "0.2.0" });
+const server = new McpServer({ name: "printwright", version: "0.3.0" });
 
 const json = (data) => ({ content: [{ type: "text", text: JSON.stringify(data, null, 2) }] });
 const fail = (message) => ({ isError: true, content: [{ type: "text", text: message }] });
@@ -118,6 +118,7 @@ server.registerTool(
       cert_id: result.license.cert_id, verify_url: result.verify_url,
       transaction_id: result.transaction_id, hashscan_url: result.hashscan_url,
       sandbox_url: result.sandbox_url,
+      model_updates: result.model_updates,
     });
   }
 );
@@ -154,6 +155,23 @@ server.registerTool(
     else if (proof.match === null) proof.note ||= "HCS mirror indexing is still in progress — retry shortly";
     return json(proof);
   }
+);
+
+server.registerTool(
+  "get_latest_version",
+  {
+    description: "Check the newest printable file available to a paid x402 license holder. " +
+      "Requires the model_updates receipt_token returned by buy_license; reports the original " +
+      "certified hash, latest file hash, changelog, HCS anchor, and authenticated download endpoint.",
+    inputSchema: {
+      cert_id: z.string().describe("certificate id returned by buy_license, e.g. pw-000003"),
+      receipt_token: z.string().describe("model_updates.receipt_token from the paid purchase receipt"),
+    },
+  },
+  async ({ cert_id, receipt_token }) => json({
+    ...await client.latestVersion({ certId: cert_id, receiptToken: receipt_token }),
+    download_authorization: "Send the same receipt_token as an Authorization: Bearer header.",
+  })
 );
 
 await server.connect(new StdioServerTransport());

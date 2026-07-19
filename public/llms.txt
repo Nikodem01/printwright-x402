@@ -43,7 +43,8 @@ and the only downloadable artifact is a non-printable text receipt.
 Every endpoint returns 429 {"error":"rate_limited","retry_after":60} (and a `Retry-After: 60`
 header) once its per-minute limit is exceeded: /models and /models/{id} and
 /certificates/{cert_id}, /licenses/{id}/can, and /stats allow 120/min, /models/{id}/download allows 30/min, /files/{token}
-allows 60/min, /licenses/{cert_id}/print_reports allows 20/min, and /batches allows 15/min. Back off
+and /licenses/{cert_id}/latest-version allow 60/min, /licenses/{cert_id}/print_reports allows
+20/min, and /batches allows 15/min. Back off
 and retry after the given number of seconds.
 
 ## Endpoints
@@ -66,6 +67,10 @@ and retry after the given number of seconds.
   delivery after a successful print. One idempotent self-report per license; invalid, cross-license,
   and sandbox capabilities create no report. This proves paid-receipt possession, not physical
   inspection, and never changes the license or ledger.
+- /api/v1/licenses/{cert_id}/latest-version: GET with Authorization: Bearer plus the private
+  model_updates.receipt_token from a real paid delivery. Returns version 1 (the original certified
+  bundle) or the newest additive version, both hashes, changelog, HCS position, and a download URL.
+  Fetch /latest-version/file with the same Bearer token. Sandbox has no update capability.
 - /api/v1/stats: open-books snapshot separating the mirror-derived HCS message count from this
   deployment's immutable per-asset settlement/split/refund ledger; includes raw proof URLs
 - /api/v1/sandbox/*: explicitly fake transaction, receipt, and local topic-message artifacts
@@ -75,7 +80,8 @@ and retry after the given number of seconds.
 ## Reference clients
 
 - scripts/buy.mjs in the repo — one-command purchase
-- MCP server (mcp/server.mjs) — search_models, get_model, buy_license, check_license, verify_certificate
+- MCP server (mcp/server.mjs) — search_models, get_model, buy_license, check_license,
+  get_latest_version, verify_certificate
 - Third-party verifier — `npx --package ./verifier printwright-verify <cert_id|mirror-message-url>`
   (shortens to `npx printwright-verify` after registry release) queries Hedera's mirror node
   directly and validates the PWC-1 payload without requesting this marketplace

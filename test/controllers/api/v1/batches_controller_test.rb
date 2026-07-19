@@ -70,6 +70,9 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
     assert(body.fetch("licenses").all? do |item|
       License.find_signed(item.dig("print_feedback", "receipt_token"), purpose: "print-feedback").cert_id == item["cert_id"]
     end)
+    assert(body.fetch("licenses").all? do |item|
+      License.find_signed(item.dig("model_updates", "receipt_token"), purpose: "model-updates").cert_id == item["cert_id"]
+    end)
     assert_equal [ "delivered" ], Purchase.distinct.pluck(:status)
     assert_equal 3, Purchase.count
     assert_equal [ "0.0.7162784@1784457000.123456789" ], Purchase.distinct.pluck(:payment_tx_id)
@@ -216,6 +219,7 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 3, response.parsed_body.fetch("licenses").length
     assert(response.parsed_body.fetch("licenses").all? { |item| item.dig("files", 0, "kind") == "sandbox_receipt" })
     assert(response.parsed_body.fetch("licenses").none? { |item| item.key?("print_feedback") })
+    assert(response.parsed_body.fetch("licenses").none? { |item| item.key?("model_updates") })
     assert PurchaseBatch.sole.sandbox?
     assert(Purchase.all.all? { |purchase| purchase.license.cert_json["sandbox"] == true })
   end

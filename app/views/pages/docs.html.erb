@@ -240,6 +240,21 @@ console.log(decision.allowed, decision.reason_code);</pre>
     buyer self-report—not sensor evidence, laboratory testing, or independent inspection. The
     report does not alter the license certificate or payment ledger.</p>
 
+  <h2>Paid-holder model updates</h2>
+  <p class="t-small">A real x402 delivery also includes a private
+    <code class="mono">model_updates.receipt_token</code>. Use it to check and download the newest
+    file for that certificate. Version 1 remains the original PWC-1 bundle; publishing version 2+
+    never rewrites its certified hash. Each update records the new file hash and a changelog hash
+    as a compact PWV-1 message on HCS.</p>
+  <pre class="mono t-small" style="overflow-x:auto">const latest = await printwright.latestVersion({
+  certId: receipt.license.cert_id,
+  receiptToken: receipt.model_updates.receipt_token,
+});
+// Compare latest.original_certificate_hash with latest.file_hash.
+// GET latest.download_url with the same Authorization: Bearer token.</pre>
+  <p class="t-small">MCP clients can call <code class="mono">get_latest_version</code> with the
+    same certificate id and receipt capability. Sandbox receipts do not receive update access.</p>
+
   <h2 id="pwc-1">PWC-1 certificate standard</h2>
   <p class="t-small"><strong>PWC-1</strong> is the frozen version-1 JSON payload stored as one
     Hedera Consensus Service message for each issued print license. Its normative

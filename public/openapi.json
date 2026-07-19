@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Printwright API",
-    "version": "1.8.0",
+    "version": "1.9.0",
     "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; every purchase mints a public HCS license certificate.",
     "contact": { "url": "https://github.com/Nikodem01/printwright-x402" },
     "x-guidance": "Search GET /api/v1/models, inspect offers, then buy one license with GET /api/v1/models/{id}/download or up to 20 licenses with POST /api/v1/batches. An unpaid request returns an x402 v2 challenge; sign one exact payment option and retry the identical request. Batch items must share one payTo account. For a zero-funds rehearsal, send X-Sandbox: true on both requests; sandbox artifacts are explicitly not payments or licenses."
@@ -212,6 +212,38 @@
         }
       }
     },
+    "/licenses/{cert_id}/latest-version": {
+      "get": {
+        "operationId": "getLatestModelVersion",
+        "summary": "Check the latest printable file for a paid x402 license",
+        "description": "Requires the private model_updates.receipt_token returned by the real non-sandbox delivery as an Authorization: Bearer header. Version 1 is the original certified bundle. Later versions are additive: the original PWC-1 model_hash never changes, while each changelog hash and replacement file hash are anchored in a PWV-1 HCS event.",
+        "security": [{ "PaidReceipt": [] }],
+        "parameters": [{ "name": "cert_id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "pw-000059" }],
+        "responses": {
+          "200": { "description": "Latest version metadata and authenticated download endpoint", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ModelVersionReceipt" } } } },
+          "401": { "description": "receipt_required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "paid_license_required — sandbox or non-delivered license", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/licenses/{cert_id}/latest-version/file": {
+      "get": {
+        "operationId": "downloadLatestModelVersion",
+        "summary": "Download the latest printable file for a paid x402 license",
+        "description": "Send the same model_updates.receipt_token as an Authorization: Bearer header. Redirects to version 1's original file when no update exists, otherwise to the highest published version file.",
+        "security": [{ "PaidReceipt": [] }],
+        "parameters": [{ "name": "cert_id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "pw-000059" }],
+        "responses": {
+          "302": { "description": "Redirect to the latest printable file blob" },
+          "401": { "description": "receipt_required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "403": { "description": "paid_license_required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
     "/stats": {
       "get": {
         "operationId": "getOpenBooks",
@@ -285,6 +317,9 @@
     }
   },
   "components": {
+    "securitySchemes": {
+      "PaidReceipt": { "type": "http", "scheme": "bearer", "description": "Per-license model_updates.receipt_token from a real x402 delivery" }
+    },
     "responses": {
       "NotFound": { "description": "Not found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
       "RateLimited": {
@@ -400,6 +435,34 @@
           "receipt_token": { "type": "string", "writeOnly": true }
         }
       },
+      "ModelUpdatesCapability": {
+        "type": "object",
+        "required": ["url", "download_url", "receipt_token"],
+        "properties": {
+          "url": { "type": "string", "format": "uri" },
+          "download_url": { "type": "string", "format": "uri" },
+          "receipt_token": { "type": "string", "writeOnly": true }
+        }
+      },
+      "ModelVersionReceipt": {
+        "type": "object",
+        "required": ["cert_id", "version", "file_kind", "file_hash", "original_certificate_hash", "download_url"],
+        "properties": {
+          "cert_id": { "type": "string" },
+          "version": { "type": "integer", "minimum": 1 },
+          "file_kind": { "type": "string", "enum": ["stl", "3mf", "step"] },
+          "file_hash": { "type": "string" },
+          "original_certificate_hash": { "type": "string", "description": "Immutable PWC-1 model_hash; differs from file_hash after an update" },
+          "changelog": { "type": ["string", "null"] },
+          "changelog_hash": { "type": ["string", "null"] },
+          "published_at": { "type": ["string", "null"], "format": "date-time" },
+          "hcs_topic_id": { "type": ["string", "null"] },
+          "hcs_sequence_number": { "type": ["integer", "null"] },
+          "hcs_transaction_id": { "type": ["string", "null"] },
+          "hcs_mirror_url": { "type": ["string", "null"], "format": "uri" },
+          "download_url": { "type": "string", "format": "uri" }
+        }
+      },
       "PrintReportReceipt": {
         "type": "object",
         "required": ["cert_id", "successful_prints"],
@@ -509,6 +572,7 @@
                 "cert_id": { "type": "string" }, "serial": { "type": "integer" },
                 "verify_url": { "type": "string" },
                 "print_feedback": { "$ref": "#/components/schemas/PrintFeedbackCapability" },
+                "model_updates": { "$ref": "#/components/schemas/ModelUpdatesCapability" },
                 "files": { "type": "array", "items": { "type": "object" } }
               }
             }
@@ -526,6 +590,7 @@
           "certificate": { "type": ["object", "null"] },
           "verify_url": { "type": "string" },
           "print_feedback": { "$ref": "#/components/schemas/PrintFeedbackCapability" },
+          "model_updates": { "$ref": "#/components/schemas/ModelUpdatesCapability" },
           "transaction_id": { "type": "string" },
           "hashscan_url": { "type": ["string", "null"] },
           "sandbox": { "type": "boolean", "description": "true only for the mock-facilitator rehearsal" },

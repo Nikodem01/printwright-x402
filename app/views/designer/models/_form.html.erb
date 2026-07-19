@@ -53,9 +53,13 @@
         <% end %>
       </div>
     <% end %>
-    <label class="t-small">Printable files (STL/3MF/STEP)
-      <%= file_field_tag "model3d[printable_files][]", multiple: true, accept: ".stl,.3mf,.step,.zip" %>
-    </label>
+    <% if model.published? %>
+      <p class="t-small">The certified printable bundle is frozen. Use “Publish a file update” below.</p>
+    <% else %>
+      <label class="t-small">Printable files (STL/3MF/STEP)
+        <%= file_field_tag "model3d[printable_files][]", multiple: true, accept: ".stl,.3mf,.step,.zip" %>
+      </label>
+    <% end %>
     <label class="t-small">Render images
       <%= file_field_tag "model3d[render_files][]", multiple: true, accept: "image/*" %>
     </label>

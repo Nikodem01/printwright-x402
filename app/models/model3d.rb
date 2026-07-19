@@ -48,6 +48,7 @@ class Model3d < ApplicationRecord
   belongs_to :designer
   belongs_to :catalog_import, optional: true
   has_many :model_files, -> { order(:position) }, dependent: :destroy
+  has_many :model_versions, -> { order(:number) }, dependent: :destroy
   # Personal is the storefront default; keep preload/query order deterministic
   # so a commercial offer cannot become checked merely because PostgreSQL
   # returned rows in a different physical order.

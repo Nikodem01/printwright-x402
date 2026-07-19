@@ -38,6 +38,10 @@ class Designer::ModelsController < Designer::BaseController
   # bytes, sorted by filename, so the certificate anchor is deterministic.
   def publish
     @model = find_model
+    if @model.published?
+      return redirect_to edit_designer_model_path(@model),
+        alert: "The certified bundle is frozen. Publish a version update instead."
+    end
     files = @model.printable_files.select { |f| f.file.attached? }
     return redirect_to edit_designer_model_path(@model), alert: "Attach at least one printable file first." if files.empty?
     return redirect_to edit_designer_model_path(@model), alert: "Add at least one license offer first." if @model.license_offers.none?
@@ -132,7 +136,12 @@ class Designer::ModelsController < Designer::BaseController
   def attach_uploads
     rejected = []
     printable_attached = false
-    Array(params.dig(:model3d, :printable_files)).reject(&:blank?).each do |upload|
+    printable_uploads = Array(params.dig(:model3d, :printable_files)).reject(&:blank?)
+    if @model.published? && printable_uploads.any?
+      rejected << "the certified bundle is frozen; use Publish update"
+      printable_uploads = []
+    end
+    printable_uploads.each do |upload|
       ext = upload.original_filename.split(".").last.to_s.downcase
       kind = ModelFile::KINDS.include?(ext) ? ext : "stl"
       if (reason = Uploads::Validator.reason_to_reject(upload, kind: kind))

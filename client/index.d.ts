@@ -91,12 +91,35 @@ export interface BatchPurchaseReceipt {
     model_id: number; kind: string; cert_id: string; serial: number;
     verify_url: string; files: Array<{ kind: string; url: string; expires_at?: string | null }>;
     print_feedback?: PrintFeedbackCapability;
+    model_updates?: ModelUpdatesCapability;
   }>;
 }
 
 export interface PrintFeedbackCapability {
   url: string;
   receipt_token: string;
+}
+
+export interface ModelUpdatesCapability {
+  url: string;
+  download_url: string;
+  receipt_token: string;
+}
+
+export interface ModelVersionReceipt {
+  cert_id: string;
+  version: number;
+  file_kind: string;
+  file_hash: string;
+  original_certificate_hash: string;
+  changelog?: string | null;
+  changelog_hash?: string | null;
+  published_at?: string | null;
+  hcs_topic_id?: string | null;
+  hcs_sequence_number?: number | null;
+  hcs_transaction_id?: string | null;
+  hcs_mirror_url?: string | null;
+  download_url: string;
 }
 
 export interface PrintReportReceipt {
@@ -121,6 +144,7 @@ export interface PurchaseReceipt {
   transaction_id: string;
   hashscan_url: string | null;
   print_feedback?: PrintFeedbackCapability;
+  model_updates?: ModelUpdatesCapability;
   sandbox?: boolean;
   warning?: string;
   sandbox_url?: string;
@@ -168,6 +192,7 @@ export class PrintwrightClient {
   buyBatch(options: { items?: BatchItem[]; asset?: Asset; webhook?: BatchWebhook; quote?: BatchPaymentQuote }): Promise<BatchPurchaseReceipt>;
   can(options: { certId: string; use: LicenseUse | string; qty?: number }): Promise<LicenseDecision>;
   reportPrint(options: { certId: string; receiptToken: string }): Promise<PrintReportReceipt>;
+  latestVersion(options: { certId: string; receiptToken: string }): Promise<ModelVersionReceipt>;
   verify(certId: string): Promise<CertificateProof>;
 }
 
