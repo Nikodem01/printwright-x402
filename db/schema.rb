@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_19_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_19_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -154,6 +154,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_140000) do
   end
 
   create_table "models3d", force: :cascade do |t|
+    t.string "category"
+    t.string "collections", default: [], null: false, array: true
     t.datetime "created_at", null: false
     t.text "description"
     t.bigint "designer_id", null: false
@@ -167,6 +169,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_140000) do
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.datetime "warranty_accepted_at"
+    t.index ["category"], name: "index_models3d_on_category"
+    t.index ["collections"], name: "index_models3d_on_collections", using: :gin
     t.index ["designer_id"], name: "index_models3d_on_designer_id"
     t.index ["embedding"], name: "index_models3d_on_embedding", opclass: :vector_cosine_ops, using: :hnsw
     t.index ["slug"], name: "index_models3d_on_slug", unique: true

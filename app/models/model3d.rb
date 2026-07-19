@@ -1,4 +1,50 @@
 class Model3d < ApplicationRecord
+  CATEGORIES = {
+    "desk-organization" => {
+      name: "Desk organization",
+      description: "Stands, trays, clips, and holders that earn their space on a work surface."
+    },
+    "home-and-garden" => {
+      name: "Home & garden",
+      description: "Small practical objects for plants, walls, shelves, and everyday rooms."
+    },
+    "kitchen-and-dining" => {
+      name: "Kitchen & dining",
+      description: "Simple measuring, storing, serving, and cleanup helpers."
+    },
+    "workshop-tools" => {
+      name: "Workshop tools",
+      description: "Jigs, gauges, guides, and light-duty helpers for the maker bench."
+    },
+    "replacement-parts" => {
+      name: "Replacement parts",
+      description: "Adaptable knobs, feet, pins, and fittings for considered repairs."
+    },
+    "toys-and-games" => {
+      name: "Toys & games",
+      description: "Desk toys, tabletop pieces, and playful calibration prints."
+    }
+  }.freeze
+
+  COLLECTIONS = {
+    "support-free-essentials" => {
+      name: "Support-free essentials",
+      description: "Straightforward bed orientations with no support material declared."
+    },
+    "under-an-hour" => {
+      name: "Under an hour",
+      description: "Compact models with honest estimated print times below sixty minutes."
+    },
+    "small-space" => {
+      name: "Small-space wins",
+      description: "Useful prints selected for compact desks, shelves, and apartments."
+    },
+    "maker-basics" => {
+      name: "Maker basics",
+      description: "Calibration and workshop staples worth keeping near the printer."
+    }
+  }.freeze
+
   belongs_to :designer
   has_many :model_files, -> { order(:position) }, dependent: :destroy
   # Personal is the storefront default; keep preload/query order deterministic
@@ -13,6 +59,8 @@ class Model3d < ApplicationRecord
 
   validates :title, presence: true
   validates :slug, presence: true, uniqueness: true
+  validates :category, inclusion: { in: CATEGORIES.keys }, allow_blank: true
+  validate :collections_are_known
 
   after_commit :enqueue_embedding, on: %i[create update]
 
@@ -83,7 +131,15 @@ class Model3d < ApplicationRecord
   # The model's searchable identity fed to Search::Embedder — one method so
   # re-embedding is deterministic and testable (EmbedModelJob, search:reindex).
   def searchable_text
-    [ title, description, tags.join(" ") ].reject(&:blank?).join("\n")
+    [ title, description, category, collections.join(" "), tags.join(" ") ].reject(&:blank?).join("\n")
+  end
+
+  def self.category_definition(key)
+    CATEGORIES.fetch(key.to_s) { raise ActiveRecord::RecordNotFound, "unknown catalog category" }
+  end
+
+  def self.collection_definition(key)
+    COLLECTIONS.fetch(key.to_s) { raise ActiveRecord::RecordNotFound, "unknown catalog collection" }
   end
 
   def render_file
@@ -100,11 +156,16 @@ class Model3d < ApplicationRecord
 
   private
 
+  def collections_are_known
+    errors.add(:collections, "contains an unknown collection") unless (collections - COLLECTIONS.keys).empty?
+  end
+
   # New and edited models get embeddings without a manual step — but only
   # when the text that feeds the embedding actually changed, so an unrelated
   # save (e.g. status flip) doesn't burn an API call.
   def enqueue_embedding
-    return unless saved_change_to_title? || saved_change_to_description? || saved_change_to_tags?
+    return unless saved_change_to_title? || saved_change_to_description? || saved_change_to_category? ||
+                  saved_change_to_collections? || saved_change_to_tags?
 
     EmbedModelJob.perform_later(id)
   end

@@ -11,8 +11,12 @@ if ! command -v openscad >/dev/null 2>&1; then
 fi
 
 models=(
-  bag-hook beaver-with-hat cable-clip calibration-cube dice-d6 gear-toy
-  hex-organizer phone-stand planter-mini vase-spiral wall-bracket whistle
+  bag-hook bag-sealer beaver-with-hat business-card-holder cable-clip cable-comb
+  calibration-cube corner-jig dice-d6 drawer-label-clip drill-guide furniture-foot
+  gear-toy headphone-stand hex-coaster hex-organizer hinge-pin hose-adapter
+  measuring-scoop mini-funnel pen-tray phone-stand picture-stand plant-saucer
+  plant-trellis planter-mini puzzle-tile soap-dish spacer-set spinning-top star-knob
+  tealight-lantern tube-squeezer vase-spiral wall-bracket whistle
 )
 
 for model in "${models[@]}"; do

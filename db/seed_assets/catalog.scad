@@ -169,6 +169,218 @@ module hex_organizer() {
   }
 }
 
+module headphone_stand() {
+  union() {
+    cube([80, 70, 6]);
+    translate([34, 29, 6]) cube([12, 12, 124]);
+    translate([5, 24, 130]) cube([70, 22, 12]);
+  }
+}
+
+module pen_tray() {
+  difference() {
+    cube([160, 65, 16]);
+    translate([3, 3, 3]) cube([154, 59, 15]);
+  }
+}
+
+module cable_comb() {
+  union() {
+    cube([90, 25, 6]);
+    for (x = [10, 26, 42, 58, 74]) translate([x, 0, 6]) cube([6, 25, 20]);
+  }
+}
+
+module label_clip() {
+  linear_extrude(height = 8)
+    difference() {
+      square([60, 22]);
+      translate([4, 5]) square([52, 12]);
+      translate([55, 5]) square([6, 12]);
+    }
+}
+
+module soap_dish() {
+  difference() {
+    cube([110, 70, 12]);
+    for (x = [20, 40, 60, 80, 100], y = [20, 50])
+      translate([x, y, -1]) cylinder(h = 14, r = 4, $fn = 28);
+  }
+}
+
+module plant_trellis() {
+  linear_extrude(height = 4)
+    union() {
+      difference() {
+        square([100, 140]);
+        translate([6, 6]) square([88, 128]);
+      }
+      translate([47, 0]) square([6, 140]);
+      for (y = [35, 70, 105]) translate([0, y]) square([100, 5]);
+    }
+}
+
+module tealight_lantern() {
+  difference() {
+    cylinder(h = 80, r = 38, $fn = 72);
+    translate([0, 0, 3]) cylinder(h = 79, r = 34, $fn = 72);
+    for (z = [27, 53], a = [0 : 45 : 135])
+      rotate([0, 0, a]) translate([0, 0, z]) rotate([0, 90, 0])
+        cylinder(h = 90, r = 5, center = true, $fn = 28);
+  }
+}
+
+module picture_stand() {
+  union() {
+    cube([100, 65, 5]);
+    translate([0, 0, 5]) cube([100, 8, 11]);
+    hull() {
+      translate([0, 50, 5]) cube([100, 8, 5]);
+      translate([0, 58, 80]) cube([100, 5, 5]);
+    }
+  }
+}
+
+module card_holder() {
+  union() {
+    cube([90, 50, 5]);
+    translate([0, 5, 5]) cube([90, 6, 15]);
+    translate([0, 39, 5]) cube([90, 6, 15]);
+  }
+}
+
+module plant_saucer() {
+  difference() {
+    cylinder(h = 8, r = 36, $fn = 72);
+    translate([0, 0, 3]) cylinder(h = 6, r = 31, $fn = 72);
+  }
+}
+
+module measuring_scoop() {
+  union() {
+    difference() {
+      cylinder(h = 25, r = 25, $fn = 72);
+      translate([0, 0, 3]) cylinder(h = 24, r = 21, $fn = 72);
+    }
+    translate([20, -8, 4]) cube([85, 16, 8]);
+  }
+}
+
+module bag_sealer() {
+  linear_extrude(height = 8)
+    difference() {
+      square([160, 20]);
+      translate([6, 5]) square([150, 10]);
+      translate([155, 4]) square([6, 12]);
+    }
+}
+
+module hex_coaster() {
+  difference() {
+    cylinder(h = 4, r = 45, $fn = 6);
+    translate([0, 0, 2]) cylinder(h = 3, r = 38, $fn = 6);
+  }
+}
+
+module mini_funnel() {
+  difference() {
+    cylinder(h = 70, r1 = 10, r2 = 42, $fn = 72);
+    translate([0, 0, 3]) cylinder(h = 69, r1 = 7, r2 = 39, $fn = 72);
+    translate([0, 0, -1]) cylinder(h = 8, r = 7, $fn = 36);
+  }
+}
+
+module tube_squeezer() {
+  linear_extrude(height = 8)
+    difference() {
+      square([100, 45]);
+      translate([10, 17]) square([75, 5]);
+      translate([91, 31]) circle(r = 5, $fn = 28);
+    }
+}
+
+module spacer_set() {
+  for (spec = [[8, 8, 3], [29, 9, 4], [50, 10, 5]])
+    translate([spec[0], 10, 0])
+      difference() {
+        cylinder(h = 8, r = spec[1], $fn = 36);
+        translate([0, 0, -1]) cylinder(h = 10, r = spec[2], $fn = 28);
+      }
+}
+
+module corner_jig() {
+  linear_extrude(height = 12)
+    difference() {
+      union() {
+        square([80, 15]);
+        square([15, 80]);
+      }
+      translate([7.5, 35]) circle(r = 3, $fn = 28);
+      translate([35, 7.5]) circle(r = 3, $fn = 28);
+    }
+}
+
+module drill_guide() {
+  difference() {
+    cube([80, 30, 18]);
+    for (spec = [[15, 2], [40, 3], [65, 4]])
+      translate([spec[0], 15, -1]) cylinder(h = 20, r = spec[1], $fn = 32);
+  }
+}
+
+module star_knob() {
+  linear_extrude(height = 14)
+    difference() {
+      union() {
+        circle(r = 16, $fn = 48);
+        for (a = [0 : 45 : 315]) translate([16 * cos(a), 16 * sin(a)]) circle(r = 8, $fn = 32);
+      }
+      circle(r = 3, $fn = 28);
+    }
+}
+
+module hinge_pin() {
+  union() {
+    cylinder(h = 60, r = 5, $fn = 36);
+    translate([0, 0, 60]) cylinder(h = 4, r = 9, $fn = 48);
+  }
+}
+
+module furniture_foot() {
+  union() {
+    cylinder(h = 25, r1 = 25, r2 = 22, $fn = 72);
+    translate([0, 0, 25]) cylinder(h = 15, r = 10, $fn = 48);
+  }
+}
+
+module hose_adapter() {
+  difference() {
+    union() {
+      cylinder(h = 30, r = 18, $fn = 64);
+      translate([0, 0, 30]) cylinder(h = 30, r = 14, $fn = 64);
+    }
+    translate([0, 0, -1]) cylinder(h = 62, r = 9, $fn = 48);
+  }
+}
+
+module puzzle_tile() {
+  linear_extrude(height = 5)
+    difference() {
+      union() {
+        square([60, 60]);
+        translate([30, 60]) circle(r = 6, $fn = 32);
+        translate([60, 30]) circle(r = 6, $fn = 32);
+      }
+      translate([30, 0]) circle(r = 6, $fn = 32);
+      translate([0, 30]) circle(r = 6, $fn = 32);
+    }
+}
+
+module spinning_top() {
+  rotate_extrude($fn = 72)
+    polygon([[0, 0], [2, 0], [25, 18], [18, 32], [6, 38], [6, 50], [0, 50]]);
+}
+
 color("#e26d5a") {
   if (model == "phone-stand") rotate([0, 0, 180]) phone_stand();
   else if (model == "cable-clip") cable_clip();
@@ -182,4 +394,28 @@ color("#e26d5a") {
   else if (model == "beaver-with-hat") rotate([0, 0, 180]) beaver();
   else if (model == "calibration-cube") calibration_cube();
   else if (model == "hex-organizer") hex_organizer();
+  else if (model == "headphone-stand") headphone_stand();
+  else if (model == "pen-tray") pen_tray();
+  else if (model == "cable-comb") cable_comb();
+  else if (model == "drawer-label-clip") label_clip();
+  else if (model == "soap-dish") soap_dish();
+  else if (model == "plant-trellis") plant_trellis();
+  else if (model == "tealight-lantern") tealight_lantern();
+  else if (model == "picture-stand") picture_stand();
+  else if (model == "business-card-holder") card_holder();
+  else if (model == "plant-saucer") plant_saucer();
+  else if (model == "measuring-scoop") measuring_scoop();
+  else if (model == "bag-sealer") bag_sealer();
+  else if (model == "hex-coaster") hex_coaster();
+  else if (model == "mini-funnel") mini_funnel();
+  else if (model == "tube-squeezer") tube_squeezer();
+  else if (model == "spacer-set") spacer_set();
+  else if (model == "corner-jig") corner_jig();
+  else if (model == "drill-guide") drill_guide();
+  else if (model == "star-knob") star_knob();
+  else if (model == "hinge-pin") hinge_pin();
+  else if (model == "furniture-foot") furniture_foot();
+  else if (model == "hose-adapter") hose_adapter();
+  else if (model == "puzzle-tile") puzzle_tile();
+  else if (model == "spinning-top") spinning_top();
 }

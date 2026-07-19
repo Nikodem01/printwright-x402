@@ -5,6 +5,7 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
     @beaver = Model3d.create!(
       designer: designers(:one), title: "Articulated Beaver with Hat", slug: "beaver-with-hat",
       tags: %w[beaver hat], description: "A cheerful beaver.",
+      category: "toys-and-games", collections: %w[support-free-essentials],
       printability: { "supports" => false, "materials" => %w[PLA], "est_print_minutes" => 95 },
       file_hash: "sha256:#{'a' * 64}", status: "published"
     )
@@ -31,6 +32,45 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
   test "filter pills carry pressed state" do
     get root_path(supports_free: "1")
     assert_select '.pill[aria-pressed="true"]', text: "Support-free"
+  end
+
+  test "category pages expose curated taxonomy and only matching models" do
+    organizer = Model3d.create!(
+      designer: designers(:one), title: "Pen Tray", slug: "pen-tray", status: "published",
+      category: "desk-organization", collections: %w[support-free-essentials small-space]
+    )
+    organizer.license_offers.create!(kind: "personal", price_cents: 150)
+
+    get category_path("desk-organization")
+
+    assert_response :success
+    assert_select "h1", text: "Desk organization"
+    assert_select ".model-card", text: /Pen Tray/, count: 1
+    assert_select ".model-card", text: /Beaver/, count: 0
+    assert_select '.browse-card[aria-current="page"]', text: /Desk organization/
+  end
+
+  test "collection pages filter across categories" do
+    organizer = Model3d.create!(
+      designer: designers(:one), title: "Pen Tray", slug: "pen-tray", status: "published",
+      category: "desk-organization", collections: %w[support-free-essentials small-space]
+    )
+    organizer.license_offers.create!(kind: "personal", price_cents: 150)
+
+    get collection_path("small-space")
+
+    assert_response :success
+    assert_select "h1", text: "Small-space wins"
+    assert_select ".model-card", text: /Pen Tray/, count: 1
+    assert_select ".model-card", text: /Beaver/, count: 0
+  end
+
+  test "unknown catalog taxonomy 404s" do
+    get category_path("not-a-category")
+    assert_response :not_found
+
+    get collection_path("not-a-collection")
+    assert_response :not_found
   end
 
   test "model page renders buy panel, trust strip, and JSON-LD product" do

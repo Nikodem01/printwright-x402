@@ -4,6 +4,8 @@ class Api::V1::ModelsController < Api::V1::BaseController
   def index
     models = Model3d.published.includes(:designer, :license_offers, model_files: { file_attachment: :blob })
     models = models.search(params[:q]) if params[:q].present?
+    models = models.where(category: params[:category]) if params[:category].present?
+    models = models.where("? = ANY(collections)", params[:collection]) if params[:collection].present?
     models = models.where("printability -> 'materials' ? :m", m: params[:material]) if params[:material].present?
     if params[:supports].present? && %w[true false].include?(params[:supports])
       models = models.where("(printability ->> 'supports')::boolean = :s", s: params[:supports])
@@ -30,6 +32,8 @@ class Api::V1::ModelsController < Api::V1::BaseController
       id: model.id,
       slug: model.slug,
       title: model.title,
+      category: model.category,
+      collections: model.collections,
       designer: { name: model.designer.display_name },
       printability: model.printability,
       license_offers: model.license_offers.map do |offer|

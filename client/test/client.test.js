@@ -7,6 +7,7 @@ import { PrintwrightClient, PrintwrightError } from "../index.js";
 let server;
 let baseUrl;
 let paidRequests = 0;
+let lastSearchParams;
 
 const certificate = {
   cert_id: "pw-000007",
@@ -20,6 +21,7 @@ before(async () => {
     response.setHeader("content-type", "application/json");
 
     if (url.pathname === "/api/v1/models" && url.searchParams.get("q") === "gear") {
+      lastSearchParams = url.searchParams;
       return response.end(JSON.stringify({ count: 1, models: [ { id: 7, title: "Gear" } ] }));
     }
     if (url.pathname === "/api/v1/models/7") {
@@ -119,9 +121,14 @@ after(() => server.close());
 test("searches and gets catalog models without payment credentials", async () => {
   const client = new PrintwrightClient({ baseUrl });
 
-  const search = await client.search({ query: "gear", maxPriceCents: 0, supports: false });
+  const search = await client.search({
+    query: "gear", maxPriceCents: 0, supports: false,
+    category: "toys-and-games", collection: "under-an-hour",
+  });
   assert.equal(search.count, 1);
   assert.equal(search.models[0].id, 7);
+  assert.equal(lastSearchParams.get("category"), "toys-and-games");
+  assert.equal(lastSearchParams.get("collection"), "under-an-hour");
   assert.equal((await client.get(7)).title, "Gear");
 });
 

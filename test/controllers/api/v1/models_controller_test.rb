@@ -6,6 +6,7 @@ class Api::V1::ModelsControllerTest < ActionDispatch::IntegrationTest
     @beaver = create_model!(
       title: "Articulated Beaver with Hat", slug: "beaver-with-hat",
       tags: %w[beaver hat animal], description: "A cheerful beaver.",
+      category: "toys-and-games", collections: %w[support-free-essentials],
       printability: { "supports" => false, "materials" => %w[PLA PETG], "est_print_minutes" => 95 },
       offers: [ { kind: "personal", price_cents: 250 }, { kind: "commercial_unit", price_cents: 60 } ]
     )
@@ -35,6 +36,8 @@ class Api::V1::ModelsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Articulated Beaver with Hat", model["title"]
     assert_equal({ "name" => @designer.display_name }, model["designer"])
     assert_equal false, model["printability"]["supports"]
+    assert_equal "toys-and-games", model["category"]
+    assert_equal %w[support-free-essentials], model["collections"]
     assert_equal [ %w[personal 250 USDC], %w[commercial_unit 60 USDC] ].map { |k, p, c| { "kind" => k, "price_cents" => p.to_i, "currency" => c } },
                  model["license_offers"]
     assert_includes model["url"], "/api/v1/models/#{@beaver.id}"
@@ -59,6 +62,11 @@ class Api::V1::ModelsControllerTest < ActionDispatch::IntegrationTest
   test "supports filter" do
     get api_v1_models_url(supports: "true")
     assert_equal %w[woodland-lodge], response.parsed_body["models"].map { |m| m["slug"] }
+  end
+
+  test "category and collection filters use stable catalog keys" do
+    get api_v1_models_url(category: "toys-and-games", collection: "support-free-essentials")
+    assert_equal %w[beaver-with-hat], response.parsed_body["models"].map { |m| m["slug"] }
   end
 
   test "max_price_cents keeps models with at least one affordable offer" do
@@ -95,10 +103,11 @@ class Api::V1::ModelsControllerTest < ActionDispatch::IntegrationTest
 
   private
 
-  def create_model!(title:, slug:, offers:, tags: [], description: nil, printability: {}, status: "published")
+  def create_model!(title:, slug:, offers:, tags: [], description: nil, printability: {}, status: "published",
+                    category: nil, collections: [])
     model = Model3d.create!(
       designer: @designer, title: title, slug: slug, tags: tags,
-      description: description, printability: printability,
+      description: description, printability: printability, category: category, collections: collections,
       file_hash: "sha256:#{Digest::SHA256.hexdigest(slug)}", status: status
     )
     offers.each { |o| model.license_offers.create!(currency: "USDC", terms_md: "Terms.", **o) }

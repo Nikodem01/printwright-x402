@@ -49,6 +49,11 @@ const printwright = new PrintwrightClient({ baseUrl: "http://localhost:3000" });
 const { models } = await printwright.search({ query: "cable clip", maxPriceCents: 300 });
 const model = await printwright.get(models[0].id);
 console.log(model.title, model.license_offers);</pre>
+  <p class="t-small">Catalog results also expose stable <code class="mono">category</code> and
+    <code class="mono">collections</code> keys. Filter with, for example,
+    <code class="mono">category=workshop-tools</code> or
+    <code class="mono">collection=under-an-hour</code>; the allowed values are enumerated in the
+    OpenAPI table below.</p>
   <p class="t-small">Add <code class="mono">accountId</code> and
     <code class="mono">privateKey</code> to the constructor to call
     <code class="mono">buy()</code>. The key remains local. Use <code class="mono">quote()</code>

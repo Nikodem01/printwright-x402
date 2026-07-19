@@ -76,3 +76,147 @@ models:
     orientation: broad side on the bed
     supports: false
     notes: Pealess signal-whistle prototype with airway, resonant chamber, edge, and lanyard hole.
+  headphone-stand:
+    slug: headphone-stand
+    dimensions_mm: [80, 70, 142]
+    orientation: base plate on the bed
+    supports: true
+    notes: Weighted rectangular base, central upright, and broad headband rest; top overhang needs support.
+  pen-tray:
+    slug: pen-tray
+    dimensions_mm: [160, 65, 16]
+    orientation: closed floor on the bed
+    supports: false
+    notes: Open low-profile tray with a 3 mm floor and 3 mm perimeter walls.
+  cable-comb:
+    slug: cable-comb
+    dimensions_mm: [90, 25, 26]
+    orientation: long base on the bed
+    supports: false
+    notes: Five full-depth dividers create four open channels for routing desk cables.
+  drawer-label-clip:
+    slug: drawer-label-clip
+    dimensions_mm: [60, 22, 8]
+    orientation: broad face on the bed
+    supports: false
+    notes: Open-ended flat U-channel for a removable paper label or thin drawer-edge marker.
+  soap-dish:
+    slug: soap-dish
+    dimensions_mm: [110, 70, 12]
+    orientation: broad face on the bed
+    supports: false
+    notes: Flat draining platform with ten 8 mm through-holes; no claim of food or skin-contact certification.
+  plant-trellis:
+    slug: plant-trellis
+    dimensions_mm: [100, 140, 4]
+    orientation: broad face on the bed
+    supports: false
+    notes: Flat rectangular plant-training frame with one spine and three cross rails.
+  tealight-lantern:
+    slug: tealight-lantern
+    dimensions_mm: [76, 76, 80]
+    orientation: closed floor on the bed
+    supports: true
+    notes: Perforated cylindrical shell sized around LED tealights only; never use with an open flame.
+  picture-stand:
+    slug: picture-stand
+    dimensions_mm: [100, 65, 85]
+    orientation: base plate on the bed
+    supports: false
+    notes: Broad base, front retaining lip, and solid inclined back for small cards or lightweight frames.
+  business-card-holder:
+    slug: business-card-holder
+    dimensions_mm: [90, 50, 20]
+    orientation: base plate on the bed
+    supports: false
+    notes: Two low rails form a wide presentation slot for standard business cards.
+  plant-saucer:
+    slug: plant-saucer
+    dimensions_mm: [72, 72, 8]
+    orientation: closed floor on the bed
+    supports: false
+    notes: Shallow round catch tray with a 3 mm floor and raised outer rim.
+  measuring-scoop:
+    slug: measuring-scoop
+    dimensions_mm: [130, 50, 25]
+    orientation: cup floor and handle on the bed
+    supports: false
+    notes: Small open scoop with an 85 mm handle; volume is nominal and not certified for food measurement.
+  bag-sealer:
+    slug: bag-sealer
+    dimensions_mm: [160, 20, 8]
+    orientation: broad face on the bed
+    supports: false
+    notes: Long open-ended C-channel for folded lightweight bags; fit depends on material and wall thickness.
+  hex-coaster:
+    slug: hex-coaster
+    dimensions_mm: [90, 77.9, 4]
+    orientation: flat floor on the bed
+    supports: false
+    notes: Six-sided coaster with a shallow recessed center and 7 mm rim.
+  mini-funnel:
+    slug: mini-funnel
+    dimensions_mm: [84, 84, 70]
+    orientation: narrow spout on the bed
+    supports: false
+    notes: Straight tapered funnel with a 3 mm floor transition and 14 mm outlet; not food-contact certified.
+  tube-squeezer:
+    slug: tube-squeezer
+    dimensions_mm: [100, 45, 8]
+    orientation: broad face on the bed
+    supports: false
+    notes: Flat hand grip with a 5 mm tube slot and hanging hole; intended for flexible household tubes.
+  spacer-set:
+    slug: spacer-set
+    dimensions_mm: [60, 20, 8]
+    orientation: all three rings flat on the bed
+    supports: false
+    notes: Three separate 8 mm tall spacer rings with 6, 8, and 10 mm nominal bores.
+  corner-jig:
+    slug: corner-jig
+    dimensions_mm: [80, 80, 12]
+    orientation: broad L face on the bed
+    supports: false
+    notes: Flat right-angle reference with two clamp or screw holes; alignment aid, not a structural bracket.
+  drill-guide:
+    slug: drill-guide
+    dimensions_mm: [80, 30, 18]
+    orientation: broad face on the bed
+    supports: false
+    notes: Bench block with nominal 4, 6, and 8 mm vertical guide bores; verify printed dimensions before use.
+  star-knob:
+    slug: star-knob
+    dimensions_mm: [48, 48, 14]
+    orientation: broad face on the bed
+    supports: false
+    notes: Eight-lobed hand knob with a plain 6 mm center bore and no captured hardware.
+  hinge-pin:
+    slug: hinge-pin
+    dimensions_mm: [18, 18, 64]
+    orientation: narrow pin end on the bed
+    supports: false
+    notes: Straight 10 mm nominal pin with an 18 mm retaining head; tune clearance for the mating hinge.
+  furniture-foot:
+    slug: furniture-foot
+    dimensions_mm: [50, 50, 40]
+    orientation: wide foot on the bed
+    supports: false
+    notes: Tapered light-duty foot with a plain 20 mm locating stem; load capacity is untested.
+  hose-adapter:
+    slug: hose-adapter
+    dimensions_mm: [36, 36, 60]
+    orientation: wider end on the bed
+    supports: false
+    notes: Stepped hollow adapter from 36 mm to 28 mm outside diameter with an 18 mm through-bore.
+  puzzle-tile:
+    slug: puzzle-tile
+    dimensions_mm: [66, 66, 5]
+    orientation: broad face on the bed
+    supports: false
+    notes: Square tile with two tabs and two matching sockets for open-ended tessellation play.
+  spinning-top:
+    slug: spinning-top
+    dimensions_mm: [50, 50, 50]
+    orientation: point on the bed with a brim if needed
+    supports: false
+    notes: Rotationally symmetric desk top with a broad flywheel and 12 mm stem.

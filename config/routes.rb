@@ -67,6 +67,8 @@ Rails.application.routes.draw do
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
   root "storefront#index"
+  get "categories/:category", to: "storefront#index", as: :category
+  get "collections/:collection", to: "storefront#index", as: :collection
   get "models/:slug", to: "storefront#show", as: :model_page
   get "verify/:cert_id", to: "verify#show", as: :verify
   get "verify/:cert_id/badge", to: "verify#badge", as: :verify_badge, defaults: { format: :svg }

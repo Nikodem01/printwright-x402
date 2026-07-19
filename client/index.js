@@ -44,13 +44,15 @@ export class PrintwrightClient {
     this.quotes = new WeakSet();
   }
 
-  async search({ query, maxPriceCents, material, supports } = {}) {
+  async search({ query, maxPriceCents, material, supports, category, collection } = {}) {
     if (!query?.trim()) throw new TypeError("query is required");
 
     const params = new URLSearchParams({ q: query });
     if (maxPriceCents !== undefined) params.set("max_price_cents", String(maxPriceCents));
     if (material) params.set("material", material);
     if (supports !== undefined) params.set("supports", String(supports));
+    if (category) params.set("category", category);
+    if (collection) params.set("collection", collection);
     return this.getJson(this.url(`api/v1/models?${params}`));
   }
 

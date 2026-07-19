@@ -5,9 +5,12 @@
   <div class="card-body">
     <h3><%= model.title %></h3>
     <div class="t-small muted"><%= model.designer.display_name %></div>
+    <% if model.category.present? %>
+      <div class="t-caption card-taxonomy"><%= Model3d.category_definition(model.category).fetch(:name) %></div>
+    <% end %>
     <div class="t-caption muted">
       <% p = model.printability %>
-      <%= [ p["est_print_minutes"] && "⏱ #{p['est_print_minutes']}m",
+      <%= [ p["est_print_minutes"] && "#{p['est_print_minutes']} min",
             p["materials"]&.join("/"),
             p["supports"] == false ? "no supports" : nil ].compact.join(" · ") %>
     </div>

@@ -1,6 +1,6 @@
 # Demo catalog assets
 
-These twelve models were designed for Printwright from parametric primitives in
+These thirty-six models were designed for Printwright from parametric primitives in
 [`catalog.scad`](catalog.scad). No third-party meshes or renders are included. The designs are
 dedicated under `CC0-1.0`; the application itself remains under its repository-level license.
 

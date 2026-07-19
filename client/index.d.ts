@@ -16,6 +16,8 @@ export interface SearchOptions {
   maxPriceCents?: number;
   material?: string;
   supports?: boolean;
+  category?: string;
+  collection?: string;
 }
 
 export interface LicenseOffer {
@@ -30,6 +32,8 @@ export interface ModelSummary {
   id: number;
   title: string;
   slug: string;
+  category?: string | null;
+  collections?: string[];
   license_offers: LicenseOffer[];
   printability?: Record<string, unknown>;
   [key: string]: unknown;

@@ -1,12 +1,27 @@
-<% content_for :title, @query.present? ? "#{@query} — Printwright" : "Printwright — every print, licensed" %>
+<% page_title = if @catalog_definition
+    "#{@catalog_definition.fetch(:name)} — Printwright"
+  elsif @query.present?
+    "#{@query} — Printwright"
+  else
+    "Printwright — every print, licensed"
+  end %>
+<% content_for :title, page_title %>
+<% content_for :description, @catalog_definition.fetch(:description) if @catalog_definition %>
 
 <section class="hero">
-  <h1>Every print, licensed.</h1>
-  <p class="t-small muted">A marketplace for licensed 3D-printable models. Every purchase mints
-    a tamper-evident license certificate on Hedera — proof of what was licensed, to whom, and
-    when, checkable by anyone, independent of Printwright.</p>
+  <% if @catalog_definition %>
+    <p class="t-caption muted">Curated catalog</p>
+    <h1><%= @catalog_definition.fetch(:name) %></h1>
+    <p class="muted"><%= @catalog_definition.fetch(:description) %></p>
+  <% else %>
+    <h1>Every print, licensed.</h1>
+    <p class="t-small muted">A marketplace for licensed 3D-printable models. Every purchase mints
+      a tamper-evident license certificate on Hedera — proof of what was licensed, to whom, and
+      when, checkable by anyone, independent of Printwright.</p>
+  <% end %>
 </section>
 
+<% unless @catalog_definition %>
 <div class="doors-grid" role="group" aria-label="Three ways to buy">
   <div class="door">
     <h3>Agents</h3>
@@ -26,19 +41,49 @@
       before the job runs.</p>
   </div>
 </div>
+<% end %>
 
-<div class="steps-strip" role="group" aria-label="How a purchase works">
-  <div class="step"><span class="step-num">1</span> Search the catalog</div>
-  <div class="step"><span class="step-num">2</span> <span class="mono">402</span> payment required</div>
-  <div class="step"><span class="step-num">3</span> Pay on Hedera (HBAR/USDC)</div>
-  <div class="step"><span class="step-num">4</span> File + certificate, on-chain</div>
-</div>
+<nav class="catalog-browse<%= " catalog-browse-compact" if @catalog_definition %>" aria-label="Browse the catalog">
+  <div>
+    <h2>Categories</h2>
+    <div class="browse-grid">
+      <% Model3d::CATEGORIES.each do |key, definition| %>
+        <%= link_to category_path(key), class: "browse-card",
+              "aria-current": (@category_key == key ? "page" : nil) do %>
+          <strong><%= definition.fetch(:name) %></strong>
+          <span><%= pluralize(@category_counts.fetch(key, 0), "model") %></span>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+  <div>
+    <h2>Collections</h2>
+    <div class="browse-grid">
+      <% Model3d::COLLECTIONS.each do |key, definition| %>
+        <%= link_to collection_path(key), class: "browse-card",
+              "aria-current": (@collection_key == key ? "page" : nil) do %>
+          <strong><%= definition.fetch(:name) %></strong>
+          <span><%= pluralize(@collection_counts.fetch(key, 0), "model") %></span>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+</nav>
 
-<div class="trust-strip t-small">
-  <span>Testnet deployment — settlements are real Hedera testnet transactions with no monetary
-    value.</span>
-  <span><%= link_to "Verify a real certificate ↗", verify_path(cert_id: "pw-000038"), class: "mono" %></span>
-</div>
+<% unless @catalog_definition %>
+  <div class="steps-strip" role="group" aria-label="How a purchase works">
+    <div class="step"><span class="step-num">1</span> Search the catalog</div>
+    <div class="step"><span class="step-num">2</span> <span class="mono">402</span> payment required</div>
+    <div class="step"><span class="step-num">3</span> Pay on Hedera (HBAR/USDC)</div>
+    <div class="step"><span class="step-num">4</span> File + certificate, on-chain</div>
+  </div>
+
+  <div class="trust-strip t-small">
+    <span>Testnet deployment — settlements are real Hedera testnet transactions with no monetary
+      value.</span>
+    <span><%= link_to "Verify a real certificate ↗", verify_path(cert_id: "pw-000038"), class: "mono" %></span>
+  </div>
+<% end %>
 
 <div class="filters" role="group" aria-label="Filters">
   <%= link_to "Support-free",

@@ -3,7 +3,20 @@ class StorefrontController < ApplicationController
 
   def index
     @query = params[:q]
-    scope = Model3d.published.includes(:designer, :license_offers, model_files: { file_attachment: :blob })
+    @category_key = params[:category]
+    @collection_key = params[:collection]
+    @catalog_definition = Model3d.category_definition(@category_key) if @category_key.present?
+    @catalog_definition = Model3d.collection_definition(@collection_key) if @collection_key.present?
+
+    published = Model3d.published
+    @category_counts = published.where.not(category: [ nil, "" ]).group(:category).count
+    @collection_counts = Model3d::COLLECTIONS.keys.index_with do |collection|
+      published.where("? = ANY(collections)", collection).count
+    end
+
+    scope = published.includes(:designer, :license_offers, model_files: { file_attachment: :blob })
+    scope = scope.where(category: @category_key) if @category_key.present?
+    scope = scope.where("? = ANY(collections)", @collection_key) if @collection_key.present?
     scope = scope.search(@query) if @query.present?
     scope = scope.where("printability -> 'materials' ? :m", m: params[:material]) if params[:material].present?
     scope = scope.where("(printability ->> 'supports')::boolean = false") if params[:supports_free].present?
@@ -11,7 +24,7 @@ class StorefrontController < ApplicationController
       affordable = LicenseOffer.where(price_cents: ..params[:max_price_cents].to_i).select(:model3d_id)
       scope = scope.where(id: affordable)
     end
-    @models = scope
+    @models = @query.present? ? scope : scope.order(:title)
   end
 
   def show
