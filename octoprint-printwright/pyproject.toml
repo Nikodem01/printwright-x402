@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "OctoPrint-Printwright"
+version = "0.0.1"
+description = "Observe OctoPrint job starts for Printwright per-print licensing."
+readme = "README.md"
+requires-python = ">=3.10,<4"
+license = "MIT"
+authors = [{ name = "Printwright contributors" }]
+classifiers = [
+  "Framework :: OctoPrint",
+  "Programming Language :: Python :: 3",
+]
+
+[project.entry-points."octoprint.plugin"]
+printwright = "octoprint_printwright"
+
+[tool.setuptools.packages.find]
+include = ["octoprint_printwright*"]

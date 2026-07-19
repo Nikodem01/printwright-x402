@@ -73,6 +73,15 @@ jobs:
         working-directory: mcp
         run: npm ci && npm test
 
+  octoprint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build plugin in stock OctoPrint 1.11.7 image
+        run: docker build -t printwright-octoprint-smoke -f octoprint-printwright/Dockerfile.smoke .
+      - name: Fire PrintStarted through the bundled virtual printer
+        run: docker run --rm --entrypoint bash printwright-octoprint-smoke /usr/local/bin/octoprint-spike-smoke
+
   secret-grep:
     runs-on: ubuntu-latest
     steps:

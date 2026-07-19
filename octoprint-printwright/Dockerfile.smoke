@@ -1,0 +1,8 @@
+FROM octoprint/octoprint:1.11.7
+
+COPY octoprint-printwright /tmp/octoprint-printwright
+COPY scripts/octoprint_spike_smoke.sh /usr/local/bin/octoprint-spike-smoke
+
+RUN pip install --no-cache-dir /tmp/octoprint-printwright \
+    && python -c 'from importlib.metadata import entry_points; assert any(p.name == "printwright" for p in entry_points(group="octoprint.plugin"))' \
+    && python -m unittest discover -s /tmp/octoprint-printwright/tests -v
