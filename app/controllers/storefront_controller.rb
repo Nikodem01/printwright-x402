@@ -15,7 +15,8 @@ class StorefrontController < ApplicationController
   end
 
   def show
-    @model = Model3d.published.includes(:designer, :license_offers).find_by!(slug: params[:slug])
+    @model = Model3d.published.includes(:designer, :license_offers,
+                                        model_files: { file_attachment: :blob }).find_by!(slug: params[:slug])
     @licenses_issued = License.joins(purchase: :license_offer)
                               .where(license_offers: { model3d_id: @model.id }).count
   end

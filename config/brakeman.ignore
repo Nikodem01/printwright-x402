@@ -1,7 +1,7 @@
 {
   "ignored_warnings": [
     {
-      "fingerprint": "460e7fdb305b319ecc11b4aa1d6d2c1fa84f92b203f780a5a73d7677f399ceca",
+      "fingerprint": "60b1fbc13f069132a0dab93d3556aa206ce467e7ef1d2275242aeea7c9867590",
       "note": "json_escape into a script tag is the correct JSON-LD escaping (loop-11 decision, <%== + json_escape)."
     },
     {

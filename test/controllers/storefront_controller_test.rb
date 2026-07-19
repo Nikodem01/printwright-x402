@@ -46,6 +46,22 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "model page exposes only a decimated preview and keeps the render fallback" do
+    source = @beaver.model_files.create!(kind: "stl", position: 0)
+    source.file.attach(io: Rails.root.join("db/seed_assets/beaver-with-hat.stl").open,
+                       filename: "beaver.stl", content_type: "model/stl")
+    render = @beaver.model_files.create!(kind: "render", position: 1)
+    render.file.attach(io: Rails.root.join("db/seed_assets/beaver-with-hat.png").open,
+                       filename: "beaver.png", content_type: "image/png")
+    PreviewMeshes::Attacher.call(@beaver)
+
+    get model_page_path(@beaver.slug)
+
+    assert_select "[data-controller='model-preview'][data-model-preview-url-value]"
+    assert_select "[data-model-preview-target='fallback']"
+    refute_includes response.body, source.file.filename.to_s
+  end
+
   test "draft model pages 404" do
     get model_page_path("hidden-draft")
     assert_response :not_found

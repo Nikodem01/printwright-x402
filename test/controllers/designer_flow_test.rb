@@ -38,6 +38,9 @@ class DesignerFlowTest < ActionDispatch::IntegrationTest
     model.reload
     assert model.published?
     assert_match(/\Asha256:[0-9a-f]{64}\z/, model.file_hash)
+    assert_predicate model.preview_file.file, :attached?
+    assert_equal %w[stl], model.printable_files.map(&:kind)
+    assert model.preview_file.file.download.start_with?(PreviewMeshes::Generator::HEADER)
 
     get api_v1_models_url(q: "flow widget")
     assert_equal model.id, response.parsed_body["models"].first["id"]

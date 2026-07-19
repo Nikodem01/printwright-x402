@@ -31,5 +31,15 @@ class CatalogAssetsTest < ActiveSupport::TestCase
     assert_equal "phone-stand-legacy-#{legacy.id}", legacy.slug
     assert_equal old_bytes, legacy.model_files.find_by!(kind: "stl").file.download
     assert_equal legacy, purchase.reload.model3d
+
+    seed_slugs = PROVENANCE.values.pluck("slug")
+    seeded_models = Model3d.where(slug: seed_slugs).includes(model_files: { file_attachment: :blob })
+    assert_equal 12, seeded_models.length
+    seeded_models.each do |seeded_model|
+      preview = seeded_model.preview_file
+      assert_predicate preview.file, :attached?, "#{seeded_model.slug} has no preview"
+      assert preview.file.download.start_with?(PreviewMeshes::Generator::HEADER)
+      assert_not_includes seeded_model.printable_files, preview
+    end
   end
 end

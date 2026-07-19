@@ -48,6 +48,7 @@ class Designer::ModelsController < Designer::BaseController
 
     digest = Digest::SHA256.new
     files.sort_by { |f| f.file.filename.to_s }.each { |f| digest.update(f.file.download) }
+    PreviewMeshes::Attacher.call(@model)
     @model.update!(file_hash: "sha256:#{digest.hexdigest}", status: "published",
                    warranty_accepted_at: Time.current)
     redirect_to model_page_path(@model.slug), notice: publish_notice

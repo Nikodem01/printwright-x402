@@ -21,10 +21,26 @@
 
 <div class="model-page">
   <div>
-    <div class="gallery">
-      <% if (render_file = @model.render_file)&.file&.attached? %>
-        <%= image_tag render_file.file, alt: @model.title %>
-      <% end %>
+    <% preview_file = @model.preview_file %>
+    <% render_file = @model.render_file %>
+    <div class="gallery model-preview" data-controller="model-preview"
+         <% if preview_file&.file&.attached? %>
+           data-model-preview-url-value="<%= rails_storage_proxy_path(preview_file.file) %>"
+         <% end %>>
+      <div class="model-preview-stage" data-model-preview-target="stage">
+        <% if render_file&.file&.attached? %>
+          <%= image_tag render_file.file, alt: @model.title, data: { model_preview_target: "fallback" } %>
+        <% else %>
+          <div class="model-preview-placeholder" data-model-preview-target="fallback">Preview render unavailable</div>
+        <% end %>
+      </div>
+      <p class="t-caption muted model-preview-status" data-model-preview-target="status" aria-live="polite">
+        <% if preview_file&.file&.attached? %>
+          Loading a coarse, non-printable preview…
+        <% else %>
+          Interactive preview unavailable — showing the designer render.
+        <% end %>
+      </p>
     </div>
 
     <div class="trust-strip" data-controller="clipboard">

@@ -167,6 +167,8 @@ DESIGNERS = { studio: studio, atelier: atelier, workshop: workshop }.freeze
     render.file.attach(io: StringIO.new(render_bytes), filename: render_name, content_type: "image/png")
   end
 
+  PreviewMeshes::Attacher.call(model)
+
   spec[:offers].each do |offer_spec|
     offer = model.license_offers.find_or_initialize_by(kind: offer_spec[:kind])
     offer.assign_attributes(offer_spec)
