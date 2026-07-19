@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_19_183000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_19_193000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -56,6 +56,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_183000) do
     t.index ["actor_designer_id"], name: "index_admin_audit_logs_on_actor_designer_id"
     t.index ["created_at"], name: "index_admin_audit_logs_on_created_at"
     t.index ["subject_type", "subject_id"], name: "index_admin_audit_logs_on_subject_type_and_subject_id"
+  end
+
+  create_table "catalog_imports", force: :cascade do |t|
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.bigint "designer_id", null: false
+    t.string "manifest_digest", null: false
+    t.integer "model_count", default: 0, null: false
+    t.jsonb "model_snapshots", default: {}, null: false
+    t.datetime "rolled_back_at"
+    t.string "status", default: "active", null: false
+    t.datetime "updated_at", null: false
+    t.index ["designer_id", "created_at"], name: "index_catalog_imports_on_designer_id_and_created_at"
+    t.index ["designer_id"], name: "index_catalog_imports_on_designer_id"
   end
 
   create_table "chat_conversations", force: :cascade do |t|
@@ -154,6 +168,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_183000) do
   end
 
   create_table "models3d", force: :cascade do |t|
+    t.bigint "catalog_import_id"
     t.string "category"
     t.string "collections", default: [], null: false, array: true
     t.datetime "created_at", null: false
@@ -173,6 +188,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_183000) do
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.datetime "warranty_accepted_at"
+    t.index ["catalog_import_id"], name: "index_models3d_on_catalog_import_id"
     t.index ["category"], name: "index_models3d_on_category"
     t.index ["collections"], name: "index_models3d_on_collections", using: :gin
     t.index ["designer_id"], name: "index_models3d_on_designer_id"
@@ -218,12 +234,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_183000) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "admin_audit_logs", "designers", column: "actor_designer_id", on_delete: :nullify
+  add_foreign_key "catalog_imports", "designers"
   add_foreign_key "download_grants", "licenses"
   add_foreign_key "ledger_entries", "designers"
   add_foreign_key "ledger_entries", "purchases"
   add_foreign_key "license_offers", "models3d"
   add_foreign_key "licenses", "purchases"
   add_foreign_key "model_files", "models3d"
+  add_foreign_key "models3d", "catalog_imports"
   add_foreign_key "models3d", "designers"
   add_foreign_key "purchases", "license_offers"
   add_foreign_key "sessions", "designers"

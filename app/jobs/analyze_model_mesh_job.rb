@@ -2,7 +2,9 @@ class AnalyzeModelMeshJob < ApplicationJob
   queue_as :default
 
   def perform(model_id)
-    model = Model3d.find(model_id)
+    model = Model3d.find_by(id: model_id)
+    return unless model
+
     result = MeshAnalysis::Analyzer.call(model.printable_files)
     duplicate = duplicate_for(model, result)
     errors = result.errors.dup

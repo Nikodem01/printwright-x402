@@ -46,6 +46,7 @@ class Model3d < ApplicationRecord
   }.freeze
 
   belongs_to :designer
+  belongs_to :catalog_import, optional: true
   has_many :model_files, -> { order(:position) }, dependent: :destroy
   # Personal is the storefront default; keep preload/query order deterministic
   # so a commercial offer cannot become checked merely because PostgreSQL

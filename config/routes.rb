@@ -7,6 +7,7 @@ Rails.application.routes.draw do
     resources :models, except: %i[destroy show] do
       member { post :publish }
     end
+    resources :imports, only: %i[index new create destroy]
     resources :sales, only: :index
   end
 

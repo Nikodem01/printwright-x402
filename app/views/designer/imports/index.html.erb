@@ -1,0 +1,26 @@
+<% content_for :title, "Bulk imports — Printwright" %>
+<div class="page-heading-row">
+  <div><h1>Bulk imports</h1><p class="muted">Each batch stays rollbackable until one of its drafts changes or publishes.</p></div>
+  <%= link_to "Import ZIP", new_designer_import_path, class: "btn btn-primary" %>
+</div>
+
+<% if @imports.any? %>
+  <table class="facts-table" style="width:100%">
+    <tr><th>created</th><th>models</th><th>status</th><th></th></tr>
+    <% @imports.each do |catalog_import| %>
+      <tr>
+        <td><%= l catalog_import.created_at, format: :short %></td>
+        <td><%= catalog_import.model_count %></td>
+        <td><span class="badge <%= catalog_import.active? ? 'badge-pending' : 'badge-ok' %>"><%= catalog_import.status %></span></td>
+        <td>
+          <% if catalog_import.active? %>
+            <%= button_to "Rollback drafts", designer_import_path(catalog_import), method: :delete,
+                  class: "linklike", data: { turbo_confirm: "Delete every unchanged draft from this import?" } %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </table>
+<% else %>
+  <div class="empty-state">No bulk imports yet.</div>
+<% end %>

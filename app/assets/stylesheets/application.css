@@ -305,6 +305,8 @@ fieldset.field { border: 1px solid var(--border); border-radius: var(--radius-s)
 .table-scroll { overflow-x: auto; }
 .container pre { max-width: 100%; }
 .container h3 code { overflow-wrap: anywhere; word-break: break-all; }
+.page-heading-row { display: flex; align-items: start; justify-content: space-between; gap: var(--s-3); }
+.code-block { overflow-x: auto; padding: var(--s-3); border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--bg-raised); }
 
 /* Shopkeeper chat (V30 part 1) — door 3. Bubbles + a muted tool trace so the
    conversation visibly proves it's calling the same public API an agent would. */

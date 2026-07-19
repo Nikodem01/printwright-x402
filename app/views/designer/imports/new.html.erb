@@ -1,0 +1,23 @@
+<% content_for :title, "Import catalog — Printwright" %>
+<h1>Import catalog ZIP</h1>
+<p class="muted">Up to 50 models. The archive must contain <code>manifest.json</code> plus every referenced STL/3MF/STEP and optional PNG/JPEG render.</p>
+
+<%= form_with url: designer_imports_path, multipart: true do %>
+  <div class="field">
+    <%= label_tag :archive, "Catalog ZIP" %>
+    <%= file_field_tag :archive, accept: ".zip,application/zip", required: true %>
+  </div>
+  <%= submit_tag "Validate and import drafts", class: "btn btn-primary" %>
+<% end %>
+
+<h2>Manifest v1</h2>
+<pre class="code-block"><code>{
+  "version": 1,
+  "models": [{
+    "title": "Cable clip", "slug": "cable-clip",
+    "description": "...", "tags": ["cable"],
+    "printability": {"supports": false, "materials": ["PLA"], "est_print_minutes": 20},
+    "files": [{"path": "models/cable-clip.stl", "kind": "stl"}],
+    "offers": [{"kind": "personal", "price_cents": 250, "currency": "USDC"}]
+  }]
+}</code></pre>
