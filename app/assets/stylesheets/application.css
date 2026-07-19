@@ -146,6 +146,13 @@ a.mono, .mono a { color: var(--chain); text-decoration: underline; }
 /* empty state */
 .empty-state { text-align: center; padding: var(--s-7) 0; color: var(--text-muted); }
 
+/* Curated machine-seller directory */
+.directory-page { max-width: 960px; margin: var(--s-5) auto 0; }
+.seller-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: var(--s-4); }
+.seller-card { padding: var(--s-4); border: 1px solid var(--border); border-radius: var(--radius-m); background: var(--bg-raised); }
+.seller-card h2 { margin-top: 0; }
+.directory-endpoint { overflow-wrap: anywhere; font-size: 12px; }
+
 /* S2 model page */
 .model-page { display: grid; grid-template-columns: 7fr 5fr; gap: var(--s-5); margin-top: var(--s-5); }
 @media (max-width: 768px) { .model-page { grid-template-columns: 1fr; } }

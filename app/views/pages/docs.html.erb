@@ -124,6 +124,11 @@ console.log(receipt.warning, await sandbox.verify(receipt.license.cert_id));</pr
     <code class="mono">node scripts/buy.mjs --query "cable clip" --sandbox</code>. Raw HTTP
     clients send <code class="mono">X-Sandbox: true</code> on both the initial download request
     and its <code class="mono">PAYMENT-SIGNATURE</code> retry.</p>
+  <p class="t-small">To validate the raw client contract—including exact v2 fields, body/header
+    equality, signed retry, local mirror equality, and the absence of real-payment claims—run
+    <code class="mono">node conformance/suite.mjs --url http://localhost:3000</code>. The public
+    suite needs no wallet or credentials. See also the curated
+    <%= link_to "agent-buyable seller directory", agent_sellers_path %>.</p>
 
   <h2>Endpoint reference</h2>
   <p class="t-small muted">Generated from <%= link_to "/openapi.json", "/openapi.json" %> at request

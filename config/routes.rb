@@ -98,6 +98,7 @@ Rails.application.routes.draw do
   get "about", to: "pages#about", as: :about
   get "pricing", to: "pages#pricing", as: :pricing
   get "open-books", to: "pages#open_books", as: :open_books
+  get "agent-sellers", to: "pages#agent_sellers", as: :agent_sellers
   get "chat", to: "chat#show", as: :chat
   post "chat", to: "chat#create"
   post "chat/approve", to: "chat#approve", as: :approve_chat_purchase

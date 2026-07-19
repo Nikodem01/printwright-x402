@@ -6,7 +6,8 @@
   "description": "Agent-side clients for the Printwright marketplace: bare x402 buyer script (scripts/buy.mjs)",
   "scripts": {
     "buy": "node scripts/buy.mjs",
-    "test:load": "node --test scripts/load-sanity.test.mjs"
+    "test:load": "node --test scripts/load-sanity.test.mjs",
+    "test:conformance": "node --test conformance/test/"
   },
   "dependencies": {
     "@printwright/client": "file:client",

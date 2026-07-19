@@ -53,6 +53,10 @@ documented in `/docs`; the verifier implementation lives in [`verifier/`](verifi
 run `node scripts/buy.mjs --query "cable clip" --sandbox`. The app still returns a 402 and runs
 verify → settle → certificate, but through its built-in mock facilitator and local throwaway
 topic. Sandbox output is visibly fake and contains only a text receipt—never paid geometry.
+The public [`conformance/`](conformance/) runner lints the raw x402 v2 challenge and completes
+that sandbox contract with no credentials. The small
+[`/agent-sellers`](app/views/pages/agent_sellers.html.erb) directory records other machine
+endpoints whose unpaid challenges were manually checked.
 
 ## Buy a model from the command line (Scene 1a)
 

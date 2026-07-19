@@ -1,0 +1,40 @@
+<% content_for :title, "Agent-buyable sellers — Printwright" %>
+<% content_for :description, "A small, manually verified directory of machine-payable x402 sellers." %>
+
+<div class="directory-page">
+  <h1>Agent-buyable sellers</h1>
+  <p>A deliberately small directory of HTTP resources that returned an x402 payment challenge
+    when checked on <strong>2026-07-19</strong>. Each row names the machine endpoint, network,
+    asset, and observed price so an agent can decide whether it has a compatible signer.</p>
+
+  <div class="seller-grid">
+    <% @sellers.each do |seller| %>
+      <article class="seller-card" data-seller>
+        <h2><%= seller[:name] %></h2>
+        <p><%= seller[:service] %></p>
+        <dl class="fact-grid">
+          <dt>Network</dt><dd><%= seller[:network] %></dd>
+          <dt>Asset</dt><dd><%= seller[:asset] %></dd>
+          <dt>Observed price</dt><dd><%= seller[:price] %></dd>
+          <dt>Status</dt><dd><span class="badge badge-ok">Challenge verified</span></dd>
+        </dl>
+        <p class="t-small"><%= seller[:verification] %></p>
+        <p class="mono directory-endpoint"><%= seller[:endpoint] %></p>
+        <%= link_to "Open machine endpoint →", seller[:href], rel: "nofollow noopener" %>
+      </article>
+    <% end %>
+  </div>
+
+  <section class="prose">
+    <h2>What inclusion means</h2>
+    <p>We made an unpaid request, received a structured x402 challenge, and cross-checked external
+      entries against the public
+      <a href="https://api.cdp.coinbase.com/platform/v2/x402/discovery/resources" rel="nofollow noopener">CDP Bazaar catalog</a>.
+      We did not make paid calls. Inclusion is not an endorsement, uptime promise, security audit,
+      or guarantee of the response after payment. External entries use real mainnet assets; inspect
+      the fresh 402 and set a spend cap before signing.</p>
+    <p>Printwright remains the reference seller for machine-paid 3D print licenses. Run its
+      <%= link_to "public zero-funds conformance suite", "https://github.com/Nikodem01/printwright-x402/tree/main/conformance" %>
+      before wiring a funded client.</p>
+  </section>
+</div>

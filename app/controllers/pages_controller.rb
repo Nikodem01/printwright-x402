@@ -10,6 +10,31 @@ class PagesController < ApplicationController
   def about; end
   def pricing; end
 
+  def agent_sellers
+    @sellers = [
+      {
+        name: "Printwright", service: "Machine-paid 3D print licenses",
+        endpoint: "/api/v1/models/{id}/download", href: docs_path,
+        network: "Hedera testnet", asset: "HBAR or testnet USDC", price: "per model offer",
+        verification: "Full sandbox conformance + real testnet settlement evidence"
+      },
+      {
+        name: "Current Weather", service: "Current and historical weather by coordinate",
+        endpoint: "https://x402.shizu.me/weather?lat=52.52&lon=13.40",
+        href: "https://x402.shizu.me/weather?lat=52.52&lon=13.40",
+        network: "Base mainnet", asset: "USDC", price: "$0.003/request",
+        verification: "x402 v2 challenge header observed; indexed by CDP Bazaar"
+      },
+      {
+        name: "Weather Forecast & Air Quality", service: "Forecast and AQI by coordinate",
+        endpoint: "https://api.kadec0.xyz/v1/weather?lat=52.52&lng=13.41",
+        href: "https://api.kadec0.xyz/v1/weather?lat=52.52&lng=13.41",
+        network: "Base mainnet", asset: "USDC", price: "$0.005/request",
+        verification: "x402 v2 challenge header observed; indexed by CDP Bazaar"
+      }
+    ]
+  end
+
   def open_books
     @snapshot = OpenBooks::Snapshot.call
   end
