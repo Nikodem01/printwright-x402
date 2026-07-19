@@ -50,6 +50,7 @@ Rails.application.routes.draw do
       get "files/:token", to: "files#show", as: :file
       get "certificates/:cert_id", to: "certificates#show", as: :certificate
       get "licenses/:id/can", to: "licenses#can", as: :license_permission
+      post "licenses/:cert_id/print_reports", to: "print_reports#create", as: :license_print_reports
       get "stats", to: "stats#show", as: :stats
       get "sandbox/topics/:topic_id/messages/:sequence_number", to: "sandbox#message",
           as: :sandbox_message

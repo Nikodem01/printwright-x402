@@ -190,6 +190,10 @@ class Api::V1::DownloadsController < Api::V1::BaseController
       license: { cert_id: license.cert_id, serial: license.serial, kind: purchase.license_offer.kind },
       certificate: license.cert_json.presence,
       verify_url: "#{request.base_url}/verify/#{license.verify_slug}",
+      print_feedback: {
+        url: api_v1_license_print_reports_url(license.cert_id),
+        receipt_token: license.signed_id(purpose: "print-feedback")
+      },
       transaction_id: purchase.payment_tx_id,
       hashscan_url: "#{Hedera::Network.hashscan_base}/transaction/#{purchase.payment_tx_id}"
     }

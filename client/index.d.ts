@@ -90,7 +90,18 @@ export interface BatchPurchaseReceipt {
   licenses: Array<{
     model_id: number; kind: string; cert_id: string; serial: number;
     verify_url: string; files: Array<{ kind: string; url: string; expires_at?: string | null }>;
+    print_feedback?: PrintFeedbackCapability;
   }>;
+}
+
+export interface PrintFeedbackCapability {
+  url: string;
+  receipt_token: string;
+}
+
+export interface PrintReportReceipt {
+  cert_id: string;
+  successful_prints: number;
 }
 
 export interface PaymentQuote {
@@ -109,6 +120,7 @@ export interface PurchaseReceipt {
   verify_url: string;
   transaction_id: string;
   hashscan_url: string | null;
+  print_feedback?: PrintFeedbackCapability;
   sandbox?: boolean;
   warning?: string;
   sandbox_url?: string;
@@ -155,6 +167,7 @@ export class PrintwrightClient {
   quoteBatch(options: { items: BatchItem[]; asset?: Asset; webhook?: BatchWebhook }): Promise<BatchPaymentQuote>;
   buyBatch(options: { items?: BatchItem[]; asset?: Asset; webhook?: BatchWebhook; quote?: BatchPaymentQuote }): Promise<BatchPurchaseReceipt>;
   can(options: { certId: string; use: LicenseUse | string; qty?: number }): Promise<LicenseDecision>;
+  reportPrint(options: { certId: string; receiptToken: string }): Promise<PrintReportReceipt>;
   verify(certId: string): Promise<CertificateProof>;
 }
 

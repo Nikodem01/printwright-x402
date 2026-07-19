@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Printwright API",
-    "version": "1.7.0",
+    "version": "1.8.0",
     "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; every purchase mints a public HCS license certificate.",
     "contact": { "url": "https://github.com/Nikodem01/printwright-x402" },
     "x-guidance": "Search GET /api/v1/models, inspect offers, then buy one license with GET /api/v1/models/{id}/download or up to 20 licenses with POST /api/v1/batches. An unpaid request returns an x402 v2 challenge; sign one exact payment option and retry the identical request. Batch items must share one payTo account. For a zero-funds rehearsal, send X-Sandbox: true on both requests; sandbox artifacts are explicitly not payments or licenses."
@@ -188,6 +188,30 @@
         }
       }
     },
+    "/licenses/{cert_id}/print_reports": {
+      "post": {
+        "operationId": "reportSuccessfulPrint",
+        "summary": "Report one successful print using a paid receipt capability",
+        "description": "The signed receipt_token is returned only by a real non-sandbox x402 delivery and is bound to one certificate. A report is idempotent per license. This is a paid holder self-report, not independent physical inspection, and it never changes the certificate or payment ledger.",
+        "security": [],
+        "parameters": [
+          { "name": "cert_id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "pw-000059" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "required": ["receipt_token"], "additionalProperties": false, "properties": {
+            "receipt_token": { "type": "string", "writeOnly": true }
+          } } } }
+        },
+        "responses": {
+          "200": { "description": "Existing report returned idempotently", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PrintReportReceipt" } } } },
+          "201": { "description": "Successful-print report recorded", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PrintReportReceipt" } } } },
+          "403": { "description": "paid_license_required — sandbox or non-delivered license", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
     "/stats": {
       "get": {
         "operationId": "getOpenBooks",
@@ -368,6 +392,22 @@
             "url": { "type": "string" }, "permissions_url": { "type": "string" } } }
         }
       },
+      "PrintFeedbackCapability": {
+        "type": "object",
+        "required": ["url", "receipt_token"],
+        "properties": {
+          "url": { "type": "string", "format": "uri" },
+          "receipt_token": { "type": "string", "writeOnly": true }
+        }
+      },
+      "PrintReportReceipt": {
+        "type": "object",
+        "required": ["cert_id", "successful_prints"],
+        "properties": {
+          "cert_id": { "type": "string" },
+          "successful_prints": { "type": "integer", "minimum": 1 }
+        }
+      },
       "OpenBooksStats": {
         "type": "object",
         "required": ["generated_at", "network", "split", "hcs", "ledger", "recent_settlement_proofs"],
@@ -468,6 +508,7 @@
                 "model_id": { "type": "integer" }, "kind": { "type": "string" },
                 "cert_id": { "type": "string" }, "serial": { "type": "integer" },
                 "verify_url": { "type": "string" },
+                "print_feedback": { "$ref": "#/components/schemas/PrintFeedbackCapability" },
                 "files": { "type": "array", "items": { "type": "object" } }
               }
             }
@@ -484,6 +525,7 @@
             "cert_id": { "type": "string" }, "serial": { "type": "integer" }, "kind": { "type": "string" } } },
           "certificate": { "type": ["object", "null"] },
           "verify_url": { "type": "string" },
+          "print_feedback": { "$ref": "#/components/schemas/PrintFeedbackCapability" },
           "transaction_id": { "type": "string" },
           "hashscan_url": { "type": ["string", "null"] },
           "sandbox": { "type": "boolean", "description": "true only for the mock-facilitator rehearsal" },

@@ -195,6 +195,22 @@ export class PrintwrightClient {
     return this.getJson(this.url(`api/v1/licenses/${encodeURIComponent(certId)}/can?${params}`));
   }
 
+  async reportPrint({ certId, receiptToken } = {}) {
+    if (!certId?.trim()) throw new TypeError("certId is required");
+    if (!receiptToken?.trim()) throw new TypeError("receiptToken is required");
+    const url = this.url(`api/v1/licenses/${encodeURIComponent(certId)}/print_reports`);
+    const response = await this.fetch(url, {
+      method: "POST",
+      headers: { accept: "application/json", "content-type": "application/json" },
+      body: JSON.stringify({ receipt_token: receiptToken }),
+    });
+    const body = await jsonBody(response);
+    if (!response.ok) {
+      throw new PrintwrightError(`print report failed (${response.status})`, { status: response.status, body });
+    }
+    return body;
+  }
+
   url(path) {
     return new URL(path, this.baseUrl);
   }

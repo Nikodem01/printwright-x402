@@ -31,6 +31,9 @@ class DocsPageTest < ActionDispatch::IntegrationTest
     assert_match "Machine-readable license decisions", response.body
     assert_match "commercial_unit_limit", response.body
     assert_match "printwright.can", response.body
+    assert_match "Paid-holder print feedback", response.body
+    assert_match "printwright.reportPrint", response.body
+    assert_match "not sensor evidence", response.body
     assert_match "check_license", response.body
     assert_match "PWC-1 certificate standard", response.body
     assert_match "pwc-1.schema.json", response.body

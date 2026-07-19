@@ -252,7 +252,7 @@ class Api::V1::BatchesController < Api::V1::BaseController
         { kind: file.kind, url: api_v1_file_url(grant.token), expires_at: grant.expires_at.iso8601 }
       end
     end
-    {
+    payload = {
       model_id: purchase.model3d.id,
       kind: purchase.license_offer.kind,
       cert_id: license.cert_id,
@@ -260,6 +260,11 @@ class Api::V1::BatchesController < Api::V1::BaseController
       files: files,
       verify_url: "#{request.base_url}/verify/#{license.verify_slug}"
     }
+    payload[:print_feedback] = {
+      url: api_v1_license_print_reports_url(license.cert_id),
+      receipt_token: license.signed_id(purpose: "print-feedback")
+    } unless purchase.sandbox?
+    payload
   end
 
   def facilitator_for(batch)

@@ -33,5 +33,7 @@ class StorefrontController < ApplicationController
     @licenses_issued = License.joins(purchase: :license_offer)
                               .where(purchases: { sandbox: false },
                                      license_offers: { model3d_id: @model.id }).count
+    @successful_prints = PrintReport.joins(license: { purchase: :license_offer })
+                                    .where(license_offers: { model3d_id: @model.id }).count
   end
 end

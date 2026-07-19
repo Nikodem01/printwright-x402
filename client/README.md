@@ -35,7 +35,17 @@ const decision = await buyer.can({
 });
 const proof = await buyer.verify(receipt.license.cert_id);
 console.log(receipt.hashscan_url, decision.allowed, decision.reason_code, proof.match);
+
+// After this paid file actually prints successfully:
+await buyer.reportPrint({
+  certId: receipt.license.cert_id,
+  receiptToken: receipt.print_feedback.receipt_token,
+});
 ```
+
+The receipt capability is returned only by a real paid delivery. A successful-print report is
+idempotent per license and contributes to the model's paid-holder report count. It is a buyer
+self-report, not independent physical inspection.
 
 Print farms can settle up to 20 licenses sharing one direct payout destination with one x402
 payment. Each item still receives its own file grant and independently verifiable certificate:

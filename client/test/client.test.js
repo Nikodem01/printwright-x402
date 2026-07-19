@@ -10,6 +10,7 @@ let paidRequests = 0;
 let paidBatchRequests = 0;
 let lastBatchBodies = [];
 let lastSearchParams;
+let lastPrintReport;
 
 const certificate = {
   cert_id: "pw-000007",
@@ -40,6 +41,10 @@ before(async () => {
           licenses: body.items.map((item, index) => ({
             model_id: item.model_id, kind: item.license, cert_id: `pw-00001${index}`,
             serial: index + 1, verify_url: `${baseUrl}/verify/pw-00001${index}`, files: [],
+            print_feedback: {
+              url: `${baseUrl}/api/v1/licenses/pw-00001${index}/print_reports`,
+              receipt_token: `receipt-${index}`,
+            },
           })),
         }));
       }
@@ -85,6 +90,9 @@ before(async () => {
         paidRequests += 1;
         return response.end(JSON.stringify({
           files: [], license: { cert_id: "pw-000007", serial: 1, kind: "personal" },
+          print_feedback: {
+            url: `${baseUrl}/api/v1/licenses/pw-000007/print_reports`, receipt_token: "receipt-7",
+          },
           hashscan_url: "https://hashscan.io/testnet/transaction/example",
         }));
       }
@@ -117,6 +125,11 @@ before(async () => {
         cert_id: "pw-000007", use: url.searchParams.get("use"), qty,
         allowed: qty <= 1, reason_code: qty <= 1 ? "allowed" : "commercial_unit_limit",
       }));
+    }
+    if (url.pathname === "/api/v1/licenses/pw-000007/print_reports" && request.method === "POST") {
+      lastPrintReport = await requestBody(request);
+      response.statusCode = 201;
+      return response.end(JSON.stringify({ cert_id: "pw-000007", successful_prints: 1 }));
     }
     if (url.pathname === "/api/v1/certificates/pw-000008") {
       return response.end(JSON.stringify({
@@ -254,6 +267,14 @@ test("checks a structured license decision without payment credentials", async (
   assert.equal(three.reason_code, "commercial_unit_limit");
   await assert.rejects(() => client.can({ certId: "pw-000007", use: "commercial_print", qty: 0 }),
     /positive integer/);
+});
+
+test("reports a successful print with the paid receipt capability", async () => {
+  const client = new PrintwrightClient({ baseUrl });
+  const result = await client.reportPrint({ certId: "pw-000007", receiptToken: "receipt-7" });
+
+  assert.deepEqual(lastPrintReport, { receipt_token: "receipt-7" });
+  assert.deepEqual(result, { cert_id: "pw-000007", successful_prints: 1 });
 });
 
 test("reports mirror indexing lag without turning an anchored certificate into an error", async () => {

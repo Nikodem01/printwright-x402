@@ -201,7 +201,7 @@ console.log(receipt.warning, await sandbox.verify(receipt.license.cert_id));</pr
     <code class="mono">/models/{id}</code>, <code class="mono">/certificates/{cert_id}</code>,
     <code class="mono">/licenses/{id}/can</code>, and <code class="mono">/stats</code>
     120/min, <code class="mono">/models/{id}/download</code> 30/min,
-    <code class="mono">/files/{token}</code> 60/min.</p>
+    <code class="mono">/files/{token}</code> 60/min, successful-print reports 20/min.</p>
 
   <h2>Machine-readable license decisions</h2>
   <p class="t-small">An agent never needs to parse legal prose to answer a bounded usage question.
@@ -224,6 +224,21 @@ console.log(receipt.warning, await sandbox.verify(receipt.license.cert_id));</pr
   certId: "pw-000057", use: "commercial_print", qty: 3
 });
 console.log(decision.allowed, decision.reason_code);</pre>
+
+  <h2>Paid-holder print feedback</h2>
+  <p class="t-small">A successful non-sandbox delivery includes a private
+    <code class="mono">print_feedback.receipt_token</code>. After the geometry really prints,
+    the buyer can submit that signed capability once. It is bound to the certificate and cannot be
+    used for another license; invalid, cross-license, and sandbox tokens create no report.</p>
+  <pre class="mono t-small" style="overflow-x:auto">const result = await printwright.reportPrint({
+  certId: receipt.license.cert_id,
+  receiptToken: receipt.print_feedback.receipt_token,
+});
+// { cert_id: "pw-000059", successful_prints: 1 }</pre>
+  <p class="t-small">A model with at least one report shows a <strong>Print-tested</strong> badge
+    and the number of distinct paid-license reports. This is verified receipt possession plus a
+    buyer self-report—not sensor evidence, laboratory testing, or independent inspection. The
+    report does not alter the license certificate or payment ledger.</p>
 
   <h2 id="pwc-1">PWC-1 certificate standard</h2>
   <p class="t-small"><strong>PWC-1</strong> is the frozen version-1 JSON payload stored as one

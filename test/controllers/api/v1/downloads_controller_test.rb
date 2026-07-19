@@ -96,6 +96,10 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/\Apw-\d{6}\z/, body.dig("license", "cert_id"))
     assert_equal 1, body["files"].length
     assert_includes body["files"].first["url"], "/api/v1/files/"
+    feedback = body.fetch("print_feedback")
+    assert_includes feedback["url"], "/api/v1/licenses/#{body.dig('license', 'cert_id')}/print_reports"
+    assert_equal body.dig("license", "cert_id"),
+      License.find_signed(feedback["receipt_token"], purpose: "print-feedback").cert_id
 
     purchase = Purchase.sole
     assert purchase.delivered?
