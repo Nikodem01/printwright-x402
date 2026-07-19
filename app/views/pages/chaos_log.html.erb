@@ -1,0 +1,49 @@
+<% content_for :title, "Chaos log — Printwright" %>
+<% content_for :description, "Public Hedera liveness evidence and reproducible adversarial test results." %>
+
+<div class="container">
+  <h1>Chaos log</h1>
+  <p class="hero">Public evidence for two narrower claims: the scheduled service recently reached
+    Hedera Consensus Service, and the listed adversarial suites passed at the linked code revision.
+    Neither claim is stretched into a general uptime or security guarantee.</p>
+
+  <h2>Hedera heartbeat</h2>
+  <% if @heartbeat[:status] == "ok" %>
+    <dl class="fact-grid heartbeat-facts">
+      <dt>State</dt><dd><strong>Alive at last scheduled submission</strong></dd>
+      <dt>Observed by the app</dt><dd><time datetime="<%= @heartbeat[:observed_at] %>"><%= @heartbeat[:observed_at] %></time></dd>
+      <dt>Hedera consensus time</dt><dd class="mono"><%= @heartbeat[:consensus_timestamp] %></dd>
+      <dt>Topic sequence</dt><dd><%= @heartbeat[:sequence_number] %></dd>
+    </dl>
+    <p class="t-small"><%= link_to "Exact mirror message ↗", @heartbeat[:message_url], class: "mono" %> ·
+      <%= link_to "Heartbeat topic on HashScan ↗", @heartbeat[:hashscan_url], class: "mono" %></p>
+  <% elsif @heartbeat[:status] == "not_configured" %>
+    <p class="verify-banner banner-pending"><strong>Not configured.</strong> No heartbeat topic is
+      claimed for this deployment.</p>
+  <% elsif @heartbeat[:status] == "stale" %>
+    <p class="verify-banner banner-pending"><strong>Stale.</strong> The latest valid heartbeat was
+      <time datetime="<%= @heartbeat[:observed_at] %>"><%= @heartbeat[:observed_at] %></time>, more
+      than twelve hours ago.</p>
+    <p class="t-small"><%= link_to "Exact stale mirror message ↗", @heartbeat[:message_url], class: "mono" %> ·
+      <%= link_to "Heartbeat topic on HashScan ↗", @heartbeat[:hashscan_url], class: "mono" %></p>
+  <% else %>
+    <p class="verify-banner banner-pending"><strong>Unavailable.</strong> The mirror did not return
+      a valid PWH-1 message, so this page does not substitute a local health check.</p>
+  <% end %>
+  <p class="t-caption muted">A PWH-1 message proves the Rails scheduler and key-holding sidecar
+    reached HCS at that time. It does not prove every storefront or payment dependency is healthy.</p>
+
+  <h2>Completed adversarial runs</h2>
+  <% @chaos_runs.each do |run| %>
+    <section class="buy-panel" data-chaos-run>
+      <p class="t-caption muted"><%= run[:date] %> · commit
+        <%= link_to run[:commit], run[:commit_url], class: "mono" %></p>
+      <h3><%= run[:name] %></h3>
+      <p><strong>Exercised:</strong> <%= run[:exercised] %></p>
+      <p><strong>Result:</strong> <%= run[:result] %></p>
+      <pre class="code-block"><code><%= run[:command] %></code></pre>
+    </section>
+  <% end %>
+  <p class="t-caption muted">Only runs that exist in the public repository and completed are
+    listed. A planned drill or an unavailable external check does not become a green row.</p>
+</div>

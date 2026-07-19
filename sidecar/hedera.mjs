@@ -38,6 +38,20 @@ export function buildHedera({ network, accountId, privateKey, treasury }) {
       };
     },
 
+    async createHeartbeatTopic() {
+      const response = await new TopicCreateTransaction()
+        .setTopicMemo("printwright public liveness pwh-1")
+        .setAdminKey(operatorKey.publicKey)
+        .setSubmitKey(operatorKey.publicKey)
+        .setAutoRenewAccountId(AccountId.fromString(accountId))
+        .execute(client);
+      const receipt = await response.getReceipt(client);
+      return {
+        topicId: receipt.topicId.toString(),
+        transactionId: response.transactionId.toString(),
+      };
+    },
+
     async submitMessage(topicId, message) {
       const transaction = await new TopicMessageSubmitTransaction()
         .setTopicId(topicId)

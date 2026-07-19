@@ -3,7 +3,7 @@ import http from "node:http";
 
 const MAX_MESSAGE_BYTES = 1024; // keep provenance records in one HCS message
 
-export function createApp({ hedera, token, topicId }) {
+export function createApp({ hedera, token, topicId, heartbeatTopicId = () => undefined }) {
   async function handle(req, res) {
     const send = (status, body) => {
       res.writeHead(status, { "content-type": "application/json" });
@@ -14,7 +14,10 @@ export function createApp({ hedera, token, topicId }) {
       return send(200, { ok: true, network: hedera.network, topicId: topicId() ?? null });
     }
 
-    const routes = ["/create-topic", "/submit-cert", "/submit-version", "/payout", "/create-collection", "/mint-airdrop"];
+    const routes = [
+      "/create-topic", "/create-heartbeat-topic", "/submit-cert", "/submit-version",
+      "/submit-heartbeat", "/payout", "/create-collection", "/mint-airdrop",
+    ];
     if (req.method !== "POST" || !routes.includes(req.url)) {
       return send(404, { error: "not_found" });
     }
@@ -37,6 +40,24 @@ export function createApp({ hedera, token, topicId }) {
       if (req.url === "/create-topic") {
         const memo = body.memo || "printwright license certificates v1";
         return send(200, await hedera.createTopic(memo));
+      }
+
+      if (req.url === "/create-heartbeat-topic") {
+        return send(200, await hedera.createHeartbeatTopic());
+      }
+
+      if (req.url === "/submit-heartbeat") {
+        if (!validHeartbeat(body.heartbeat, hedera.network)) {
+          return send(400, { error: "invalid_heartbeat" });
+        }
+        const target = heartbeatTopicId();
+        if (!target) return send(400, { error: "no_heartbeat_topic_configured" });
+
+        const message = JSON.stringify(body.heartbeat);
+        if (Buffer.byteLength(message, "utf8") > MAX_MESSAGE_BYTES) {
+          return send(422, { error: "heartbeat_too_large", limit: MAX_MESSAGE_BYTES });
+        }
+        return send(200, await hedera.submitMessage(target, message));
       }
 
       if (req.url === "/create-collection") {
@@ -124,6 +145,20 @@ export function createApp({ hedera, token, topicId }) {
       if (typeof t.amount !== "string" || !/^[1-9]\d*$/.test(t.amount)) return "invalid_transfer_amount";
     }
     return null;
+  }
+
+  function validHeartbeat(heartbeat, network) {
+    if (!heartbeat || typeof heartbeat !== "object" || Array.isArray(heartbeat)) return false;
+    const keys = Object.keys(heartbeat).sort();
+    const expected = ["network", "observed_at", "schema", "service", "status"];
+    if (keys.length !== expected.length || keys.some((key, index) => key !== expected[index])) return false;
+    return heartbeat.schema === "pwh-1" &&
+      heartbeat.service === "printwright" &&
+      heartbeat.status === "alive" &&
+      heartbeat.network === `hedera:${network}` &&
+      typeof heartbeat.observed_at === "string" &&
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(heartbeat.observed_at) &&
+      Number.isFinite(Date.parse(heartbeat.observed_at));
   }
 
   return http.createServer((req, res) => {

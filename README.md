@@ -141,6 +141,8 @@ Agent discovery: `/.well-known/x402-catalog.json` (crawlable live offers) ·
 [`/openapi.json`](public/openapi.json) · [`/llms.txt`](public/llms.txt).
 The public `/open-books` page and `/api/v1/stats` expose the HCS certificate count, configured
 90/10 split, exact per-asset ledger totals, refunds, and recent raw mirror proof links.
+The public `/chaos-log` page separates mirror-verifiable scheduled liveness from reproducible
+adversarial test results; a heartbeat is never presented as proof that checkout is healthy.
 
 Pre-release load sanity is a bounded, read-only catalog burst (100 requests stays below the
 documented 120/min per-IP catalog limit):

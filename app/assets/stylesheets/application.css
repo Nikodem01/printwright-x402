@@ -225,6 +225,11 @@ a.mono, .mono a { color: var(--chain); text-decoration: underline; }
 }
 .fact-grid dt { color: var(--text-muted); font-size: 14px; }
 .fact-grid dd { margin: 0; }
+.heartbeat-facts dd { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+  .heartbeat-facts { grid-template-columns: 1fr; gap: 2px; }
+  .heartbeat-facts dt:not(:first-child) { margin-top: var(--s-1); }
+}
 .mismatch-row { background: var(--bad-bg); }
 .evidence-footer { margin-top: var(--s-4); display: flex; gap: var(--s-4); flex-wrap: wrap; align-items: baseline; }
 

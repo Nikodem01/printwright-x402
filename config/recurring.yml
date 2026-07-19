@@ -16,3 +16,6 @@ production:
   cleanup_expired_chat_conversations:
     command: "ChatConversation.cleanup_expired!"
     schedule: every hour at minute 42
+  submit_public_heartbeat:
+    class: HeartbeatJob
+    schedule: every 6 hours

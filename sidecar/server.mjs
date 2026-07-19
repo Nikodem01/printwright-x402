@@ -28,6 +28,7 @@ createApp({
   hedera,
   token: process.env.SIDECAR_TOKEN,
   topicId: () => process.env.HEDERA_HCS_TOPIC_ID,
+  heartbeatTopicId: () => process.env.HEDERA_HEARTBEAT_TOPIC_ID,
 }).listen(PORT, HOST, () => {
   console.log(`hcs sidecar on ${HOST}:${PORT} (network: ${hedera.network})`);
 });

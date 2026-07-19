@@ -37,6 +37,24 @@ BUYER_ACCOUNT_ID=0.0.x BUYER_PRIVATE_KEY=0x... node scripts/smoke.mjs
 Green = app, sidecar, facilitator, a real settle, and a mirror-confirmed cert.
 A red smoke outranks every other task.
 
+## Public HCS heartbeat
+
+The production scheduler submits one compact PWH-1 liveness statement every six hours to a
+dedicated, submit-key-protected topic. Create it once through the local sidecar, then set the
+returned public topic id as `HEDERA_HEARTBEAT_TOPIC_ID` for both app and sidecar and restart them:
+
+```bash
+curl -X POST localhost:4021/create-heartbeat-topic \
+  -H "Authorization: Bearer $SIDECAR_TOKEN" -H "Content-Type: application/json" -d '{}'
+bin/rails runner 'HeartbeatJob.perform_now'
+```
+
+`/chaos-log` reads the latest message directly from the mirror. The topic has the operator as
+admin, submit, and auto-renew account; the private key stays in the sidecar. A missing/invalid
+mirror message is shown as unavailable, never replaced by `/up`. The heartbeat proves the Rails
+scheduler and sidecar reached HCS at that instant—not end-to-end checkout health. The paid smoke
+above remains the stronger operational test.
+
 ## Designer payouts
 
 Panel: `/admin` → **Preview designer payouts** or **Run designer payouts**. The run button has

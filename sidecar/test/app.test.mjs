@@ -11,6 +11,10 @@ const fakeHedera = {
     calls.push(["createTopic", memo]);
     return { topicId: "0.0.111", transactionId: "0.0.1@1.2" };
   },
+  createHeartbeatTopic: async () => {
+    calls.push(["createHeartbeatTopic"]);
+    return { topicId: "0.0.222", transactionId: "0.0.1@2.2" };
+  },
   submitMessage: async (topicId, message) => {
     calls.push(["submitMessage", topicId, message]);
     return { topicId, sequenceNumber: 7, transactionId: "0.0.1@3.4" };
@@ -32,9 +36,15 @@ const fakeHedera = {
 let server;
 let base;
 let configuredTopic = "0.0.111";
+let configuredHeartbeatTopic = "0.0.222";
 
 before(async () => {
-  server = createApp({ hedera: fakeHedera, token: TOKEN, topicId: () => configuredTopic });
+  server = createApp({
+    hedera: fakeHedera,
+    token: TOKEN,
+    topicId: () => configuredTopic,
+    heartbeatTopicId: () => configuredHeartbeatTopic,
+  });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   base = `http://127.0.0.1:${server.address().port}`;
 });
@@ -68,6 +78,53 @@ test("create-topic uses the default memo", async () => {
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), { topicId: "0.0.111", transactionId: "0.0.1@1.2" });
   assert.deepEqual(calls.at(-1), ["createTopic", "printwright license certificates v1"]);
+});
+
+test("creates a dedicated heartbeat topic with fixed policy", async () => {
+  const res = await post("/create-heartbeat-topic", {});
+  assert.equal(res.status, 200);
+  assert.deepEqual(await res.json(), { topicId: "0.0.222", transactionId: "0.0.1@2.2" });
+  assert.deepEqual(calls.at(-1), ["createHeartbeatTopic"]);
+});
+
+test("submit-heartbeat accepts only the bounded pwh-1 schema", async () => {
+  const heartbeat = {
+    schema: "pwh-1",
+    service: "printwright",
+    status: "alive",
+    network: "hedera:testnet",
+    observed_at: "2026-07-19T12:00:00Z",
+  };
+  const res = await post("/submit-heartbeat", { heartbeat });
+  assert.equal(res.status, 200);
+  assert.deepEqual(calls.at(-1), ["submitMessage", "0.0.222", JSON.stringify(heartbeat)]);
+
+  for (const invalid of [
+    {},
+    { ...heartbeat, schema: "pwc-1" },
+    { ...heartbeat, service: "other" },
+    { ...heartbeat, status: "healthy" },
+    { ...heartbeat, network: "hedera:mainnet" },
+    { ...heartbeat, observed_at: "today" },
+    { ...heartbeat, extra: "not part of pwh-1" },
+  ]) {
+    const rejected = await post("/submit-heartbeat", { heartbeat: invalid });
+    assert.equal(rejected.status, 400, JSON.stringify(invalid));
+    assert.deepEqual(await rejected.json(), { error: "invalid_heartbeat" });
+  }
+});
+
+test("submit-heartbeat refuses without its dedicated topic", async () => {
+  configuredHeartbeatTopic = undefined;
+  const res = await post("/submit-heartbeat", {
+    heartbeat: {
+      schema: "pwh-1", service: "printwright", status: "alive",
+      network: "hedera:testnet", observed_at: "2026-07-19T12:00:00Z",
+    },
+  });
+  assert.equal(res.status, 400);
+  assert.deepEqual(await res.json(), { error: "no_heartbeat_topic_configured" });
+  configuredHeartbeatTopic = "0.0.222";
 });
 
 test("submit-cert serializes compactly and returns sequence number", async () => {

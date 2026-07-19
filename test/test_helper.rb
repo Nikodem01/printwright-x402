@@ -6,6 +6,9 @@ ENV["RAILS_ENV"] ||= "test"
 # suite was green in CI and red for anyone actually set up to use the feature.
 # Tests that exercise the semantic path set this themselves and stub the HTTP.
 ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
+# A developer's configured public heartbeat topic must not make the suite call
+# the live mirror. Heartbeat tests opt in explicitly and stub the response.
+ENV.delete("HEDERA_HEARTBEAT_TOPIC_ID")
 
 require_relative "../config/environment"
 require "rails/test_help"
