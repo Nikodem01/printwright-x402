@@ -5,7 +5,7 @@ import { Controller } from "@hotwired/stimulus"
 // invalidReason like "invalid_signature") fall back to a generic message and
 // are treated as retryable — a fresh quote + signature is a real fix for those.
 const FAILURE_COPY = {
-  sold_out: () => "This edition is sold out — there are no units left to license.",
+  sold_out: () => "This offer is sold out — there are no license slots left.",
   facilitator_unavailable: (retryAfter) =>
     `The payment processor is temporarily unavailable. Try again in about ${retryAfter || 5} seconds.`,
   rate_limited: (retryAfter) =>
@@ -173,16 +173,28 @@ export default class extends Controller {
   success(body) {
     this.element.dataset.checkoutState = "success"
     const txId = body.transaction_id
+    const maxUnits = body.license.max_units
+    const serialLabel = maxUnits ? `#${body.license.serial} of ${maxUnits}` : `#${body.license.serial}`
+    const capNote = maxUnits
+      ? `<p class="t-caption muted">${body.license.remaining_units} of ${maxUnits} license slots now remain. This cap does not technically restrict physical printing.</p>`
+      : ""
+    const shareCard = body.share_card_url
+      ? `<a href="${this.escape(body.share_card_url)}" target="_blank" rel="noopener">
+          <img src="${this.escape(body.share_card_url)}" alt="Share card for ${this.escape(body.license.cert_id)}" style="display:block; margin:var(--s-2) 0; max-width:100%; height:auto">
+        </a>`
+      : ""
     this.receiptTarget.innerHTML = `
       <div class="badge badge-ok">✓ licensed</div>
-      <h3 style="margin-top: var(--s-2)">Licensed — unit #${body.license.serial}</h3>
+      <h3 style="margin-top: var(--s-2)">Licensed — unit ${serialLabel}</h3>
+      ${capNote}
       <a class="btn btn-primary" href="${body.files[0]?.url}" download>Download files</a>
       <dl class="t-small" style="margin-bottom:0">
         <dt class="muted">transaction</dt>
         <dd style="margin:0 0 var(--s-2)"><a class="mono" href="${body.hashscan_url}" target="_blank" rel="noopener">${this.escape(txId)}</a></dd>
         <dt class="muted">certificate</dt>
         <dd style="margin:0"><a class="mono" href="${body.verify_url}">${this.escape(body.license.cert_id)}</a></dd>
-      </dl>`
+      </dl>
+      ${shareCard}`
     this.receiptTarget.hidden = false
     this.statusTarget.innerHTML = ""
     this.buttonTarget.hidden = true

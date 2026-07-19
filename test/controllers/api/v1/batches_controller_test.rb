@@ -67,6 +67,7 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 3, body.fetch("licenses").length
     assert_equal 3, body.fetch("licenses").map { |item| item["cert_id"] }.uniq.length
     assert(body.fetch("licenses").all? { |item| item["verify_url"].include?(item["cert_id"]) })
+    assert(body.fetch("licenses").all? { |item| item["share_card_url"].include?(item["cert_id"]) })
     assert(body.fetch("licenses").all? do |item|
       License.find_signed(item.dig("print_feedback", "receipt_token"), purpose: "print-feedback").cert_id == item["cert_id"]
     end)

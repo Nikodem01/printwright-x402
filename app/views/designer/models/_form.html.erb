@@ -71,8 +71,9 @@
       <div class="field-row">
         <label class="t-small">Kind <%= offer.select :kind, LicenseOffer::KINDS %></label>
         <label class="t-small">Price (US cents) <%= offer.number_field :price_cents, min: 1 %></label>
-        <label class="t-small">Max units <%= offer.number_field :max_units, placeholder: "unlimited" %></label>
+        <label class="t-small">License issuance cap <%= offer.number_field :max_units, placeholder: "unlimited" %></label>
       </div>
+      <p class="t-caption muted">Optional. This caps licenses sold, not physical copies; Printwright cannot technically enforce print count.</p>
       <label class="t-small">Terms <%= offer.text_area :terms_md, rows: 2 %></label>
     <% end %>
   </fieldset>

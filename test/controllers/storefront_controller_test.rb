@@ -95,6 +95,18 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "capped offer reports license slots without claiming physical scarcity" do
+    offer = @beaver.license_offers.sole
+    offer.update!(max_units: 3)
+    Purchase.create!(license_offer: offer, status: "pending", replay_key: SecureRandom.hex(32))
+
+    get model_page_path(@beaver.slug)
+
+    assert_select ".offer-row", text: /2 of 3 license slots available/
+    assert_select ".buy-panel", text: /not a claim of physical scarcity/
+    assert_select ".buy-panel", text: /does not technically prevent/
+  end
+
   test "model page exposes only a decimated preview and keeps the render fallback" do
     source = @beaver.model_files.create!(kind: "stl", position: 0)
     source.file.attach(io: Rails.root.join("db/seed_assets/beaver-with-hat.stl").open,

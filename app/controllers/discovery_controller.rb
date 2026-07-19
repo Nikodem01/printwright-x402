@@ -54,6 +54,7 @@ class DiscoveryController < ApplicationController
       settlement_assets: [ X402::Requirements.usdc_asset, X402::Requirements::HBAR_ASSET ],
       available: !offer.sold_out?,
       max_units: offer.max_units,
+      remaining_units: offer.units_remaining,
       payment_url: api_v1_model_download_url(model_id: model.id, license: offer.kind),
       terms: catalog_terms(offer)
     }

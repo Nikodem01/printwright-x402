@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Printwright certificate <%= @license.cert_id %>">
+  <rect width="1200" height="630" fill="#f5f1e8"/>
+  <rect x="56" y="56" width="1088" height="518" rx="28" fill="#ffffff" stroke="#16734a" stroke-width="3"/>
+  <circle cx="112" cy="116" r="28" fill="#d9f5e7"/>
+  <text x="112" y="126" text-anchor="middle" font-family="system-ui,sans-serif" font-size="30" font-weight="700" fill="#0c653d">✓</text>
+  <text x="160" y="108" font-family="system-ui,sans-serif" font-size="28" font-weight="700" fill="#20201d">PRINTWRIGHT LICENSE CERTIFICATE</text>
+  <text x="160" y="140" font-family="ui-monospace,monospace" font-size="22" fill="#16734a"><%= @license.cert_id %></text>
+
+  <text x="96" y="246" font-family="system-ui,sans-serif" font-size="52" font-weight="700" fill="#20201d"><%= truncate(@model.title, length: 46) %></text>
+  <text x="96" y="292" font-family="system-ui,sans-serif" font-size="24" fill="#65645f">by <%= truncate(@model.designer.display_name, length: 54) %></text>
+
+  <text x="96" y="386" font-family="system-ui,sans-serif" font-size="24" fill="#65645f">LICENSE</text>
+  <text x="96" y="432" font-family="system-ui,sans-serif" font-size="34" font-weight="700" fill="#20201d"><%= @offer.kind.humanize %></text>
+  <text x="610" y="386" font-family="system-ui,sans-serif" font-size="24" fill="#65645f">LICENSE UNIT</text>
+  <text x="610" y="432" font-family="ui-monospace,monospace" font-size="34" font-weight="700" fill="#20201d">#<%= @license.serial %><%= " of #{@offer.max_units}" if @offer.max_units %></text>
+
+  <% if @license.purchase.sandbox? %>
+    <text x="96" y="518" font-family="system-ui,sans-serif" font-size="24" font-weight="700" fill="#9a5b00">SANDBOX SIMULATION — NOT A LICENSE OR HEDERA RECORD</text>
+  <% elsif @offer.max_units %>
+    <text x="96" y="510" font-family="system-ui,sans-serif" font-size="20" fill="#65645f">The cap limits licenses sold. It does not technically restrict physical printing.</text>
+  <% else %>
+    <text x="96" y="510" font-family="system-ui,sans-serif" font-size="20" fill="#65645f">Verify this certificate against its public Hedera Consensus Service record.</text>
+  <% end %>
+  <text x="1104" y="542" text-anchor="end" font-family="system-ui,sans-serif" font-size="22" font-weight="700" fill="#16734a">EVERY PRINT, LICENSED.</text>
+</svg>

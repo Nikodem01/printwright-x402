@@ -37,7 +37,10 @@ class Api::V1::ModelsController < Api::V1::BaseController
       designer: { name: model.designer.display_name },
       printability: model.printability,
       license_offers: model.license_offers.map do |offer|
-        { kind: offer.kind, price_cents: offer.price_cents, currency: offer.currency }
+        {
+          kind: offer.kind, price_cents: offer.price_cents, currency: offer.currency,
+          max_units: offer.max_units, remaining_units: offer.units_remaining
+        }
       end,
       url: api_v1_model_url(model),
       render_url: render_url_for(model)
@@ -56,6 +59,7 @@ class Api::V1::ModelsController < Api::V1::BaseController
           price_cents: offer.price_cents,
           currency: offer.currency,
           max_units: offer.max_units,
+          remaining_units: offer.units_remaining,
           terms: {
             version: offer.terms_version,
             hash: offer.terms_hash,

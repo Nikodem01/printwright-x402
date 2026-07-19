@@ -1,4 +1,7 @@
 <% content_for :title, "Certificate #{@license.cert_id} — Printwright" %>
+<% content_for :description, ERB::Util.html_escape("#{@license.cert_id}: #{@model.title} #{@license.purchase.license_offer.kind.humanize.downcase} verified on Hedera.") %>
+<% content_for :social_image, verify_share_card_url(@license.verify_slug) %>
+<% content_for :social_image_alt, ERB::Util.html_escape("Printwright license certificate #{@license.cert_id} for #{@model.title}") %>
 <% if @check.state == :minting %>
   <% content_for :head do %><meta http-equiv="refresh" content="5"><% end %>
 <% end %>
@@ -130,6 +133,7 @@
     <p class="t-small" style="margin-top: var(--s-3)">
       <%= link_to(@license.purchase.sandbox? ? "Printable sandbox record" : "Printable certificate",
                   verify_certificate_path(@license.verify_slug)) %> ·
+      <%= link_to "Share card", verify_share_card_path(@license.verify_slug) %> ·
       <%= link_to "Embeddable badge", badge_docs_path %>
     </p>
     <p class="t-caption muted">

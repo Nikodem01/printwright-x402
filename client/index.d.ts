@@ -89,6 +89,7 @@ export interface BatchPurchaseReceipt {
   sandbox: boolean;
   licenses: Array<{
     model_id: number; kind: string; cert_id: string; serial: number;
+    max_units: number | null; remaining_units: number | null; share_card_url?: string;
     verify_url: string; files: Array<{ kind: string; url: string; expires_at?: string | null }>;
     print_feedback?: PrintFeedbackCapability;
     model_updates?: ModelUpdatesCapability;
@@ -139,8 +140,9 @@ export interface PaymentQuote {
 
 export interface PurchaseReceipt {
   files: Array<{ kind: string; url: string; expires_at?: string | null; sandbox?: boolean }>;
-  license: { cert_id: string; serial: number; kind: string };
+  license: { cert_id: string; serial: number; kind: string; max_units?: number | null; remaining_units?: number | null };
   verify_url: string;
+  share_card_url?: string;
   transaction_id: string;
   hashscan_url: string | null;
   print_feedback?: PrintFeedbackCapability;

@@ -113,9 +113,19 @@
             <span class="t-caption muted" style="display:block">
               <%= offer.kind == "personal" ? "print for yourself, unlimited copies" : "one licensed sale per unit" %>
             </span>
+            <% if offer.max_units %>
+              <span class="t-caption" style="display:block">
+                <strong><%= offer.units_remaining %> of <%= offer.max_units %> license slots available</strong>
+              </span>
+            <% end %>
           </span>
           <span class="price"><%= offer_price(offer) %></span>
         </label>
+      <% end %>
+      <% if @model.license_offers.any?(&:max_units) %>
+        <p class="t-caption muted">A license issuance cap limits how many licenses Printwright
+          will sell. It is not a claim of physical scarcity and does not technically prevent
+          someone from making prints outside their license terms.</p>
       <% end %>
       <div style="margin: var(--s-2) 0">
         <% @model.license_offers.each do |offer| %>

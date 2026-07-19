@@ -38,7 +38,9 @@ class Api::V1::ModelsControllerTest < ActionDispatch::IntegrationTest
     assert_equal false, model["printability"]["supports"]
     assert_equal "toys-and-games", model["category"]
     assert_equal %w[support-free-essentials], model["collections"]
-    assert_equal [ %w[personal 250 USDC], %w[commercial_unit 60 USDC] ].map { |k, p, c| { "kind" => k, "price_cents" => p.to_i, "currency" => c } },
+    assert_equal [ %w[personal 250 USDC], %w[commercial_unit 60 USDC] ].map { |k, p, c|
+      { "kind" => k, "price_cents" => p.to_i, "currency" => c, "max_units" => nil, "remaining_units" => nil }
+    },
                  model["license_offers"]
     assert_includes model["url"], "/api/v1/models/#{@beaver.id}"
   end
@@ -88,6 +90,7 @@ class Api::V1::ModelsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @beaver.file_hash, body["file_hash"]
     assert_equal %w[beaver hat animal], body["tags"]
     assert body["license_offers"].all? { |o| o.key?("terms") && o.key?("max_units") }
+    assert body["license_offers"].all? { |o| o.key?("remaining_units") }
     personal = body["license_offers"].find { |offer| offer["kind"] == "personal" }
     assert_equal true, personal.dig("terms", "permissions", "personal_use", "allowed")
     assert_includes personal.dig("terms", "permissions_url"), ".json"

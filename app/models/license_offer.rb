@@ -13,10 +13,21 @@ class LicenseOffer < ApplicationRecord
   # in flight. Authoritative only under the offer row lock (see the download
   # controller's create step); unlocked callers get an advisory answer.
   def sold_out?
-    max_units && purchases.where(sandbox: false).where.not(status: FAILED_STATUSES).count >= max_units
+    max_units && units_remaining.zero?
   end
 
-  FAILED_STATUSES = %w[failed_verification failed_settlement].freeze
+  def capacity_used
+    purchases.where(sandbox: false).where.not(status: FAILED_STATUSES).count
+  end
+
+  def units_remaining
+    max_units && [ max_units - capacity_used, 0 ].max
+  end
+
+  # These terminal attempts can no longer become licenses and release their
+  # reservation. A refund is possible only before delivery, so it has no
+  # issued license to keep in the cap.
+  FAILED_STATUSES = %w[failed_verification failed_settlement refunded].freeze
 
   before_save :compute_terms_hash,
     if: -> { new_record? || terms_version_changed? || terms_md_changed? }

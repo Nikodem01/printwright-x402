@@ -39,6 +39,23 @@ class BadgeCertificateTest < ActionDispatch::IntegrationTest
     assert_match "@page", response.body # print stylesheet present
   end
 
+  test "share card renders certificate facts and the honest license-sale cap" do
+    offer = @license.purchase.license_offer
+    offer.update!(max_units: 25)
+    offer.model3d.update!(title: "Useful <script>alert(1)</script> part")
+
+    get verify_share_card_path(@license.verify_slug)
+
+    assert_response :success
+    assert_equal "image/svg+xml", response.media_type
+    assert_match 'width="1200" height="630"', response.body
+    assert_match @license.cert_id, response.body
+    assert_match "#1 of 25", response.body
+    assert_match "limits licenses sold", response.body
+    assert_no_match(/<script/i, response.body)
+    assert_empty Nokogiri::XML(response.body).errors
+  end
+
   test "badge docs page shows the snippet; unknown certs 404" do
     get badge_docs_path
     assert_response :success
@@ -50,6 +67,8 @@ class BadgeCertificateTest < ActionDispatch::IntegrationTest
     get verify_badge_path(cert_id: "pw-999999", format: :svg)
     assert_response :not_found
     get verify_certificate_path("pw-999999")
+    assert_response :not_found
+    get verify_share_card_path("pw-999999")
     assert_response :not_found
   end
 

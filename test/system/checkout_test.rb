@@ -37,6 +37,7 @@ class CheckoutTest < ApplicationSystemTestCase
   end
 
   test "buying in the browser walks the x402 states and lands on a receipt" do
+    @model.license_offers.sole.update!(max_units: 25)
     stub_request(:post, "#{FACILITATOR}/verify")
       .to_return(body: fixture("verify_ok.json"), headers: { "content-type" => "application/json" })
     stub_request(:post, "#{FACILITATOR}/settle")
@@ -48,7 +49,9 @@ class CheckoutTest < ApplicationSystemTestCase
     click_button "Buy license · 0.10 ℏ · $0.25"
 
     assert_selector ".badge-ok", text: "licensed"
-    assert_text "Licensed — unit #1"
+    assert_text "Licensed — unit #1 of 25"
+    assert_text "24 of 25 license slots now remain"
+    assert_selector "img[alt^='Share card for pw-']"
     assert_selector "a", text: settled_tx
     assert_selector "a", text: /\Apw-\d{6,}\z/
     assert_link "Download files"
@@ -94,7 +97,7 @@ class CheckoutTest < ApplicationSystemTestCase
     assert_no_changes -> { Purchase.count } do
       click_button "Buy license · 0.10 ℏ · $0.25"
       assert_selector ".badge-bad", text: "failed"
-      assert_text "This edition is sold out — there are no units left to license."
+      assert_text "This offer is sold out — there are no license slots left."
       assert_selector "button[disabled]", text: "Sold out"
       assert_no_button "Try again"
     end

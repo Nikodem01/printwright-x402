@@ -21,6 +21,19 @@ class VerifyController < ApplicationController
       content_type: "image/svg+xml"
   end
 
+  # A receipt-native social image. It states the issued license serial and,
+  # when configured, the license-sale cap; neither is described as a physical
+  # print limit because Printwright cannot technically enforce print counts.
+  def share_card
+    @license = License.includes(purchase: { license_offer: { model3d: :designer } })
+      .find_by(verify_slug: params[:cert_id])
+    return head :not_found unless @license
+
+    @offer = @license.purchase.license_offer
+    @model = @offer.model3d
+    render "share_card", formats: :svg, layout: false, content_type: "image/svg+xml"
+  end
+
   # Print-styled certificate (browser print-to-PDF prints it clean): the cert
   # facts, the QR to the live verify check, and the raw URLs in text form —
   # paper must not depend on this site staying up.

@@ -36,6 +36,7 @@ class VerifyControllerTest < ActionDispatch::IntegrationTest
     assert_select ".banner-ok", text: /Verified on Hedera/
     assert_select ".fact-grid .mono", text: /#1/
     assert_select ".evidence-footer a", minimum: 3
+    assert_select 'meta[property="og:image"][content$="/share-card"]'
   end
 
   test "unanchored cert shows minting with auto-refresh" do
@@ -65,6 +66,19 @@ class VerifyControllerTest < ActionDispatch::IntegrationTest
     get verify_path("pw-999999")
     assert_response :not_found
     assert_select ".banner-bad", text: /not found/i
+  end
+
+  test "certificate social metadata escapes a hostile model title" do
+    @license.purchase.model3d.update!(title: 'Part"><script>alert(1)</script>')
+
+    get verify_path(@license.cert_id)
+
+    assert_response :success
+    assert_select 'meta[property="og:image"][content$="/share-card"]'
+    assert_select 'meta[property="og:image:alt"][content=?]',
+      "Printwright license certificate #{@license.cert_id} for Part\"><script>alert(1)</script>"
+    assert_select "script", { text: /alert\(1\)/, count: 0 }
+    assert_no_match(/<script>alert\(1\)<\/script>/, response.body)
   end
 
   test "LIVE: real cert verifies against the real mirror node" do

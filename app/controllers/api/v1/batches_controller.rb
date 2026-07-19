@@ -257,9 +257,12 @@ class Api::V1::BatchesController < Api::V1::BaseController
       kind: purchase.license_offer.kind,
       cert_id: license.cert_id,
       serial: license.serial,
+      max_units: purchase.license_offer.max_units,
+      remaining_units: purchase.license_offer.units_remaining,
       files: files,
       verify_url: "#{request.base_url}/verify/#{license.verify_slug}"
     }
+    payload[:share_card_url] = verify_share_card_url(license.verify_slug) unless purchase.sandbox?
     payload[:print_feedback] = {
       url: api_v1_license_print_reports_url(license.cert_id),
       receipt_token: license.signed_id(purpose: "print-feedback")

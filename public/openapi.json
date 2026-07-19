@@ -350,7 +350,8 @@
           "designer": { "type": "object", "properties": { "name": { "type": "string" } } },
           "printability": { "$ref": "#/components/schemas/Printability" },
           "license_offers": { "type": "array", "items": { "type": "object", "properties": {
-            "kind": { "type": "string" }, "price_cents": { "type": "integer" }, "currency": { "type": "string" } } } },
+            "kind": { "type": "string" }, "price_cents": { "type": "integer" }, "currency": { "type": "string" },
+            "max_units": { "type": ["integer", "null"] }, "remaining_units": { "type": ["integer", "null"] } } } },
           "url": { "type": "string" }, "render_url": { "type": ["string", "null"] }
         }
       },
@@ -376,6 +377,7 @@
             "license_offers": { "type": "array", "items": { "type": "object", "properties": {
               "kind": { "type": "string" }, "price_cents": { "type": "integer" }, "currency": { "type": "string" },
               "max_units": { "type": ["integer", "null"] },
+              "remaining_units": { "type": ["integer", "null"], "description": "Current license slots after active reservations; not a physical print count" },
               "terms": { "type": "object", "properties": {
                 "version": { "type": ["string", "null"] }, "hash": { "type": "string" },
                 "url": { "type": ["string", "null"] },
@@ -570,7 +572,9 @@
               "properties": {
                 "model_id": { "type": "integer" }, "kind": { "type": "string" },
                 "cert_id": { "type": "string" }, "serial": { "type": "integer" },
+                "max_units": { "type": ["integer", "null"] }, "remaining_units": { "type": ["integer", "null"] },
                 "verify_url": { "type": "string" },
+                "share_card_url": { "type": "string" },
                 "print_feedback": { "$ref": "#/components/schemas/PrintFeedbackCapability" },
                 "model_updates": { "$ref": "#/components/schemas/ModelUpdatesCapability" },
                 "files": { "type": "array", "items": { "type": "object" } }
@@ -586,9 +590,11 @@
             "kind": { "type": "string" }, "url": { "type": "string" },
             "expires_at": { "type": ["string", "null"] }, "sandbox": { "type": "boolean" } } } },
           "license": { "type": "object", "properties": {
-            "cert_id": { "type": "string" }, "serial": { "type": "integer" }, "kind": { "type": "string" } } },
+            "cert_id": { "type": "string" }, "serial": { "type": "integer" }, "kind": { "type": "string" },
+            "max_units": { "type": ["integer", "null"] }, "remaining_units": { "type": ["integer", "null"] } } },
           "certificate": { "type": ["object", "null"] },
           "verify_url": { "type": "string" },
+          "share_card_url": { "type": "string" },
           "print_feedback": { "$ref": "#/components/schemas/PrintFeedbackCapability" },
           "model_updates": { "$ref": "#/components/schemas/ModelUpdatesCapability" },
           "transaction_id": { "type": "string" },

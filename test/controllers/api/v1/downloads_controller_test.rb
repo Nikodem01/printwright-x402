@@ -94,6 +94,7 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert_includes body["hashscan_url"], body["transaction_id"]
     assert_equal 1, body.dig("license", "serial")
     assert_match(/\Apw-\d{6}\z/, body.dig("license", "cert_id"))
+    assert_includes body["share_card_url"], "/share-card"
     assert_equal 1, body["files"].length
     assert_includes body["files"].first["url"], "/api/v1/files/"
     feedback = body.fetch("print_feedback")

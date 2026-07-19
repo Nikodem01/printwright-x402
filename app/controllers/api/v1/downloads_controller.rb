@@ -187,9 +187,10 @@ class Api::V1::DownloadsController < Api::V1::BaseController
       files: model.printable_files.map do |f|
         { kind: f.kind, url: api_v1_file_url(grant.token), expires_at: grant.expires_at.iso8601 }
       end,
-      license: { cert_id: license.cert_id, serial: license.serial, kind: purchase.license_offer.kind },
+      license: license_summary(license),
       certificate: license.cert_json.presence,
       verify_url: "#{request.base_url}/verify/#{license.verify_slug}",
+      share_card_url: verify_share_card_url(license.verify_slug),
       print_feedback: {
         url: api_v1_license_print_reports_url(license.cert_id),
         receipt_token: license.signed_id(purpose: "print-feedback")
@@ -220,6 +221,17 @@ class Api::V1::DownloadsController < Api::V1::BaseController
       transaction_id: purchase.payment_tx_id,
       hashscan_url: nil,
       sandbox_url: api_v1_sandbox_transaction_url(purchase.payment_tx_id)
+    }
+  end
+
+  def license_summary(license)
+    offer = license.purchase.license_offer
+    {
+      cert_id: license.cert_id,
+      serial: license.serial,
+      kind: offer.kind,
+      max_units: offer.max_units,
+      remaining_units: offer.units_remaining
     }
   end
 

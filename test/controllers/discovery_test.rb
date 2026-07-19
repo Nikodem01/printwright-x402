@@ -32,6 +32,7 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
     assert_equal [ "personal", 90, "USD", "USDC", true ],
                  [ offer["license_kind"], offer.dig("price", "cents"),
                    offer.dig("price", "currency"), offer["preferred_settlement_asset"], offer["available"] ]
+    assert_nil offer["remaining_units"]
     assert_equal %w[0.0.429274 0.0.0], offer["settlement_assets"]
     assert_equal "v1", offer.dig("terms", "version")
     assert_includes offer.dig("terms", "permissions_url"), ".json"

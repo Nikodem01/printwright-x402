@@ -52,6 +52,9 @@ For a browser-native check, load [`public/printwright-verify-widget.js`](public/
 as a classic script and add `<printwright-verify cert-id="…" topic-id="…" network="testnet">`.
 The committed [`widget-example.html`](public/widget-example.html) runs from any static server and
 queries only the Hedera mirror, so the marketplace can be offline.
+Paid delivery receipts also expose a 1200×630 certificate `share_card_url`. A capped offer reports
+its license unit and current license slots remaining; the cap limits licenses sold, not physical
+copies, and the storefront says so explicitly.
 
 **Try the complete integration without funds:** construct the client with `sandbox: true`, or
 run `node scripts/buy.mjs --query "cable clip" --sandbox`. The app still returns a 402 and runs
