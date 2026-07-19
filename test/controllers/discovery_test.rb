@@ -6,12 +6,17 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
     assert_response :success
     spec = JSON.parse(response.body)
     assert_equal "3.1.0", spec["openapi"]
+    assert spec.dig("info", "x-guidance").present?
     assert_equal [ "/certificates/{cert_id}", "/files/{token}", "/models", "/models/{id}", "/models/{id}/download" ],
                  spec["paths"].keys.sort
-    download = spec.dig("paths", "/models/{id}/download", "get", "responses")
-    assert download.key?("402"), "402 response must be documented"
-    assert download.dig("402", "headers").key?("PAYMENT-REQUIRED")
-    assert download.dig("200", "headers").key?("PAYMENT-RESPONSE")
+    operation = spec.dig("paths", "/models/{id}/download", "get")
+    assert_equal [ "x402" ], operation.dig("x-payment-info", "protocols").flat_map(&:keys)
+    assert_equal "dynamic", operation.dig("x-payment-info", "price", "mode")
+    responses = operation["responses"]
+    assert responses.key?("402"), "402 response must be documented"
+    assert responses.dig("402", "headers").key?("PAYMENT-REQUIRED")
+    assert responses.dig("402", "headers").key?("WWW-Authenticate")
+    assert responses.dig("200", "headers").key?("PAYMENT-RESPONSE")
   end
 
   test "llms.txt is served with the buy flow" do

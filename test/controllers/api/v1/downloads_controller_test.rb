@@ -51,6 +51,7 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "250000", "0.0.429274" ], [ usdc["amount"], usdc["asset"] ]
     decoded = JSON.parse(Base64.strict_decode64(response.headers["PAYMENT-REQUIRED"]))
     assert_equal body, decoded
+    assert_equal "x402", response.headers["WWW-Authenticate"]
   end
 
   # --- row: malformed header -> 400 invalid_payload ---

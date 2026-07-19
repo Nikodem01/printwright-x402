@@ -3,7 +3,9 @@
   "info": {
     "title": "Printwright API",
     "version": "1.1.0",
-    "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; every purchase mints a public HCS license certificate."
+    "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; every purchase mints a public HCS license certificate.",
+    "contact": { "url": "https://github.com/Nikodem01/printwright-x402" },
+    "x-guidance": "Search GET /api/v1/models, inspect an offer with GET /api/v1/models/{id}, then call GET /api/v1/models/{id}/download?license=personal or commercial_unit. The unpaid download returns an x402 v2 challenge; sign one exact payment option and retry the same URL. The paid response contains expiring file grants, the license, and public Hedera transaction/certificate references."
   },
   "servers": [{ "url": "/api/v1" }],
   "paths": {
@@ -11,6 +13,7 @@
       "get": {
         "operationId": "searchModels",
         "summary": "Search the catalog (keyword + trigram fuzzy matching)",
+        "security": [],
         "parameters": [
           { "name": "q", "in": "query", "schema": { "type": "string" }, "description": "keywords, e.g. 'beaver hat'" },
           { "name": "material", "in": "query", "schema": { "type": "string" }, "description": "e.g. PLA" },
@@ -36,6 +39,7 @@
       "get": {
         "operationId": "getModel",
         "summary": "Full model metadata (offers, terms, file hash)",
+        "security": [],
         "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
         "responses": {
           "200": { "description": "Model detail", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ModelDetail" } } } },
@@ -49,6 +53,10 @@
         "operationId": "downloadModel",
         "summary": "The paid endpoint: x402 negotiation",
         "description": "Without a payment header, responds 402 with PaymentRequirements (JSON body AND base64 PAYMENT-REQUIRED header). Retry the same request with the base64 PaymentPayload in the PAYMENT-SIGNATURE header (X-PAYMENT also accepted). The server verifies and settles through an x402 facilitator on Hedera testnet, then returns the file grant, license and certificate.",
+        "x-payment-info": {
+          "price": { "mode": "dynamic", "currency": "USD", "min": "0.01", "max": "10000.00" },
+          "protocols": [{ "x402": {} }]
+        },
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
           { "name": "license", "in": "query", "schema": { "type": "string", "enum": ["personal", "commercial_unit"], "default": "personal" } },
@@ -57,7 +65,10 @@
         "responses": {
           "402": {
             "description": "Payment required — PaymentRequired object in body and PAYMENT-REQUIRED header. `error` is \"payment required\" when no payment is attached, or \"invalid_payment_requirements\" when the attached payment matches none of the offer's `accepts` entries (still a fresh PaymentRequired body to retry against).",
-            "headers": { "PAYMENT-REQUIRED": { "schema": { "type": "string" }, "description": "base64 of the same PaymentRequired JSON" } },
+            "headers": {
+              "PAYMENT-REQUIRED": { "schema": { "type": "string" }, "description": "base64 of the same PaymentRequired JSON" },
+              "WWW-Authenticate": { "schema": { "type": "string", "const": "x402" }, "description": "Marks the challenge as x402 for generic HTTP-payment discovery clients" }
+            },
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaymentRequired" } } }
           },
           "200": {
@@ -93,6 +104,7 @@
       "get": {
         "operationId": "getCertificate",
         "summary": "Public license certificate + HCS/HTS anchoring links",
+        "security": [],
         "parameters": [{ "name": "cert_id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "pw-000036" }],
         "responses": {
           "200": {
@@ -108,6 +120,7 @@
       "get": {
         "operationId": "redeemDownloadGrant",
         "summary": "Redeem a download grant token (expiring, limited uses)",
+        "security": [],
         "parameters": [{ "name": "token", "in": "path", "required": true, "schema": { "type": "string" } }],
         "responses": {
           "302": { "description": "Redirect to the file blob" },

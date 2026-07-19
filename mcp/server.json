@@ -1,0 +1,56 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Nikodem01/printwright",
+  "title": "Printwright",
+  "description": "Search and buy licensed 3D-printable models over x402 on Hedera, then verify certificates.",
+  "repository": {
+    "url": "https://github.com/Nikodem01/printwright-x402",
+    "source": "github",
+    "subfolder": "mcp"
+  },
+  "version": "0.1.0",
+  "websiteUrl": "https://github.com/Nikodem01/printwright-x402",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "printwright-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "PRINTWRIGHT_URL",
+          "description": "Printwright marketplace origin",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "http://localhost:3000"
+        },
+        {
+          "name": "BUYER_ACCOUNT_ID",
+          "description": "Funded Hedera account used only for confirmed purchases",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": false,
+          "placeholder": "0.0.xxxxxxx"
+        },
+        {
+          "name": "BUYER_PRIVATE_KEY",
+          "description": "Local Hedera ECDSA key used only for confirmed purchases",
+          "format": "string",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "MAX_SPEND_CENTS",
+          "description": "Hard cap for one confirmed purchase, in US cents",
+          "format": "number",
+          "isRequired": false,
+          "isSecret": false,
+          "default": "500"
+        }
+      ]
+    }
+  ]
+}

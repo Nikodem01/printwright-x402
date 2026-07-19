@@ -42,6 +42,7 @@ class Api::V1::DownloadsController < Api::V1::BaseController
   def payment_required(requirements, error: "payment required")
     body = requirements.payment_required(error: error)
     response.set_header("PAYMENT-REQUIRED", Base64.strict_encode64(JSON.generate(body)))
+    response.set_header("WWW-Authenticate", "x402")
     render json: body, status: :payment_required
   end
 
