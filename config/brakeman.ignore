@@ -7,6 +7,10 @@
     {
       "fingerprint": "97c78cbc65109de34ddde2b301585f42e2c337892841728767fe36745e96eb3e",
       "note": "Static CASE skeleton interpolated; every user value passes through sanitize_sql_like/sanitize_sql_array (model3d search ranking)."
+    },
+    {
+      "fingerprint": "b3fc99a9fa75aaf3c0abed39ad8d439190289664f00f9d2cca5259bb58ec5c88",
+      "note": "OpenSCAD runs through Open3.capture3 with an argument array, never a shell; executable and angles are server-owned constants/configuration, while request data is written only as validated STL bytes."
     }
   ],
   "brakeman_version": "8.0.5"

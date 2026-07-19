@@ -22,7 +22,8 @@
 <div class="model-page">
   <div>
     <% preview_file = @model.preview_file %>
-    <% render_file = @model.render_file %>
+    <% render_files = @model.render_files.select { |file| file.file.attached? } %>
+    <% render_file = render_files.first %>
     <div class="gallery model-preview" data-controller="model-preview"
          <% if preview_file&.file&.attached? %>
            data-model-preview-url-value="<%= rails_storage_proxy_path(preview_file.file) %>"
@@ -41,6 +42,13 @@
           Interactive preview unavailable — showing the designer render.
         <% end %>
       </p>
+      <% if render_files.many? %>
+        <div class="turntable-thumbnails" aria-label="Turntable views">
+          <% render_files.each_with_index do |file, index| %>
+            <%= image_tag file.file, alt: "#{@model.title} view #{index + 1} of #{render_files.length}", loading: "lazy" %>
+          <% end %>
+        </div>
+      <% end %>
     </div>
 
     <div class="trust-strip" data-controller="clipboard">

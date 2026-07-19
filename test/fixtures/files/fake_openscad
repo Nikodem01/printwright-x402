@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+output = ARGV.fetch(ARGV.index("-o") + 1)
+fixture = File.expand_path("../../../db/seed_assets/calibration-cube.png", __dir__)
+File.binwrite(output, File.binread(fixture))

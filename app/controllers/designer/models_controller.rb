@@ -66,6 +66,7 @@ class Designer::ModelsController < Designer::BaseController
     PreviewMeshes::Attacher.call(@model)
     @model.update!(file_hash: digest, status: "published",
                    warranty_accepted_at: Time.current)
+    RenderModelJob.perform_later(@model.id)
     redirect_to model_page_path(@model.slug), notice: publish_notice
   end
 

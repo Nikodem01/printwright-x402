@@ -90,16 +90,16 @@ the public mirror node and diffs it against the marketplace copy). Then ask:
 
 ## Run the marketplace locally
 
-Prereqs: Ruby 3.3, Postgres (with `pg_trgm`), Node ≥ 20, and a funded
+Prereqs: Ruby 3.3, Postgres (with `pg_trgm`), Node ≥ 20, OpenSCAD 2021.01+, and a funded
 [Hedera testnet account](https://portal.hedera.com/dashboard) (the portal grants test HBAR;
 testnet USDC comes from the [Circle faucet](https://faucet.circle.com) — pick Hedera).
 
 ```bash
-sudo apt install postgresql-16-pgvector  # or your platform's pgvector build
+sudo apt install postgresql-16-pgvector openscad  # or your platform's equivalent packages
 cp .env.example .env                     # fill in the marked values
 echo "HEDERA_PRIVATE_KEY=0x..." > sidecar/.env   # operator key stays with the signer
 bin/setup --skip-server                  # bundle + db:prepare
-bin/rails db:seed                        # 12 demo models
+bin/rails db:seed                        # 36 demo models
 (cd sidecar && npm install && npm start) &        # HCS signing sidecar on :4021
 bin/dev                                  # marketplace on :3000
 ```

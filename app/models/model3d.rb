@@ -148,6 +148,10 @@ class Model3d < ApplicationRecord
     model_files.detect { |f| f.kind == "render" }
   end
 
+  def render_files
+    model_files.select { |f| f.kind == "render" }
+  end
+
   def preview_file
     model_files.detect { |f| f.kind == "preview" }
   end

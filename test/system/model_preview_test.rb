@@ -17,6 +17,13 @@ class ModelPreviewTest < ApplicationSystemTestCase
       io: Rails.root.join("db/seed_assets/gear-toy.png").open,
       filename: "gear-toy.png", content_type: "image/png"
     )
+    3.times do |index|
+      turn = @model.model_files.create!(kind: "render", position: index + 2)
+      turn.file.attach(
+        io: Rails.root.join("db/seed_assets/gear-toy.png").open,
+        filename: "gear-toy-#{index + 2}.png", content_type: "image/png"
+      )
+    end
     PreviewMeshes::Attacher.call(@model)
     @model.license_offers.create!(kind: "personal", price_cents: 100)
   end
@@ -27,6 +34,7 @@ class ModelPreviewTest < ApplicationSystemTestCase
     assert_selector ".model-preview[data-preview-state='ready']", wait: 10
     assert_selector ".model-preview-stage canvas[role='img']"
     assert_selector ".model-preview-stage img[hidden]", visible: :all
+    assert_selector ".turntable-thumbnails img", count: 4
     assert_text "drag to rotate"
   end
 end

@@ -40,7 +40,9 @@ class DesignerFlowTest < ActionDispatch::IntegrationTest
     AnalyzeModelMeshJob.perform_now(model.id)
     assert_equal "passed", model.reload.mesh_analysis_status
 
-    post publish_designer_model_path(model), params: { warranty: "1" }
+    assert_enqueued_with(job: RenderModelJob, args: [ model.id ]) do
+      post publish_designer_model_path(model), params: { warranty: "1" }
+    end
     model.reload
     assert model.published?
     assert_match(/\Asha256:[0-9a-f]{64}\z/, model.file_hash)
