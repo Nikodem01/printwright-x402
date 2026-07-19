@@ -148,7 +148,7 @@ console.log(receipt.warning, await sandbox.verify(receipt.license.cert_id));</pr
   <p class="t-small">Per-endpoint rate limits, all on a 1-minute window (so a 429's
     <code class="mono">Retry-After</code> is always 60): <code class="mono">/models</code> and
     <code class="mono">/models/{id}</code>, <code class="mono">/certificates/{cert_id}</code>,
-    and <code class="mono">/licenses/{id}/can</code>
+    <code class="mono">/licenses/{id}/can</code>, and <code class="mono">/stats</code>
     120/min, <code class="mono">/models/{id}/download</code> 30/min,
     <code class="mono">/files/{token}</code> 60/min.</p>
 

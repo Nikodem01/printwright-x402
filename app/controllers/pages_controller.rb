@@ -10,6 +10,10 @@ class PagesController < ApplicationController
   def about; end
   def pricing; end
 
+  def open_books
+    @snapshot = OpenBooks::Snapshot.call
+  end
+
   # Endpoint reference is rendered from the spec at request time, not
   # hand-duplicated, so the page and public/openapi.json can't drift apart.
   def docs

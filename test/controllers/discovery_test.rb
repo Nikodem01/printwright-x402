@@ -9,7 +9,7 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
     assert spec.dig("info", "x-guidance").present?
     assert_equal [ "/certificates/{cert_id}", "/files/{token}", "/licenses/{id}/can", "/models", "/models/{id}", "/models/{id}/download",
                    "/sandbox/files/{cert_id}", "/sandbox/topics/{topic_id}/messages/{sequence_number}",
-                   "/sandbox/transactions/{transaction_id}" ],
+                   "/sandbox/transactions/{transaction_id}", "/stats" ],
                  spec["paths"].keys.sort
     operation = spec.dig("paths", "/models/{id}/download", "get")
     assert_equal [ "x402" ], operation.dig("x-payment-info", "protocols").flat_map(&:keys)
@@ -26,6 +26,9 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
       spec.dig("components", "schemas", "ModelSummary", "properties", "printability", "$ref")
     assert_equal "checkLicense", spec.dig("paths", "/licenses/{id}/can", "get", "operationId")
     assert_equal "1", spec.dig("components", "schemas", "LicensePermissions", "properties", "schema_version", "const")
+    assert_equal "getOpenBooks", spec.dig("paths", "/stats", "get", "operationId")
+    assert_equal %w[hedera:testnet hedera:mainnet],
+      spec.dig("components", "schemas", "OpenBooksStats", "properties", "network", "enum")
   end
 
   test "llms.txt is served with the buy flow" do

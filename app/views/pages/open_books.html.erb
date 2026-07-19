@@ -1,0 +1,73 @@
+<% content_for :title, "Open books — Printwright" %>
+<% content_for :description, "Public HCS certificate and marketplace revenue-split facts." %>
+
+<div class="container">
+  <h1>Open books</h1>
+  <p class="t-small muted">Two ledgers, labeled separately: Hedera's public topic is the durable
+    count of certificate messages; the marketplace's immutable revenue ledger records the split
+    for settlements retained in this deployment. Raw values are also available from
+    <%= link_to "/api/v1/stats", api_v1_stats_path, class: "mono" %>.</p>
+
+  <h2>Public certificate topic</h2>
+  <% hcs = @snapshot[:hcs] %>
+  <% if hcs[:status] == "ok" %>
+    <dl class="fact-grid">
+      <dt>PWC-1 messages on HCS</dt><dd><strong><%= hcs[:message_count] %></strong></dd>
+      <dt>Latest consensus time</dt><dd class="mono"><%= hcs[:latest_consensus_timestamp] %></dd>
+      <dt>Licenses retained in this database</dt><dd><%= hcs[:local_anchored_licenses] %></dd>
+      <dt>On-chain minus local</dt><dd><%= hcs[:count_difference] %></dd>
+    </dl>
+    <p class="t-small">
+      <%= link_to "Raw latest-message query ↗", hcs[:mirror_url], class: "mono" %> ·
+      <%= link_to "Exact latest message ↗", hcs[:latest_message_url], class: "mono" %> ·
+      <%= link_to "Topic on HashScan ↗", hcs[:hashscan_url], class: "mono" %>
+    </p>
+  <% else %>
+    <p class="verify-banner banner-pending">The mirror node is temporarily unavailable. Local
+      revenue books remain visible below; no cached or database count is presented as on-chain.</p>
+  <% end %>
+  <p class="t-caption muted">The topic sequence is the message count because this submit-key-
+    protected topic contains only PWC-1 certificates. A local difference is disclosed rather
+    than hidden; imports, database resets, or in-flight anchoring can make the two counts differ.</p>
+
+  <h2>Revenue split</h2>
+  <p class="t-small">Configured split: designers <strong><%= @snapshot.dig(:split, :designer_bps) / 100.0 %>%</strong>,
+    platform <strong><%= @snapshot.dig(:split, :platform_bps) / 100.0 %>%</strong>. The exact base-unit
+    entries below are written atomically when settlement succeeds; refunds are separate immutable
+    rows and are subtracted only in the net column.</p>
+  <div class="table-scroll">
+    <table class="facts-table">
+      <thead><tr><th>Asset</th><th>Gross settled</th><th>Designer share</th><th>Platform fee</th><th>Refunded</th><th>Net</th></tr></thead>
+      <tbody>
+        <% @snapshot.dig(:ledger, :assets).each do |row| %>
+          <tr>
+            <th scope="row"><%= row[:symbol] %><br><span class="t-caption mono"><%= row[:asset] %></span></th>
+            <% %i[gross_settled_base_units designer_share_base_units platform_fee_base_units refunded_base_units net_after_refunds_base_units].each do |key| %>
+              <td class="mono"><%= row[key] %><br><span class="t-caption muted">base units</span></td>
+            <% end %>
+          </tr>
+        <% end %>
+        <% if @snapshot.dig(:ledger, :assets).empty? %>
+          <tr><td colspan="6">No real settlements recorded in this deployment yet.</td></tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+  <p class="t-small"><%= @snapshot.dig(:ledger, :settlement_count) %> settlements ·
+    <%= @snapshot.dig(:ledger, :refund_count) %> refunds recorded.</p>
+
+  <h2>Recent settlement proofs</h2>
+  <p class="t-small">Each raw mirror response exposes the successful CryptoTransfer and its HBAR
+    or token transfers. The listed gross base units must equal the positive payment transfer;
+    the 90/10 rows above are the marketplace's accounting split of that gross.</p>
+  <ul class="t-small">
+    <% @snapshot[:recent_settlement_proofs].each do |proof| %>
+      <li><span class="mono"><%= proof[:transaction_id] %></span> —
+        <%= proof[:gross_base_units] %> base units of <%= proof[:asset] %> ·
+        <%= link_to "raw mirror ↗", proof[:mirror_url] %> ·
+        <%= link_to "HashScan ↗", proof[:hashscan_url] %></li>
+    <% end %>
+  </ul>
+  <p class="t-caption muted">Generated <%= @snapshot[:generated_at] %> on
+    <%= @snapshot[:network] %>. Sandbox rehearsals never enter these books.</p>
+</div>

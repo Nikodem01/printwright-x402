@@ -1,4 +1,5 @@
 require "application_system_test_case"
+require "webmock/minitest"
 
 # The responsive gate (V26). A page that scrolls sideways on a phone is broken
 # in a way screenshots at one width never catch, and it regresses silently —
@@ -17,6 +18,8 @@ class ResponsiveTest < ApplicationSystemTestCase
       tags: %w[cable clip organizer desk]
     )
     @model.license_offers.create!(kind: "personal", price_cents: 90, currency: "USDC", terms_md: "T.")
+    stub_request(:get, %r{testnet\.mirrornode\.hedera\.com/api/v1/topics/.+/messages})
+      .to_return(body: { messages: [] }.to_json)
   end
 
   test "no public page scrolls horizontally at any supported width" do
@@ -27,7 +30,8 @@ class ResponsiveTest < ApplicationSystemTestCase
       [ "api docs", docs_path ],
       [ "pricing", pricing_path ],
       [ "about", about_path ],
-      [ "terms", terms_path ]
+      [ "terms", terms_path ],
+      [ "open books", open_books_path ]
     ]
 
     WIDTHS.each do |width|

@@ -41,6 +41,7 @@ Rails.application.routes.draw do
       get "files/:token", to: "files#show", as: :file
       get "certificates/:cert_id", to: "certificates#show", as: :certificate
       get "licenses/:id/can", to: "licenses#can", as: :license_permission
+      get "stats", to: "stats#show", as: :stats
       get "sandbox/topics/:topic_id/messages/:sequence_number", to: "sandbox#message",
           as: :sandbox_message
       get "sandbox/files/:cert_id", to: "sandbox#file", as: :sandbox_file
@@ -83,6 +84,7 @@ Rails.application.routes.draw do
   get "docs", to: "pages#docs", as: :docs
   get "about", to: "pages#about", as: :about
   get "pricing", to: "pages#pricing", as: :pricing
+  get "open-books", to: "pages#open_books", as: :open_books
   get "chat", to: "chat#show", as: :chat
   post "chat", to: "chat#create"
   post "chat/approve", to: "chat#approve", as: :approve_chat_purchase

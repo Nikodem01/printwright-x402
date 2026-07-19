@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Printwright API",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; every purchase mints a public HCS license certificate.",
     "contact": { "url": "https://github.com/Nikodem01/printwright-x402" },
     "x-guidance": "Search GET /api/v1/models, inspect an offer with GET /api/v1/models/{id}, then call GET /api/v1/models/{id}/download?license=personal or commercial_unit. The unpaid download returns an x402 v2 challenge; sign one exact payment option and retry the same URL. For a zero-funds rehearsal, send X-Sandbox: true on both download requests; this returns hedera:sandbox artifacts that are explicitly not payments or licenses."
@@ -139,6 +139,18 @@
           "404": { "$ref": "#/components/responses/NotFound" },
           "409": { "description": "permissions_unavailable — no structured policy matches the certificate's anchored terms hash", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
           "422": { "description": "invalid_use or invalid_quantity", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/stats": {
+      "get": {
+        "operationId": "getOpenBooks",
+        "summary": "Public HCS certificate and immutable revenue-ledger metrics",
+        "description": "Separates the durable certificate-topic message count fetched from Hedera's mirror node from the settlement/refund totals retained in this deployment's immutable ledger. Amounts are exact asset base units; sandbox rehearsals are excluded.",
+        "security": [],
+        "responses": {
+          "200": { "description": "Current open-books snapshot; hcs.status=unavailable labels mirror outages without presenting a local count as on-chain", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OpenBooksStats" } } } },
           "429": { "$ref": "#/components/responses/RateLimited" }
         }
       }
@@ -309,6 +321,46 @@
           "terms": { "type": "object", "properties": {
             "version": { "type": "string" }, "hash": { "type": "string" },
             "url": { "type": "string" }, "permissions_url": { "type": "string" } } }
+        }
+      },
+      "OpenBooksStats": {
+        "type": "object",
+        "required": ["generated_at", "network", "split", "hcs", "ledger", "recent_settlement_proofs"],
+        "properties": {
+          "generated_at": { "type": "string", "format": "date-time" },
+          "network": { "type": "string", "enum": ["hedera:testnet", "hedera:mainnet"] },
+          "split": { "type": "object", "properties": {
+            "designer_bps": { "type": "integer" }, "platform_bps": { "type": "integer" } } },
+          "hcs": { "type": "object", "properties": {
+            "status": { "type": "string", "enum": ["ok", "unavailable"] },
+            "topic_id": { "type": "string" },
+            "message_count": { "type": ["integer", "null"] },
+            "latest_sequence_number": { "type": ["integer", "null"] },
+            "latest_consensus_timestamp": { "type": ["string", "null"] },
+            "local_anchored_licenses": { "type": "integer" },
+            "count_difference": { "type": ["integer", "null"] },
+            "mirror_url": { "type": ["string", "null"] },
+            "latest_message_url": { "type": ["string", "null"] },
+            "hashscan_url": { "type": "string" }
+          } },
+          "ledger": { "type": "object", "properties": {
+            "settlement_count": { "type": "integer" },
+            "refund_count": { "type": "integer" },
+            "assets": { "type": "array", "items": { "type": "object", "properties": {
+              "asset": { "type": "string" }, "symbol": { "type": "string" },
+              "decimals": { "type": ["integer", "null"] },
+              "gross_settled_base_units": { "type": "integer" },
+              "designer_share_base_units": { "type": "integer" },
+              "platform_fee_base_units": { "type": "integer" },
+              "refunded_base_units": { "type": "integer" },
+              "net_after_refunds_base_units": { "type": "integer" }
+            } } }
+          } },
+          "recent_settlement_proofs": { "type": "array", "items": { "type": "object", "properties": {
+            "transaction_id": { "type": "string" }, "asset": { "type": "string" },
+            "gross_base_units": { "type": "integer" }, "mirror_url": { "type": "string" },
+            "hashscan_url": { "type": "string" }
+          } } }
         }
       },
       "PaymentRequired": {
