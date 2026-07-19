@@ -1,0 +1,67 @@
+<form class="form-horizontal">
+  <div class="control-group">
+    <div class="controls">
+      <label class="checkbox">
+        <input type="checkbox" data-bind="checked: settings.plugins.printwright.enabled">
+        Pause new jobs until their Printwright royalty is licensed
+      </label>
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label">Marketplace URL</label>
+    <div class="controls">
+      <input type="url" class="input-block-level" placeholder="https://printwright.example"
+             data-bind="value: settings.plugins.printwright.base_url">
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label">Model ID</label>
+    <div class="controls">
+      <input type="number" min="1" step="1" data-bind="value: settings.plugins.printwright.model_id">
+      <span class="help-block">Every job on this configured queue buys one commercial-unit license for this model.</span>
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label">Network</label>
+    <div class="controls">
+      <select data-bind="value: settings.plugins.printwright.network">
+        <option value="testnet">Hedera testnet</option>
+        <option value="mainnet">Hedera mainnet</option>
+      </select>
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label">Asset ID</label>
+    <div class="controls">
+      <input type="text" placeholder="0.0.429274" data-bind="value: settings.plugins.printwright.asset">
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label">Maximum base units</label>
+    <div class="controls">
+      <input type="number" min="0" step="1" data-bind="value: settings.plugins.printwright.max_amount">
+      <span class="help-block">Fail closed if the exact requirement exceeds this cap. Zero disables real spending.</span>
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label">hcli executable</label>
+    <div class="controls">
+      <input type="text" placeholder="hcli" data-bind="value: settings.plugins.printwright.hcli_path">
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label">hcli payer reference</label>
+    <div class="controls">
+      <input type="text" placeholder="farm-payer" data-bind="value: settings.plugins.printwright.signer_from">
+      <span class="help-block">Use an hcli account alias or KMS key reference. Never paste a private key here.</span>
+    </div>
+  </div>
+  <div class="control-group">
+    <div class="controls">
+      <label class="checkbox">
+        <input type="checkbox" data-bind="checked: settings.plugins.printwright.sandbox">
+        Sandbox rehearsal only — restricted to VIRTUAL; no funds, printable file, or real license
+      </label>
+    </div>
+  </div>
+</form>

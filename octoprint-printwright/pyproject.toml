@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "OctoPrint-Printwright"
-version = "0.0.1"
-description = "Observe OctoPrint job starts for Printwright per-print licensing."
+version = "0.1.0"
+description = "License OctoPrint jobs through Printwright's x402 per-print rail."
 readme = "README.md"
 requires-python = ">=3.10,<4"
 license = "MIT"
@@ -20,3 +20,6 @@ printwright = "octoprint_printwright"
 
 [tool.setuptools.packages.find]
 include = ["octoprint_printwright*"]
+
+[tool.setuptools.package-data]
+octoprint_printwright = ["templates/*.jinja2"]
