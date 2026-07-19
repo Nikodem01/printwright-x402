@@ -1,8 +1,8 @@
 {
   "ignored_warnings": [
     {
-      "fingerprint": "60b1fbc13f069132a0dab93d3556aa206ce467e7ef1d2275242aeea7c9867590",
-      "note": "json_escape into a script tag is the correct JSON-LD escaping (loop-11 decision, <%== + json_escape)."
+      "fingerprint": "ff6d9eda8650d0a07039dc878d76e96f07795e86a66b8fb461f4f2d074f6b4c3",
+      "note": "json_escape into a script tag is Rails' JSON-LD escaping boundary; the storefront controller test proves a designer-supplied </script><script> string remains inert while the JSON round-trips."
     },
     {
       "fingerprint": "97c78cbc65109de34ddde2b301585f42e2c337892841728767fe36745e96eb3e",

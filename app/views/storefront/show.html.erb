@@ -12,8 +12,17 @@
       brand: { "@type": "Person", name: @model.designer.display_name },
       offers: @model.license_offers.map { |offer|
         { "@type": "Offer", price: format("%.2f", offer.price_cents / 100.0),
-          priceCurrency: "USD", availability: "https://schema.org/InStock",
-          name: "#{offer.kind.humanize} license" }
+          priceCurrency: "USD",
+          availability: offer.sold_out? ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+          name: "#{offer.kind.humanize} license",
+          url: api_v1_model_download_url(model_id: @model.id, license: offer.kind),
+          itemOffered: {
+            "@type": "DigitalDocument",
+            additionalType: "PrintLicense",
+            name: "#{offer.kind.humanize} print license",
+            license: offer.terms_version ?
+              license_document_url(version: offer.terms_version, kind: offer.kind, format: :json) : nil
+          }.compact }
       }
     ) %>
   </script>

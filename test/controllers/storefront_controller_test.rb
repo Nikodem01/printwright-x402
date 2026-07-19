@@ -73,16 +73,25 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  test "model page renders buy panel, trust strip, and JSON-LD product" do
+  test "model page renders buy panel, trust strip, and JSON-LD print licenses" do
+    hostile_description = "Useful clip </script><script>alert('markup injection')</script>"
+    @beaver.update!(description: hostile_description)
     get model_page_path(@beaver.slug)
     assert_response :success
+    refute_includes response.body, hostile_description
     assert_select "h1", text: @beaver.title
     assert_select ".buy-panel .offer-row", 1
     assert_select ".trust-strip .mono", text: /sha256:/
     assert_select 'script[type="application/ld+json"]' do |nodes|
       product = JSON.parse(nodes.first.text)
       assert_equal "Product", product["@type"]
+      assert_equal hostile_description, product["description"]
       assert_equal "2.50", product["offers"].first["price"]
+      license = product["offers"].first.fetch("itemOffered")
+      assert_equal "DigitalDocument", license["@type"]
+      assert_equal "PrintLicense", license["additionalType"]
+      assert_equal "Personal print license", license["name"]
+      assert_includes product["offers"].first["url"], "/download?license=personal"
     end
   end
 

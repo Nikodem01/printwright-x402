@@ -1,5 +1,7 @@
 # Printwright
 
+Live commerce manifest: GET /.well-known/x402-catalog.json
+
 > The agent-buyable marketplace for licensed 3D-printable models. Search, inspect, and BUY
 > print licenses over plain HTTP — payments use the x402 protocol (HTTP 402) settling on
 > Hedera testnet in HBAR or USDC. No account, no API key, no card. Every purchase mints a

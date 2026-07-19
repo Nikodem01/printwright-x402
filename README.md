@@ -137,7 +137,8 @@ Private keys remain in the wallet process; payment headers, receipts, and bearer
 never enter the Gemini conversation. `CHAT_DAILY_MESSAGE_LIMIT` bounds total provider calls in
 addition to the per-IP request rate limit.
 
-Agent discovery: [`/openapi.json`](public/openapi.json) · [`/llms.txt`](public/llms.txt).
+Agent discovery: `/.well-known/x402-catalog.json` (crawlable live offers) ·
+[`/openapi.json`](public/openapi.json) · [`/llms.txt`](public/llms.txt).
 The public `/open-books` page and `/api/v1/stats` expose the HCS certificate count, configured
 90/10 split, exact per-asset ledger totals, refunds, and recent raw mirror proof links.
 

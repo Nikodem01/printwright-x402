@@ -79,6 +79,8 @@ Rails.application.routes.draw do
 
   # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
   get "manifest" => "rails/pwa#manifest", as: :pwa_manifest, defaults: { format: :json }
+  get ".well-known/x402-catalog.json", to: "discovery#catalog", as: :x402_catalog,
+      defaults: { format: :json }
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
   root "storefront#index"

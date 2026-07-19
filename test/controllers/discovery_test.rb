@@ -1,6 +1,59 @@
 require "test_helper"
 
 class DiscoveryTest < ActionDispatch::IntegrationTest
+  setup do
+    @model = Model3d.create!(
+      designer: designers(:one), title: "Crawler Cable Clip", slug: "crawler-cable-clip",
+      description: "A small clip for routing one cable.", status: "published"
+    )
+    @model.license_offers.create!(
+      kind: "personal", price_cents: 90, currency: "USDC", terms_version: "v1"
+    )
+    draft = Model3d.create!(
+      designer: designers(:one), title: "Private Draft", slug: "private-draft", status: "draft"
+    )
+    draft.license_offers.create!(kind: "personal", price_cents: 10, terms_version: "v1")
+  end
+
+  test "well-known commerce manifest exposes each published x402 offer" do
+    get "/.well-known/x402-catalog.json"
+
+    assert_response :success
+    assert_equal "application/json", response.media_type
+    assert_match(/public/, response.headers["Cache-Control"])
+    manifest = response.parsed_body
+    assert_equal 1, manifest["schema_version"]
+    assert_equal({ "version" => 2, "scheme" => "exact", "network" => X402::Requirements.network },
+                 manifest["x402"])
+    assert_equal [ "crawler-cable-clip" ], manifest["models"].pluck("slug")
+
+    model = manifest["models"].sole
+    offer = model["offers"].sole
+    assert_equal [ "personal", 90, "USD", "USDC", true ],
+                 [ offer["license_kind"], offer.dig("price", "cents"),
+                   offer.dig("price", "currency"), offer["preferred_settlement_asset"], offer["available"] ]
+    assert_equal %w[0.0.429274 0.0.0], offer["settlement_assets"]
+    assert_equal "v1", offer.dig("terms", "version")
+    assert_includes offer.dig("terms", "permissions_url"), ".json"
+    refute_includes response.body, "private-draft"
+  end
+
+  test "toy crawler follows manifest links and reaches an x402 challenge" do
+    get "/.well-known/x402-catalog.json"
+    model = response.parsed_body.fetch("models").sole
+    offer = model.fetch("offers").sole
+
+    [ model.fetch("page_url"), model.fetch("api_url"), offer.dig("terms", "permissions_url") ].each do |url|
+      get URI(url).request_uri
+      assert_response :success, url
+    end
+
+    get URI(offer.fetch("payment_url")).request_uri, headers: { "X-Sandbox" => "true" }
+    assert_response :payment_required
+    assert_equal 2, response.parsed_body["x402Version"]
+    assert_equal "x402", response.headers["WWW-Authenticate"]
+  end
+
   test "openapi.json is served, parses, and covers every public endpoint" do
     get "/openapi.json"
     assert_response :success
