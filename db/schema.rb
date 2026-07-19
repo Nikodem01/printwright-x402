@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_19_233000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_19_234500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -65,7 +65,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_233000) do
     t.string "manifest_digest", null: false
     t.integer "model_count", default: 0, null: false
     t.jsonb "model_snapshots", default: {}, null: false
+    t.jsonb "provenance", default: {}, null: false
     t.datetime "rolled_back_at"
+    t.string "source_kind"
+    t.string "source_url"
     t.string "status", default: "active", null: false
     t.datetime "updated_at", null: false
     t.index ["designer_id", "created_at"], name: "index_catalog_imports_on_designer_id_and_created_at"
@@ -201,8 +204,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_19_233000) do
     t.jsonb "mesh_analysis", default: {}, null: false
     t.string "mesh_analysis_digest"
     t.string "mesh_analysis_status", default: "pending", null: false
+    t.datetime "ownership_warranted_at"
     t.jsonb "printability", default: {}, null: false
     t.string "slug", null: false
+    t.string "source_license"
+    t.string "source_url"
     t.string "status", default: "draft", null: false
     t.string "tags", default: [], null: false, array: true
     t.string "title", null: false

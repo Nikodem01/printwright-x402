@@ -1,5 +1,61 @@
 <% content_for :title, "Import catalog — Printwright" %>
-<h1>Import catalog ZIP</h1>
+<h1>Import catalog</h1>
+
+<h2>From an external profile</h2>
+<p class="muted">Paste a public HTTPS URL for a Printwright external-profile v1 manifest.
+  Review every source license before any files are fetched. Creative Commons, public-domain,
+  and unknown licenses are blocked rather than silently replaced with Printwright terms.</p>
+
+<%= form_with url: preview_designer_imports_path do %>
+  <div class="field">
+    <%= label_tag :feed_url, "Profile manifest URL" %>
+    <%= url_field_tag :feed_url, params[:feed_url], required: true,
+          placeholder: "https://example.com/.well-known/printwright-profile.json" %>
+  </div>
+  <%= submit_tag "Fetch and review profile", class: "btn btn-primary" %>
+<% end %>
+
+<% if @profile %>
+  <section style="margin-top: var(--s-5)">
+    <h2>Review <%= @profile.profile_name %></h2>
+    <p class="t-small">Profile: <%= link_to @profile.profile_url, @profile.profile_url,
+      target: "_blank", rel: "noopener noreferrer", class: "mono" %></p>
+    <%= form_with url: designer_imports_path do %>
+      <%= hidden_field_tag :profile_url, @profile.feed_url %>
+      <%= hidden_field_tag :profile_digest, @profile.digest %>
+      <table class="facts-table" style="width:100%">
+        <thead><tr><th>model</th><th>source license</th><th>decision</th></tr></thead>
+        <tbody>
+          <% @profile.models.each do |model| %>
+            <tr>
+              <td><%= link_to model.title, model.source_url, target: "_blank", rel: "noopener noreferrer" %></td>
+              <td class="mono"><%= model.source_license.presence || "missing" %></td>
+              <td>
+                <% if model.compatible %>
+                  <label class="t-small">
+                    <%= check_box_tag "external_ids[]", model.external_id, false,
+                          id: "external_id_#{model.external_id.parameterize}" %>
+                    Import this draft. I warrant that I own this model and may offer it under
+                    Printwright's license terms.
+                  </label>
+                <% else %>
+                  <span class="badge badge-bad">blocked</span>
+                  <span class="t-small"><%= model.reason %></span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+      <% if @profile.models.any?(&:compatible) %>
+        <%= submit_tag "Import selected warranted drafts", class: "btn btn-primary",
+              style: "margin-top: var(--s-3)" %>
+      <% end %>
+    <% end %>
+  </section>
+<% end %>
+
+<h2 style="margin-top: var(--s-6)">From a catalog ZIP</h2>
 <p class="muted">Up to 50 models. The archive must contain <code>manifest.json</code> plus every referenced STL/3MF/STEP and optional PNG/JPEG render.</p>
 
 <%= form_with url: designer_imports_path, multipart: true do %>

@@ -10,6 +10,11 @@ Live commerce manifest: GET /.well-known/x402-catalog.json
 
 API base: /api/v1 — full spec at /openapi.json — human docs at /docs
 
+Designer catalog portability: `/external-profile-v1.schema.json` defines a public HTTPS profile
+manifest with source URLs/licenses and remote file SHA-256 values. `/designer/imports` reviews it,
+requires a separate ownership warranty per selected proprietary original, and creates drafts with
+provenance. Creative Commons, public-domain, missing, and unknown licenses are blocked with reasons.
+
 ## How to buy (the whole flow)
 
 1. GET /api/v1/models?q=beaver+hat — ranked search (fuzzy matching included)

@@ -116,6 +116,24 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
                     buyer_hint payment_tx issued_at terms_hash], schema["required"]
   end
 
+  test "external-profile schema and live example preserve source licenses and file hashes" do
+    get "/external-profile-v1.schema.json"
+    assert_response :success
+    schema = response.parsed_body
+    required = schema.dig("properties", "models", "items", "required")
+    assert_includes required, "source_url"
+    assert_includes required, "source_license"
+    assert_includes required, "files"
+
+    get "/examples/external-profile-v1.json"
+    assert_response :success
+    example = response.parsed_body
+    assert_equal [ "all-rights-reserved", "cc-by-nc-4.0" ], example.fetch("models").pluck("source_license")
+    assert(example.fetch("models").all? do |model|
+      model.fetch("files").all? { |file| file.fetch("sha256").match?(/\Asha256:[0-9a-f]{64}\z/) }
+    end)
+  end
+
   # Staleness guard: derives the route list from Rails.application.routes
   # (never hardcoded) so a new /api/v1 endpoint without docs fails the suite.
   test "openapi.json documents every /api/v1 route the app actually has" do

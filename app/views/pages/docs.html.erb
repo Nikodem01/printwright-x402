@@ -38,6 +38,21 @@ curl -i "http://localhost:3000/api/v1/models/5/download?license=personal" \
 #   { "files": [...], "license": {"cert_id": "pw-000036", "serial": 3, "kind": "personal"},
 #     "certificate": {...}, "transaction_id": "...", "hashscan_url": "https://hashscan.io/..." }</pre>
 
+  <h2 id="external-profile">External designer profiles</h2>
+  <p class="t-small">Designers can import up to 50 self-owned models from a portable public HTTPS
+    manifest under <strong>Designer → Imports</strong>. The
+    <%= link_to "external-profile v1 JSON Schema", "/external-profile-v1.schema.json" %> fixes the
+    source-profile, per-model provenance, source-license, file URL/hash, and offer fields; the
+    <%= link_to "live example", "/examples/external-profile-v1.json", class: "mono" %> includes
+    one eligible original and one deliberately blocked Creative Commons item.</p>
+  <p class="t-small">Review fetches metadata only. Files are downloaded only after the signed-in
+    designer checks a separate ownership warranty for each selected proprietary original. Every
+    download is public HTTPS with private/reserved DNS rejection, redirect revalidation, bounded
+    bytes, and a required SHA-256 match. Creative Commons, CC0/public-domain, missing, and unknown
+    source licenses remain blocked with a reason; Printwright never silently replaces their terms.
+    Imports create drafts, preserve source links/license/warranty time, and still require normal
+    mesh checks and the publish warranty.</p>
+
   <h2>Batch purchase</h2>
   <p class="t-small">Print farms can acquire up to 20 licenses with one x402 negotiation and one
     settlement. Probe and retry the identical <code class="mono">POST /api/v1/batches</code>

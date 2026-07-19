@@ -25,13 +25,14 @@ module CatalogImports
       end
     end
 
-    def self.call(designer, archive)
-      new(designer, archive).call
+    def self.call(designer, archive, provenance: {})
+      new(designer, archive, provenance: provenance).call
     end
 
-    def initialize(designer, archive)
+    def initialize(designer, archive, provenance: {})
       @designer = designer
       @archive = archive
+      @provenance = provenance
     end
 
     def call
@@ -186,9 +187,9 @@ module CatalogImports
 
     def persist(specs, archive_bytes)
       CatalogImport.transaction do
-        catalog_import = @designer.catalog_imports.create!(
+        catalog_import = @designer.catalog_imports.create!({
           manifest_digest: "sha256:#{Digest::SHA256.hexdigest(archive_bytes)}"
-        )
+        }.merge(@provenance.fetch(:catalog, {})))
         models = specs.map { |spec| persist_model(catalog_import, spec) }
         snapshots = models.to_h { |model| [ model.id.to_s, Snapshot.digest(model) ] }
         catalog_import.update!(model_count: models.length, model_snapshots: snapshots, completed_at: Time.current)
@@ -197,7 +198,10 @@ module CatalogImports
     end
 
     def persist_model(catalog_import, spec)
-      model = @designer.models3d.create!(spec.fetch(:attributes).merge(catalog_import: catalog_import))
+      source = @provenance.fetch(:models, {}).fetch(spec.fetch(:attributes).fetch(:slug), {})
+      model = @designer.models3d.create!(
+        spec.fetch(:attributes).merge(source).merge(catalog_import: catalog_import)
+      )
       spec.fetch(:offers).each { |offer| model.license_offers.create!(offer) }
       spec.fetch(:files).each_with_index do |file, position|
         record = model.model_files.create!(kind: file.fetch(:kind), position: position)

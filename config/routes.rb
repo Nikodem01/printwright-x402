@@ -10,7 +10,9 @@ Rails.application.routes.draw do
       member { post :publish }
       resources :versions, only: :create, controller: :model_versions
     end
-    resources :imports, only: %i[index new create destroy]
+    resources :imports, only: %i[index new create destroy] do
+      collection { post :preview }
+    end
     resource :identity, only: %i[show create], controller: :identity do
       post :verify
     end

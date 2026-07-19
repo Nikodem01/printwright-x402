@@ -56,6 +56,13 @@ Paid delivery receipts also expose a 1200×630 certificate `share_card_url`. A c
 its license unit and current license slots remaining; the cap limits licenses sold, not physical
 copies, and the storefront says so explicitly.
 
+Designers can bulk-import their own catalog ZIP or review a portable public HTTPS profile under
+`/designer/imports`. The [`external-profile v1` schema](public/external-profile-v1.schema.json)
+requires a source URL, source license, and SHA-256 for every remote file. Import is per-model and
+warranty-gated: proprietary originals become drafts with provenance, while Creative Commons,
+public-domain, missing, and unknown licenses stay blocked with explicit reasons. The importer does
+not scrape undocumented Printables/Thingiverse HTML or silently re-license third-party work.
+
 **Try the complete integration without funds:** construct the client with `sandbox: true`, or
 run `node scripts/buy.mjs --query "cable clip" --sandbox`. The app still returns a 402 and runs
 verify → settle → certificate, but through its built-in mock facilitator and local throwaway

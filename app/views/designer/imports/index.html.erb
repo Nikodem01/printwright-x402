@@ -6,10 +6,18 @@
 
 <% if @imports.any? %>
   <table class="facts-table" style="width:100%">
-    <tr><th>created</th><th>models</th><th>status</th><th></th></tr>
+    <tr><th>created</th><th>source</th><th>models</th><th>status</th><th></th></tr>
     <% @imports.each do |catalog_import| %>
       <tr>
         <td><%= l catalog_import.created_at, format: :short %></td>
+        <td class="t-small">
+          <% if catalog_import.source_url.present? %>
+            <%= link_to catalog_import.provenance["profile_name"].presence || "external profile",
+                  catalog_import.source_url, target: "_blank", rel: "noopener noreferrer" %>
+          <% else %>
+            ZIP
+          <% end %>
+        </td>
         <td><%= catalog_import.model_count %></td>
         <td><span class="badge <%= catalog_import.active? ? 'badge-pending' : 'badge-ok' %>"><%= catalog_import.status %></span></td>
         <td>

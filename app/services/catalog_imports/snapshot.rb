@@ -3,7 +3,10 @@ require "json"
 
 module CatalogImports
   class Snapshot
-    MODEL_FIELDS = %w[title slug description tags category collections printability status].freeze
+    MODEL_FIELDS = %w[
+      title slug description tags category collections printability status
+      source_url source_license ownership_warranted_at
+    ].freeze
     OFFER_FIELDS = %w[kind price_cents currency max_units terms_md terms_version].freeze
 
     def self.digest(model)

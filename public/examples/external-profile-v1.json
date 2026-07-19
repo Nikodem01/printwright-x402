@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "profile": {
+    "name": "Printwright self-authored seed profile",
+    "url": "https://github.com/Nikodem01/printwright-x402/tree/main/db/seed_assets"
+  },
+  "models": [
+    {
+      "id": "printwright-calibration-cube",
+      "title": "External Calibration Cube",
+      "slug": "external-calibration-cube",
+      "description": "A self-authored 20 mm calibration cube imported through the portable profile format.",
+      "tags": ["calibration", "external-profile"],
+      "category": "workshop-tools",
+      "collections": ["maker-basics"],
+      "printability": {"supports": false, "materials": ["PLA"], "est_print_minutes": 20},
+      "source_url": "https://github.com/Nikodem01/printwright-x402/blob/main/db/seed_assets/calibration-cube.stl",
+      "source_license": "all-rights-reserved",
+      "files": [
+        {
+          "kind": "stl",
+          "url": "https://raw.githubusercontent.com/Nikodem01/printwright-x402/main/db/seed_assets/calibration-cube.stl",
+          "sha256": "sha256:cd5a56c0704f095e7b56d3f7b18e0f7a50bf6302027f2a3c4d64cfb65383412d"
+        }
+      ],
+      "offers": [{"kind": "personal", "price_cents": 250, "currency": "USDC"}]
+    },
+    {
+      "id": "example-cc-remix",
+      "title": "Example Creative Commons remix",
+      "slug": "example-cc-remix",
+      "description": "A policy example that must remain blocked from automatic relicensing.",
+      "source_url": "https://github.com/Nikodem01/printwright-x402/blob/main/public/examples/external-profile-v1.json",
+      "source_license": "cc-by-nc-4.0",
+      "files": [
+        {
+          "kind": "stl",
+          "url": "https://raw.githubusercontent.com/Nikodem01/printwright-x402/main/db/seed_assets/calibration-cube.stl",
+          "sha256": "sha256:cd5a56c0704f095e7b56d3f7b18e0f7a50bf6302027f2a3c4d64cfb65383412d"
+        }
+      ],
+      "offers": [{"kind": "personal", "price_cents": 250, "currency": "USDC"}]
+    }
+  ]
+}

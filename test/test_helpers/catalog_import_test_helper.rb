@@ -48,4 +48,33 @@ module CatalogImportTestHelper
     end.string
     ArchiveUpload.new("catalog.zip", bytes)
   end
+
+  def external_profile_document(allowed_license: "all-rights-reserved")
+    stl = Rails.root.join("db/seed_assets/calibration-cube.stl").binread
+    digest = "sha256:#{Digest::SHA256.hexdigest(stl)}"
+    {
+      schema_version: 1,
+      profile: { name: "External Maker", url: "https://profiles.example/maker" },
+      models: [
+        {
+          id: "maker-cube", title: "Maker Cube", slug: "external-maker-cube",
+          description: "Original cube.", tags: [ "cube" ], category: "workshop-tools",
+          collections: [ "maker-basics" ], printability: { supports: false, materials: [ "PLA" ] },
+          source_url: "https://profiles.example/models/cube", source_license: allowed_license,
+          files: [ { kind: "stl", url: "https://files.example/cube.stl", sha256: digest } ],
+          offers: [ { kind: "personal", price_cents: 250, currency: "USDC" } ]
+        },
+        {
+          id: "maker-remix", title: "Maker Remix", slug: "external-maker-remix",
+          source_url: "https://profiles.example/models/remix", source_license: "cc-by-nc-4.0",
+          files: [ { kind: "stl", url: "https://files.example/remix.stl", sha256: digest } ],
+          offers: [ { kind: "personal", price_cents: 250, currency: "USDC" } ]
+        }
+      ]
+    }
+  end
+
+  def external_profile_json(**options)
+    JSON.generate(external_profile_document(**options))
+  end
 end

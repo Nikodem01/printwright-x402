@@ -4,6 +4,16 @@
     <div class="flash flash-bad"><%= model.errors.full_messages.to_sentence %></div>
   <% end %>
 
+  <% if model.source_url.present? %>
+    <div class="flash flash-ok">
+      Imported provenance: <%= link_to model.source_url, model.source_url,
+        target: "_blank", rel: "noopener noreferrer", class: "mono" %><br>
+      <span class="t-small">Source license: <strong><%= model.source_license %></strong> ·
+        ownership warranted <%= model.ownership_warranted_at ? l(model.ownership_warranted_at, format: :short) : "not recorded" %>. This draft still
+        requires the normal publish warranty and mesh checks.</span>
+    </div>
+  <% end %>
+
   <div class="field"><%= f.label :title %><%= f.text_field :title, required: true %></div>
   <div class="field"><%= f.label :description %><%= f.text_area :description, rows: 5 %></div>
   <div class="field">
