@@ -38,7 +38,8 @@ console.log(model.title, model.license_offers);
 ```
 
 `search()` and `get()` need no credentials. `quote()` exposes the unsigned 402 for approval,
-`buy()` signs locally with the configured Hedera account, and `verify()` compares the issued
+`buy()` signs locally with the configured Hedera account, `can()` answers structured license
+use/quantity questions without parsing prose, and `verify()` compares the issued
 certificate with its public HCS mirror message.
 
 **Try the complete integration without funds:** construct the client with `sandbox: true`, or
@@ -74,8 +75,9 @@ claude mcp add printwright \
   -- node mcp/server.mjs
 ```
 
-Four tools: `search_models`, `get_model`, `buy_license` (refuses without `confirm: true`,
-capped by `MAX_SPEND_CENTS`), and `verify_certificate` (fetches the on-chain HCS message from
+Five tools: `search_models`, `get_model`, `buy_license` (refuses without `confirm: true`,
+capped by `MAX_SPEND_CENTS`), `check_license` (machine-decidable use/quantity), and
+`verify_certificate` (fetches the on-chain HCS message from
 the public mirror node and diffs it against the marketplace copy). Then ask:
 *"find a printable beaver with a hat under $3 and buy a personal license."*
 

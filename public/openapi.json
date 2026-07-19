@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Printwright API",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; every purchase mints a public HCS license certificate.",
     "contact": { "url": "https://github.com/Nikodem01/printwright-x402" },
     "x-guidance": "Search GET /api/v1/models, inspect an offer with GET /api/v1/models/{id}, then call GET /api/v1/models/{id}/download?license=personal or commercial_unit. The unpaid download returns an x402 v2 challenge; sign one exact payment option and retry the same URL. For a zero-funds rehearsal, send X-Sandbox: true on both download requests; this returns hedera:sandbox artifacts that are explicitly not payments or licenses."
@@ -123,6 +123,26 @@
         }
       }
     },
+    "/licenses/{id}/can": {
+      "get": {
+        "operationId": "checkLicense",
+        "summary": "Decide whether one certificate permits a named use and quantity",
+        "description": "Returns a machine-decidable interpretation only when its canonical v1 prose matches the certificate's anchored terms_hash. The prose remains the legal grant. Sandbox receipts always return allowed=false.",
+        "security": [],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "pw-000036", "description": "public certificate id" },
+          { "name": "use", "in": "query", "required": true, "schema": { "type": "string", "enum": ["personal_print", "commercial_print", "resell_files", "share_files", "personal_remix", "commercial_remix", "transfer_license", "sublicense"] } },
+          { "name": "qty", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 1000000, "default": 1 } }
+        ],
+        "responses": {
+          "200": { "description": "Allowed or denied decision with stable reason code, structured permissions, certificate URL, and anchored terms references", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LicenseDecision" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "description": "permissions_unavailable — no structured policy matches the certificate's anchored terms hash", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "422": { "description": "invalid_use or invalid_quantity", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
     "/files/{token}": {
       "get": {
         "operationId": "redeemDownloadGrant",
@@ -197,6 +217,7 @@
         "type": "object",
         "properties": {
           "error": { "type": "string" },
+          "message": { "type": "string" },
           "sandbox": { "type": "boolean" },
           "warning": { "type": "string" },
           "status": { "type": "string", "description": "included on 409 duplicate_payment: the existing purchase's current status" },
@@ -241,13 +262,54 @@
               "max_units": { "type": ["integer", "null"] },
               "terms": { "type": "object", "properties": {
                 "version": { "type": ["string", "null"] }, "hash": { "type": "string" },
-                "url": { "type": ["string", "null"] }, "text": { "type": "string" } } }
+                "url": { "type": ["string", "null"] },
+                "permissions_url": { "type": ["string", "null"] },
+                "permissions": { "oneOf": [ { "$ref": "#/components/schemas/LicensePermissions" }, { "type": "null" } ] },
+                "text": { "type": "string" } } }
             } } },
             "designer": { "type": "object", "properties": {
               "name": { "type": "string" }, "verified": { "type": "boolean" },
               "hedera_account_id": { "type": ["string", "null"] } } },
             "download_url": { "type": "string" } } }
         ]
+      },
+      "LicensePermissions": {
+        "type": "object",
+        "description": "Convenience interpretation of canonical license prose; the anchored prose governs.",
+        "required": ["schema_version", "license_kind", "personal_use", "commercial_units", "resale_files", "share_files", "remix", "attribution", "transfer", "sublicense"],
+        "properties": {
+          "schema_version": { "type": "string", "const": "1" },
+          "license_kind": { "type": "string", "enum": ["personal", "commercial_unit"] },
+          "personal_use": { "type": "object", "properties": { "allowed": { "type": "boolean" }, "max_prints": { "type": ["integer", "null"] } } },
+          "commercial_units": { "type": "object", "properties": { "allowed": { "type": "boolean" }, "max_units": { "type": "integer", "minimum": 0 } } },
+          "resale_files": { "type": "object", "properties": { "allowed": { "type": "boolean" } } },
+          "share_files": { "type": "object", "properties": { "allowed": { "type": "boolean" } } },
+          "remix": { "type": "object", "properties": { "allowed": { "type": "boolean" }, "scope": { "type": "string", "enum": ["personal_noncommercial_only"] } } },
+          "attribution": { "type": "object", "properties": { "required": { "type": "boolean" }, "false_authorship_prohibited": { "type": "boolean" } } },
+          "transfer": { "type": "object", "properties": { "allowed": { "type": "boolean" } } },
+          "sublicense": { "type": "object", "properties": { "allowed": { "type": "boolean" } } }
+        },
+        "additionalProperties": false
+      },
+      "LicenseDecision": {
+        "type": "object",
+        "required": ["cert_id", "use", "qty", "allowed", "reason_code", "reason"],
+        "properties": {
+          "cert_id": { "type": "string" },
+          "use": { "type": "string" },
+          "qty": { "type": "integer" },
+          "license_kind": { "type": "string" },
+          "unit_serial": { "type": "integer" },
+          "allowed": { "type": "boolean" },
+          "reason_code": { "type": "string" },
+          "reason": { "type": "string" },
+          "sandbox": { "type": "boolean" },
+          "permissions": { "oneOf": [ { "$ref": "#/components/schemas/LicensePermissions" }, { "type": "null" } ] },
+          "certificate_url": { "type": "string" },
+          "terms": { "type": "object", "properties": {
+            "version": { "type": "string" }, "hash": { "type": "string" },
+            "url": { "type": "string" }, "permissions_url": { "type": "string" } } }
+        }
       },
       "PaymentRequired": {
         "type": "object",

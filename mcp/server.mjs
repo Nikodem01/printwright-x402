@@ -34,7 +34,7 @@ function parseSpendCap(raw) {
   return cap;
 }
 
-const server = new McpServer({ name: "printwright", version: "0.1.0" });
+const server = new McpServer({ name: "printwright", version: "0.2.0" });
 
 const json = (data) => ({ content: [{ type: "text", text: JSON.stringify(data, null, 2) }] });
 const fail = (message) => ({ isError: true, content: [{ type: "text", text: message }] });
@@ -120,6 +120,23 @@ server.registerTool(
       sandbox_url: result.sandbox_url,
     });
   }
+);
+
+server.registerTool(
+  "check_license",
+  {
+    description: "Answer whether one certificate permits a specific use and quantity from " +
+      "Printwright's structured interpretation of its anchored license terms. No payment credentials needed.",
+    inputSchema: {
+      cert_id: z.string().describe("e.g. pw-000003"),
+      use: z.enum([
+        "personal_print", "commercial_print", "resell_files", "share_files",
+        "personal_remix", "commercial_remix", "transfer_license", "sublicense",
+      ]),
+      qty: z.number().int().positive().max(1_000_000).default(1),
+    },
+  },
+  async ({ cert_id, use, qty }) => json(await client.can({ certId: cert_id, use, qty }))
 );
 
 server.registerTool(

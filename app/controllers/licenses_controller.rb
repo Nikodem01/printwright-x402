@@ -11,11 +11,13 @@ class LicensesController < ApplicationController
 
     @text = Licensing::Documents.text(@version, @kind)
     @hash = Licensing::Documents.hash(@version, @kind)
+    @permissions = Licensing::Permissions.document(@version, @kind)
     respond_to do |format|
       format.html
       format.text { render plain: @text }
+      format.json { render json: @permissions }
     end
-  rescue ActionController::RoutingError
+  rescue ActionController::RoutingError, Licensing::Permissions::UnknownDocument
     render file: Rails.public_path.join("404.html"), status: :not_found, layout: false
   end
 end

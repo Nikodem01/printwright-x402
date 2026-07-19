@@ -21,6 +21,10 @@ class DocsPageTest < ActionDispatch::IntegrationTest
     assert_match "designer-declared slicing guidance", response.body
     assert_match "Load sanity", response.body
     assert_match "scripts/load-sanity.mjs", response.body
+    assert_match "Machine-readable license decisions", response.body
+    assert_match "commercial_unit_limit", response.body
+    assert_match "printwright.can", response.body
+    assert_match "check_license", response.body
     assert_match "MCP", response.body
     assert_match "claude mcp add printwright", response.body
   end

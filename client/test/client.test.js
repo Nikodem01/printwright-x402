@@ -81,6 +81,13 @@ before(async () => {
         hcs: { mirror_url: `${baseUrl}/mirror/messages/7` },
       }));
     }
+    if (url.pathname === "/api/v1/licenses/pw-000007/can") {
+      const qty = Number(url.searchParams.get("qty"));
+      return response.end(JSON.stringify({
+        cert_id: "pw-000007", use: url.searchParams.get("use"), qty,
+        allowed: qty <= 1, reason_code: qty <= 1 ? "allowed" : "commercial_unit_limit",
+      }));
+    }
     if (url.pathname === "/api/v1/certificates/pw-000008") {
       return response.end(JSON.stringify({
         status: "anchored", certificate,
@@ -178,6 +185,18 @@ test("verifies an anchored certificate independent of JSON key order", async () 
   assert.equal(proof.match, true);
   assert.deepEqual(proof.onchain, { serial: 1, cert_id: "pw-000007", model_hash: "sha256:abc" });
   assert.equal(proof.consensus_timestamp, "123.456");
+});
+
+test("checks a structured license decision without payment credentials", async () => {
+  const client = new PrintwrightClient({ baseUrl });
+
+  const one = await client.can({ certId: "pw-000007", use: "commercial_print" });
+  const three = await client.can({ certId: "pw-000007", use: "commercial_print", qty: 3 });
+  assert.equal(one.allowed, true);
+  assert.equal(three.allowed, false);
+  assert.equal(three.reason_code, "commercial_unit_limit");
+  await assert.rejects(() => client.can({ certId: "pw-000007", use: "commercial_print", qty: 0 }),
+    /positive integer/);
 });
 
 test("reports mirror indexing lag without turning an anchored certificate into an error", async () => {

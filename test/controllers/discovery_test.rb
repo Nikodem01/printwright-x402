@@ -7,7 +7,7 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
     spec = JSON.parse(response.body)
     assert_equal "3.1.0", spec["openapi"]
     assert spec.dig("info", "x-guidance").present?
-    assert_equal [ "/certificates/{cert_id}", "/files/{token}", "/models", "/models/{id}", "/models/{id}/download",
+    assert_equal [ "/certificates/{cert_id}", "/files/{token}", "/licenses/{id}/can", "/models", "/models/{id}", "/models/{id}/download",
                    "/sandbox/files/{cert_id}", "/sandbox/topics/{topic_id}/messages/{sequence_number}",
                    "/sandbox/transactions/{transaction_id}" ],
                  spec["paths"].keys.sort
@@ -24,6 +24,8 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
     assert_equal %w[bed_min_mm est_print_minutes materials supports], printability["properties"].keys.sort
     assert_equal "#/components/schemas/Printability",
       spec.dig("components", "schemas", "ModelSummary", "properties", "printability", "$ref")
+    assert_equal "checkLicense", spec.dig("paths", "/licenses/{id}/can", "get", "operationId")
+    assert_equal "1", spec.dig("components", "schemas", "LicensePermissions", "properties", "schema_version", "const")
   end
 
   test "llms.txt is served with the buy flow" do

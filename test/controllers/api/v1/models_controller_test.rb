@@ -88,6 +88,9 @@ class Api::V1::ModelsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @beaver.file_hash, body["file_hash"]
     assert_equal %w[beaver hat animal], body["tags"]
     assert body["license_offers"].all? { |o| o.key?("terms") && o.key?("max_units") }
+    personal = body["license_offers"].find { |offer| offer["kind"] == "personal" }
+    assert_equal true, personal.dig("terms", "permissions", "personal_use", "allowed")
+    assert_includes personal.dig("terms", "permissions_url"), ".json"
     assert_includes body["download_url"], "/download?license={kind}"
     assert_equal @designer.display_name, body.dig("designer", "name")
   end

@@ -10,12 +10,17 @@ class Licensing::DocumentsTest < ActiveSupport::TestCase
     assert_equal "sha256:#{Digest::SHA256.hexdigest(text)}", Licensing::Documents.hash("v1", "personal")
     assert_not_equal Licensing::Documents.hash("v1", "personal"),
                      Licensing::Documents.hash("v1", "commercial_unit")
+    assert_equal "v1", Licensing::Documents.version_for_hash(
+      "personal", Licensing::Documents.hash("v1", "personal")
+    )
+    assert_nil Licensing::Documents.version_for_hash("personal", "sha256:unknown")
   end
 
-  test "unknown documents raise; exists? answers quietly; traversal is blocked" do
+  test "unknown documents raise; exists? and hash lookup answer quietly; traversal is blocked" do
     assert_raises(Licensing::Documents::UnknownDocument) { Licensing::Documents.text("v9", "personal") }
     assert_not Licensing::Documents.exists?("v1", "site_wide")
     assert_not Licensing::Documents.exists?("..", "..%2Fsecrets")
+    assert_nil Licensing::Documents.version_for_hash("../personal", "sha256:unknown")
     assert Licensing::Documents.exists?("v1", "commercial_unit")
   end
 

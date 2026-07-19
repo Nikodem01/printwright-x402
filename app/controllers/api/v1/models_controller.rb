@@ -60,6 +60,9 @@ class Api::V1::ModelsController < Api::V1::BaseController
             version: offer.terms_version,
             hash: offer.terms_hash,
             url: offer.terms_version ? license_document_url(version: offer.terms_version, kind: offer.kind) : nil,
+            permissions_url: offer.terms_version ?
+              license_document_url(version: offer.terms_version, kind: offer.kind, format: :json) : nil,
+            permissions: offer.terms_version ? Licensing::Permissions.document(offer.terms_version, offer.kind) : nil,
             text: offer.terms_text
           }
         }

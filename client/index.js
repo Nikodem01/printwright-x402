@@ -153,6 +153,15 @@ export class PrintwrightClient {
     };
   }
 
+  async can({ certId, use, qty = 1 } = {}) {
+    if (!certId?.trim()) throw new TypeError("certId is required");
+    if (!use?.trim()) throw new TypeError("use is required");
+    if (!Number.isSafeInteger(qty) || qty <= 0) throw new TypeError("qty must be a positive integer");
+
+    const params = new URLSearchParams({ use, qty: String(qty) });
+    return this.getJson(this.url(`api/v1/licenses/${encodeURIComponent(certId)}/can?${params}`));
+  }
+
   url(path) {
     return new URL(path, this.baseUrl);
   }

@@ -26,6 +26,16 @@ module Licensing
       false
     end
 
+    def self.version_for_hash(kind, terms_hash)
+      return nil unless kind.to_s.match?(/\A[a-z_]+\z/) && terms_hash.to_s.start_with?("sha256:")
+
+      ROOT.children.filter(&:directory?).filter_map do |directory|
+        version = directory.basename.to_s
+        next unless version.match?(/\Av\d+\z/)
+        version if exists?(version, kind) && hash(version, kind) == terms_hash
+      end.first
+    end
+
     def self.cache
       @cache ||= {}
     end

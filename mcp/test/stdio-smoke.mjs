@@ -4,10 +4,29 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import http from "node:http";
 
-test("stdio handshake lists the printwright tools", async () => {
+test("stdio handshake lists the tools and check_license delegates to the public API", async (t) => {
+  const marketplace = http.createServer((request, response) => {
+    const url = new URL(request.url, `http://${request.headers.host}`);
+    assert.equal(url.pathname, "/api/v1/licenses/pw-000007/can");
+    assert.equal(url.searchParams.get("use"), "commercial_print");
+    assert.equal(url.searchParams.get("qty"), "3");
+    response.setHeader("content-type", "application/json");
+    response.end(JSON.stringify({
+      cert_id: "pw-000007", use: "commercial_print", qty: 3,
+      allowed: false, reason_code: "commercial_unit_limit",
+    }));
+  });
+  await new Promise((resolve) => marketplace.listen(0, "127.0.0.1", resolve));
+
   const server = spawn(process.execPath, [ fileURLToPath(new URL("../server.mjs", import.meta.url)) ], {
+    env: { ...process.env, PRINTWRIGHT_URL: `http://127.0.0.1:${marketplace.address().port}` },
     stdio: [ "pipe", "pipe", "inherit" ],
+  });
+  t.after(() => {
+    server.kill();
+    marketplace.close();
   });
   const send = (msg) => server.stdin.write(JSON.stringify(msg) + "\n");
 
@@ -34,8 +53,16 @@ test("stdio handshake lists the printwright tools", async () => {
   assert.ok(tools.length >= 3, `expected several tools, got ${tools}`);
   assert.ok(tools.some((t) => /buy/.test(t)), `no buy tool in ${tools}`);
   assert.ok(tools.some((t) => /search|list/.test(t)), `no search tool in ${tools}`);
+  assert.ok(tools.includes("check_license"), `no check_license tool in ${tools}`);
 
-  server.kill();
+  send({ jsonrpc: "2.0", id: 3, method: "tools/call", params: {
+    name: "check_license", arguments: { cert_id: "pw-000007", use: "commercial_print", qty: 3 } } });
+  await waitFor(() => messages.some((m) => m.id === 3));
+  const toolResult = messages.find((m) => m.id === 3).result;
+  assert.notEqual(toolResult.isError, true, toolResult.content[0].text);
+  const decision = JSON.parse(toolResult.content[0].text);
+  assert.equal(decision.allowed, false);
+  assert.equal(decision.reason_code, "commercial_unit_limit");
 });
 
 function waitFor(ready, ms = 5000) {

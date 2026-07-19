@@ -32,7 +32,7 @@ and the only downloadable artifact is a non-printable text receipt.
 
 Every endpoint returns 429 {"error":"rate_limited","retry_after":60} (and a `Retry-After: 60`
 header) once its per-minute limit is exceeded: /models and /models/{id} and
-/certificates/{cert_id} allow 120/min, /models/{id}/download allows 30/min, /files/{token}
+/certificates/{cert_id} and /licenses/{id}/can allow 120/min, /models/{id}/download allows 30/min, /files/{token}
 allows 60/min. Back off and retry after the given number of seconds.
 
 ## Endpoints
@@ -46,10 +46,14 @@ allows 60/min. Back off and retry after the given number of seconds.
 - /api/v1/models/{id}/download: the paid endpoint (x402)
 - /api/v1/certificates/{cert_id}: public certificate + HCS mirror links + nft (license NFT
   claim state, once minted)
+- /api/v1/licenses/{cert_id}/can?use=commercial_print&qty=3: machine-decidable yes/no from
+  structured permissions, with stable reason code and anchored terms refs. Supported uses:
+  personal_print, commercial_print, resell_files, share_files, personal_remix,
+  commercial_remix, transfer_license, sublicense. One commercial_unit cert covers one unit.
 - /api/v1/sandbox/*: explicitly fake transaction, receipt, and local topic-message artifacts
 - /verify/{cert_id}: human-readable certificate verification page
 
 ## Reference clients
 
 - scripts/buy.mjs in the repo — one-command purchase
-- MCP server (mcp/server.mjs) — search_models, get_model, buy_license, verify_certificate
+- MCP server (mcp/server.mjs) — search_models, get_model, buy_license, check_license, verify_certificate

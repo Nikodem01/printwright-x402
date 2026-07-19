@@ -30,9 +30,16 @@ const buyer = new PrintwrightClient({
   network: "testnet",
 });
 const receipt = await buyer.buy({ modelId: model.id, license: "personal", asset: "usdc" });
+const decision = await buyer.can({
+  certId: receipt.license.cert_id, use: "commercial_print", qty: 3,
+});
 const proof = await buyer.verify(receipt.license.cert_id);
-console.log(receipt.hashscan_url, proof.match);
+console.log(receipt.hashscan_url, decision.allowed, decision.reason_code, proof.match);
 ```
+
+`can()` needs no account or key. It asks the public structured-policy endpoint whether one
+certificate permits a named use and quantity, and returns a boolean, stable reason code, the
+permission object, and the anchored prose references. The prose remains the governing grant.
 
 `quote()` exposes the unsigned 402 requirements for approval or dry-run interfaces. Pass its
 result back as `buy({ quote })` to sign exactly that selection without requesting another

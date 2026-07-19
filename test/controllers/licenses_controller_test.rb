@@ -15,6 +15,15 @@ class LicensesControllerTest < ActionDispatch::IntegrationTest
     assert_match Licensing::Documents.hash("v1", "commercial_unit"), response.body
     assert_match "sha256sum", response.body
     assert_match "Commercial Per-Unit", response.body
+    assert_match "Machine-readable permissions", response.body
+  end
+
+  test "json permalink serves the structured interpretation beside the prose" do
+    get license_document_path(version: "v1", kind: "commercial_unit", format: :json)
+    assert_response :success
+    assert_equal "commercial_unit", response.parsed_body["license_kind"]
+    assert_equal 1, response.parsed_body.dig("commercial_units", "max_units")
+    assert_equal false, response.parsed_body.dig("resale_files", "allowed")
   end
 
   test "unknown versions and kinds 404" do

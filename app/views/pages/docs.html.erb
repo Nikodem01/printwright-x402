@@ -151,6 +151,28 @@ console.log(receipt.warning, await sandbox.verify(receipt.license.cert_id));</pr
     120/min, <code class="mono">/models/{id}/download</code> 30/min,
     <code class="mono">/files/{token}</code> 60/min.</p>
 
+  <h2>Machine-readable license decisions</h2>
+  <p class="t-small">An agent never needs to parse legal prose to answer a bounded usage question.
+    Ask one certificate whether it permits a named use and quantity:</p>
+  <pre class="mono t-small" style="overflow-x:auto">GET /api/v1/licenses/pw-000057/can?use=commercial_print&amp;qty=3
+# {"cert_id":"pw-000057","use":"commercial_print","qty":3,"allowed":false,
+#  "reason_code":"commercial_unit_limit","reason":"... acquire one per unit sold", ...}</pre>
+  <p class="t-small">Supported uses are <code class="mono">personal_print</code>,
+    <code class="mono">commercial_print</code>, <code class="mono">resell_files</code>,
+    <code class="mono">share_files</code>, <code class="mono">personal_remix</code>,
+    <code class="mono">commercial_remix</code>, <code class="mono">transfer_license</code>, and
+    <code class="mono">sublicense</code>. A commercial per-unit certificate permits exactly one
+    commercial print; three units require three certificates.</p>
+  <p class="t-small">The response includes the complete permissions object plus links to the
+    certificate, canonical prose, anchored <code class="mono">terms_hash</code>, and JSON permalink.
+    The JSON is a convenience interpretation; the prose whose hash is anchored on HCS governs.
+    If the hashes do not match, the API returns <code class="mono">permissions_unavailable</code>
+    instead of guessing.</p>
+  <pre class="mono t-small" style="overflow-x:auto">const decision = await printwright.can({
+  certId: "pw-000057", use: "commercial_print", qty: 3
+});
+console.log(decision.allowed, decision.reason_code);</pre>
+
   <h2>Printability metadata</h2>
   <p class="t-small">Catalog responses use the following stable fields under
     <code class="mono">printability</code>. They are designer-declared slicing guidance—not a
@@ -185,9 +207,10 @@ claude mcp add printwright \
   --env BUYER_PRIVATE_KEY=0x... \
   --env MAX_SPEND_CENTS=500 \
   -- node mcp/server.mjs</pre>
-  <p class="t-small">Four tools: <code class="mono">search_models</code>,
+  <p class="t-small">Five tools: <code class="mono">search_models</code>,
     <code class="mono">get_model</code>, <code class="mono">buy_license</code> (refuses without
     <code class="mono">confirm: true</code>, capped by <code class="mono">MAX_SPEND_CENTS</code>),
+    <code class="mono">check_license</code> (machine-decidable use + quantity),
     and <code class="mono">verify_certificate</code> (reads the HCS message from the public
     mirror and diffs it against the marketplace copy).</p>
 

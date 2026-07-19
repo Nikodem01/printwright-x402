@@ -94,6 +94,21 @@ export interface CertificateProof {
   [key: string]: unknown;
 }
 
+export type LicenseUse = "personal_print" | "commercial_print" | "resell_files" |
+  "share_files" | "personal_remix" | "commercial_remix" | "transfer_license" | "sublicense";
+
+export interface LicenseDecision {
+  cert_id: string;
+  use: LicenseUse | string;
+  qty: number;
+  allowed: boolean;
+  reason_code: string;
+  reason: string;
+  permissions?: Record<string, unknown> | null;
+  terms?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 export class PrintwrightError extends Error {
   status?: number;
   body?: unknown;
@@ -105,6 +120,7 @@ export class PrintwrightClient {
   get(modelId: number): Promise<ModelDetails>;
   quote(options: QuoteOptions): Promise<PaymentQuote>;
   buy(options: PurchaseOptions): Promise<PurchaseReceipt>;
+  can(options: { certId: string; use: LicenseUse | string; qty?: number }): Promise<LicenseDecision>;
   verify(certId: string): Promise<CertificateProof>;
 }
 

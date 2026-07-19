@@ -9,6 +9,12 @@
   </p>
   <pre class="mono t-small" style="overflow-x:auto">curl -s <%= license_document_url(version: @version, kind: @kind, format: :txt) %> | sha256sum</pre>
 
+  <p class="t-small">
+    <%= link_to "Machine-readable permissions (JSON)",
+      license_document_path(version: @version, kind: @kind, format: :json) %>
+    are a convenience interpretation of the prose below. The prose and its anchored hash govern.
+  </p>
+
   <pre style="white-space: pre-wrap; margin-top: var(--s-4)"><%= @text %></pre>
 
   <p class="t-caption muted">

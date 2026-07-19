@@ -22,6 +22,10 @@ account with Printwright, no card — just a funded Hedera testnet account.
 - **`verify_certificate`** — fetches Printwright's copy of a license certificate *and* the
   on-chain HCS message from the public Hedera mirror node, and reports `match: true/false`.
   Sandbox certificates instead compare against an explicitly local, fake message.
+- **`check_license`** — asks the structured policy endpoint whether one certificate permits a
+  named use and quantity, returning yes/no, a stable reason code, the permission object, and
+  the anchored prose references. For example, one `commercial_unit` certificate permits one
+  commercial print but not three. No payment credentials are needed.
 
 ## Environment variables
 
@@ -35,7 +39,7 @@ account with Printwright, no card — just a funded Hedera testnet account.
 | `PRINTWRIGHT_SANDBOX` | no | `false` | Set exactly `true` to use Printwright's local mock facilitator and throwaway topic. No buyer credentials or funds are needed; receipts and artifacts are labeled sandbox and have no on-chain or license value. |
 
 `BUYER_ACCOUNT_ID` and `BUYER_PRIVATE_KEY` are only required to call `buy_license`;
-`search_models`, `get_model`, and `verify_certificate` need none of them.
+`search_models`, `get_model`, `check_license`, and `verify_certificate` need none of them.
 
 ## Mount it in Claude Code / Claude Desktop
 
