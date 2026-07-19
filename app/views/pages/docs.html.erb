@@ -151,6 +151,30 @@ console.log(receipt.warning, await sandbox.verify(receipt.license.cert_id));</pr
     120/min, <code class="mono">/models/{id}/download</code> 30/min,
     <code class="mono">/files/{token}</code> 60/min.</p>
 
+  <h2>Printability metadata</h2>
+  <p class="t-small">Catalog responses use the following stable fields under
+    <code class="mono">printability</code>. They are designer-declared slicing guidance—not a
+    guarantee that a model fits every printer, and not evidence that Printwright physically tested it.</p>
+  <div class="table-scroll">
+    <table class="facts-table">
+      <thead><tr><th>Field</th><th>Type / unit</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code class="mono">supports</code></td><td>boolean</td><td>Whether the declared orientation requires support material.</td></tr>
+        <tr><td><code class="mono">materials</code></td><td>string[]</td><td>Suggested materials such as PLA or PETG.</td></tr>
+        <tr><td><code class="mono">est_print_minutes</code></td><td>integer minutes</td><td>Approximate duration; slicer, profile, scale, and printer can change it.</td></tr>
+        <tr><td><code class="mono">bed_min_mm</code></td><td>integer millimetres</td><td>Declared minimum square build-plate side at the published scale.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Load sanity</h2>
+  <p class="t-small">Operators can run a bounded, read-only catalog burst before release:
+    <code class="mono">node scripts/load-sanity.mjs --url https://your-host --requests 100 --concurrency 10</code>.
+    A sequential warm-up must pass before the timed burst. The command then reports throughput,
+    status counts, transport errors, and p50/p95/p99 latency;
+    non-local targets must use HTTPS. Keep the default below the documented 120/min catalog
+    rate limit when testing through one client IP.</p>
+
   <h2>MCP</h2>
   <p class="t-small">The MCP server exposes the same door to any MCP client (Claude Code, Claude
     Desktop, ...):</p>

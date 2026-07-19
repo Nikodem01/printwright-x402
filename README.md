@@ -126,6 +126,16 @@ addition to the per-IP request rate limit.
 
 Agent discovery: [`/openapi.json`](public/openapi.json) · [`/llms.txt`](public/llms.txt).
 
+Pre-release load sanity is a bounded, read-only catalog burst (100 requests stays below the
+documented 120/min per-IP catalog limit):
+
+```bash
+node scripts/load-sanity.mjs --url https://your-host --requests 100 --concurrency 10
+```
+
+It requires a successful warm-up first, then reports status counts, transport errors,
+throughput, and p50/p95/p99 latency. Non-local targets must use HTTPS.
+
 ## Architecture
 
 - **Rails 8 monolith** — catalog API, x402 paywall (402 issuance, verify/settle via the

@@ -16,6 +16,11 @@ class DocsPageTest < ActionDispatch::IntegrationTest
     assert_match "PAYMENT-SIGNATURE", response.body
     assert_match "Error contract", response.body
     assert_match "duplicate_payment", response.body
+    assert_match "Printability metadata", response.body
+    assert_match "est_print_minutes", response.body
+    assert_match "designer-declared slicing guidance", response.body
+    assert_match "Load sanity", response.body
+    assert_match "scripts/load-sanity.mjs", response.body
     assert_match "MCP", response.body
     assert_match "claude mcp add printwright", response.body
   end

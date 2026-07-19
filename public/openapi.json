@@ -211,11 +211,22 @@
           "category": { "type": ["string", "null"] },
           "collections": { "type": "array", "items": { "type": "string" } },
           "designer": { "type": "object", "properties": { "name": { "type": "string" } } },
-          "printability": { "type": "object" },
+          "printability": { "$ref": "#/components/schemas/Printability" },
           "license_offers": { "type": "array", "items": { "type": "object", "properties": {
             "kind": { "type": "string" }, "price_cents": { "type": "integer" }, "currency": { "type": "string" } } } },
           "url": { "type": "string" }, "render_url": { "type": ["string", "null"] }
         }
+      },
+      "Printability": {
+        "type": "object",
+        "description": "Designer-declared slicing guidance, not a guarantee of printer compatibility or evidence of a physical test.",
+        "properties": {
+          "supports": { "type": "boolean", "description": "Whether the declared print orientation requires support material." },
+          "materials": { "type": "array", "items": { "type": "string" }, "description": "Suggested filament/material names such as PLA or PETG." },
+          "est_print_minutes": { "type": "integer", "minimum": 1, "description": "Approximate print duration in minutes; slicer, profile, scale, and printer can change it." },
+          "bed_min_mm": { "type": "integer", "minimum": 1, "description": "Designer-declared minimum square build-plate side in millimetres at the published scale." }
+        },
+        "additionalProperties": true
       },
       "ModelDetail": {
         "allOf": [

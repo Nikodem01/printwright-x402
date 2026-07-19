@@ -39,6 +39,9 @@ allows 60/min. Back off and retry after the given number of seconds.
 
 - /api/v1/models: search (q, category, collection, material, supports, max_price_cents). Model
   summaries include stable category and collections keys for agent-side catalog navigation.
+  printability contains designer-declared supports (boolean), materials (string[]),
+  est_print_minutes (minutes), and bed_min_mm (minimum square build-plate side at published
+  scale). These are slicing estimates, not physical-print guarantees.
 - /api/v1/models/{id}: full metadata incl. license offers and terms
 - /api/v1/models/{id}/download: the paid endpoint (x402)
 - /api/v1/certificates/{cert_id}: public certificate + HCS mirror links + nft (license NFT

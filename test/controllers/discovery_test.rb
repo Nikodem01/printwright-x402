@@ -20,6 +20,10 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
     assert responses.dig("402", "headers").key?("WWW-Authenticate")
     assert responses.dig("402", "headers").key?("X-Printwright-Sandbox")
     assert responses.dig("200", "headers").key?("PAYMENT-RESPONSE")
+    printability = spec.dig("components", "schemas", "Printability")
+    assert_equal %w[bed_min_mm est_print_minutes materials supports], printability["properties"].keys.sort
+    assert_equal "#/components/schemas/Printability",
+      spec.dig("components", "schemas", "ModelSummary", "properties", "printability", "$ref")
   end
 
   test "llms.txt is served with the buy flow" do
