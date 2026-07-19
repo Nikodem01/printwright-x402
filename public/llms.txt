@@ -52,8 +52,12 @@ allows 60/min. Back off and retry after the given number of seconds.
   commercial_remix, transfer_license, sublicense. One commercial_unit cert covers one unit.
 - /api/v1/sandbox/*: explicitly fake transaction, receipt, and local topic-message artifacts
 - /verify/{cert_id}: human-readable certificate verification page
+- /pwc-1.schema.json: normative frozen schema for the eleven-field PWC-1 HCS certificate payload
 
 ## Reference clients
 
 - scripts/buy.mjs in the repo — one-command purchase
 - MCP server (mcp/server.mjs) — search_models, get_model, buy_license, check_license, verify_certificate
+- Third-party verifier — `npx --package ./verifier printwright-verify <cert_id|mirror-message-url>`
+  (shortens to `npx printwright-verify` after registry release) queries Hedera's mirror node
+  directly and validates the PWC-1 payload without requesting this marketplace

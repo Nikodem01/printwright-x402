@@ -42,6 +42,13 @@ console.log(model.title, model.license_offers);
 use/quantity questions without parsing prose, and `verify()` compares the issued
 certificate with its public HCS mirror message.
 
+Independent verification does not need this Rails app. From this checkout,
+`npx --package ./verifier printwright-verify pw-000058` scans the known public topic directly;
+after the package release the shorter command is `npx printwright-verify pw-000058`. An exact
+mirror-message URL can be supplied instead.
+The frozen PWC-1 contract is published as [`/pwc-1.schema.json`](public/pwc-1.schema.json) and
+documented in `/docs`; the verifier implementation lives in [`verifier/`](verifier/).
+
 **Try the complete integration without funds:** construct the client with `sandbox: true`, or
 run `node scripts/buy.mjs --query "cable clip" --sandbox`. The app still returns a 402 and runs
 verify → settle → certificate, but through its built-in mock facilitator and local throwaway
@@ -156,9 +163,10 @@ bin/rails test            # Rails suite (paywall error table runs against real c
 bin/rails test:system     # Capybara: storefront + chat checkout, designer publish, verify states
 cd sidecar && npm test    # sidecar suite (SDK faked)
 cd mcp && npm test        # MCP stdio smoke (spawns the real server over stdio)
+cd verifier && npm test   # PWC-1 validation + direct-mirror CLI contracts
 ```
 
-All four run on every push via GitHub Actions ([ci.yml](.github/workflows/ci.yml)), plus
+All suites run on every push via GitHub Actions ([ci.yml](.github/workflows/ci.yml)), plus
 rubocop, brakeman, a seeds boot, a tree-wide secret grep, and a log-hygiene grep that fails
 the build if key/token/signature material ever reaches a log.
 

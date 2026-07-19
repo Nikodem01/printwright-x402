@@ -1,0 +1,39 @@
+{
+  "name": "printwright-verify",
+  "version": "0.1.0",
+  "description": "Verify PWC-1 print-license certificates directly against a Hedera mirror node.",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "printwright-verify": "cli.js"
+  },
+  "files": [
+    "cli.js",
+    "index.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "hedera",
+    "hcs",
+    "3d-printing",
+    "license",
+    "verification"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nikodem01/printwright-x402.git",
+    "directory": "verifier"
+  },
+  "homepage": "https://github.com/Nikodem01/printwright-x402/tree/main/verifier",
+  "publishConfig": {
+    "access": "public"
+  }
+}

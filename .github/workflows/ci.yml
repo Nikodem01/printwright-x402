@@ -30,7 +30,7 @@ jobs:
       - name: Lint (rubocop)
         run: bin/rubocop
       - name: Static security analysis (brakeman)
-        run: bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error --skip-files node_modules/,sidecar/node_modules/,mcp/node_modules/,scripts/spike/ -i config/brakeman.ignore
+        run: bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error --skip-files node_modules/,sidecar/node_modules/,mcp/node_modules/,verifier/node_modules/,scripts/spike/ -i config/brakeman.ignore
       - name: Rails tests
         run: bin/rails test
       - name: Payment decoder fuzz and state-machine properties
@@ -75,6 +75,17 @@ jobs:
       - name: MCP stdio smoke
         working-directory: mcp
         run: npm ci && npm test
+
+  verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: PWC-1 verifier contracts and audit
+        working-directory: verifier
+        run: npm ci && npm audit --audit-level=high && npm test
 
   octoprint:
     runs-on: ubuntu-latest

@@ -35,6 +35,19 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "/openapi.json"
     assert_includes response.body, "PAYMENT-SIGNATURE"
     assert_includes response.body, "X-Sandbox: true"
+    assert_includes response.body, "PWC-1"
+    assert_includes response.body, "printwright-verify"
+  end
+
+  test "PWC-1 JSON Schema is public and keeps the frozen certificate contract" do
+    get "/pwc-1.schema.json"
+    assert_response :success
+    schema = JSON.parse(response.body)
+    assert_equal "PWC-1 Print License Certificate", schema["title"]
+    assert_equal false, schema["additionalProperties"]
+    assert_equal 1, schema.dig("properties", "v", "const")
+    assert_equal %w[v cert_id model_id model_hash designer license_type unit_serial
+                    buyer_hint payment_tx issued_at terms_hash], schema["required"]
   end
 
   # Staleness guard: derives the route list from Rails.application.routes

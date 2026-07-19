@@ -25,6 +25,10 @@ class DocsPageTest < ActionDispatch::IntegrationTest
     assert_match "commercial_unit_limit", response.body
     assert_match "printwright.can", response.body
     assert_match "check_license", response.body
+    assert_match "PWC-1 certificate standard", response.body
+    assert_match "pwc-1.schema.json", response.body
+    assert_match "npx printwright-verify", response.body
+    assert_match "never requests the marketplace", response.body
     assert_match "MCP", response.body
     assert_match "claude mcp add printwright", response.body
   end
