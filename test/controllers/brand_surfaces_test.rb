@@ -38,6 +38,9 @@ class BrandSurfacesTest < ActionDispatch::IntegrationTest
   test "header exposes buyer recovery and the correct designer account action" do
     get root_url
 
+    assert_select "button[data-controller='theme'][data-action='theme#toggle']", text: "Dark mode"
+    assert_select "button[data-theme-target='button'][aria-pressed='false']"
+    assert_select ".header-actions > button.theme-toggle:last-child"
     assert_select ".header-actions a[href=?]", new_license_library_path, text: "My library"
     assert_select ".header-actions a[href=?]", new_session_path, text: "For designers"
     assert_select ".header-actions a[href=?]", designer_models_path, count: 0
@@ -47,6 +50,23 @@ class BrandSurfacesTest < ActionDispatch::IntegrationTest
 
     assert_select ".header-actions a[href=?]", designer_models_path, text: "Dashboard"
     assert_select ".header-actions a[href=?]", new_session_path, count: 0
+  end
+
+  test "layout restores a saved theme before application assets load" do
+    get root_url
+
+    bootstrap = css_select("head script").map(&:text).find { |script| script.include?("printwright-theme") }
+    assert bootstrap
+    assert_includes bootstrap, "document.documentElement.dataset.theme"
+  end
+
+  test "landing embeds one conversational purchase demo without a competing header action" do
+    get root_url
+
+    assert_select ".header-actions a[href=?]", chat_path, count: 0
+    assert_select ".hero-shopkeeper form[action=?]", chat_path
+    assert_select ".hero-shopkeeper a[href=?]", chat_path, text: /Open full chat/
+    assert_select ".hero-shopkeeper .prompt-chip", minimum: 2
   end
 
   test "configured browser wallet is local, lazy, and names its Hedera network" do

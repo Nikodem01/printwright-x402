@@ -59,7 +59,7 @@ claude mcp add printwright \
   -- node mcp/server.mjs
 ```
 
-Then ask something like *"find a printable beaver with a hat under $3 and buy a personal
+Then ask something like *"find a printable beaver with a hat under 3 USDC and buy a personal
 license."* The assistant will call `search_models`, then `get_model`, then ask you to confirm
 before calling `buy_license` with `confirm: true`.
 

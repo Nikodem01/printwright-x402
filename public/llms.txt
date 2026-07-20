@@ -47,7 +47,7 @@ on both download requests. Every response says SANDBOX, no Hedera funds move, th
 and the only downloadable artifact is a non-printable text receipt.
 Validate the client contract with `node conformance/suite.mjs --url http://localhost:3000`; it
 lints the exact v2 body/header fields and proves sandbox artifacts cannot be mistaken for paid
-licenses. `/agent-sellers` is a small, date-stamped directory of manually challenged x402 sellers.
+licenses.
 
 ## Rate limits
 

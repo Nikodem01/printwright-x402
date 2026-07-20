@@ -16,9 +16,11 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
   test "browse lists published models with price and printability facts" do
     get root_path
     assert_response :success
+    assert_select "section#models"
+    assert_select "form.search-form[action=?]", root_path(anchor: "models")
     assert_select ".model-card", 1
     assert_select ".model-card h3", text: "Articulated Beaver with Hat"
-    assert_select ".price", text: "$2.50"
+    assert_select ".price", text: "2.50 USDC"
     assert_select ".model-card", { text: /Hidden Draft/, count: 0 }
   end
 
@@ -32,6 +34,7 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
   test "active filter pills expose their current state" do
     get root_path(supports_free: "1")
     assert_select '.pill[aria-current="true"]', text: "Support-free"
+    assert_select '.pill[href$="#models"]', minimum: 3
   end
 
   test "category pages expose curated taxonomy and only matching models" do
@@ -48,6 +51,7 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
     assert_select ".model-card", text: /Pen Tray/, count: 1
     assert_select ".model-card", text: /Beaver/, count: 0
     assert_select '.browse-card[aria-current="page"]', text: /Desk organization/
+    assert_select '.browse-card[href$="#models"]'
   end
 
   test "collection pages filter across categories" do
@@ -82,11 +86,14 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
     assert_select "h1", text: @beaver.title
     assert_select ".buy-panel .offer-row", 1
     assert_select ".trust-strip .mono", text: /sha256:/
+    assert_select ".trust-strip", text: /Public integrity check/
+    assert_select ".copy-btn", text: "copy full hash"
     assert_select 'script[type="application/ld+json"]' do |nodes|
       product = JSON.parse(nodes.first.text)
       assert_equal "Product", product["@type"]
       assert_equal hostile_description, product["description"]
       assert_equal "2.50", product["offers"].first["price"]
+      assert_equal "USDC", product["offers"].first["priceCurrency"]
       license = product["offers"].first.fetch("itemOffered")
       assert_equal "DigitalDocument", license["@type"]
       assert_equal "PrintLicense", license["additionalType"]
@@ -107,7 +114,17 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
     assert_select ".buy-panel", text: /does not technically prevent/
   end
 
-  test "model page exposes only a decimated preview and keeps the render fallback" do
+  test "commercial offers expose a quantity bounded by batch size and remaining slots" do
+    @beaver.license_offers.create!(kind: "commercial_unit", price_cents: 60, max_units: 7)
+
+    get model_page_path(@beaver.slug)
+
+    assert_select "[data-checkout-batch-url-value='#{api_v1_batches_path}']"
+    assert_select "input[aria-label='Commercial units'][min='1'][max='7'][value='1']", 1
+    assert_select ".license-quantity", text: /0.60 USDC each/
+  end
+
+  test "model page exposes rendered turntable frames without the printable mesh" do
     source = @beaver.model_files.create!(kind: "stl", position: 0)
     source.file.attach(io: Rails.root.join("db/seed_assets/beaver-with-hat.stl").open,
                        filename: "beaver.stl", content_type: "model/stl")
@@ -118,8 +135,8 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
 
     get model_page_path(@beaver.slug)
 
-    assert_select "[data-controller='model-preview'][data-model-preview-url-value]"
-    assert_select "[data-model-preview-target='fallback']"
+    assert_select "[data-controller='render-turntable'][data-render-turntable-frames-value]"
+    assert_select "[data-render-turntable-target='image']"
     refute_includes response.body, source.file.filename.to_s
   end
 
@@ -131,9 +148,26 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
   test "landing page narrates the three doors and how a purchase works" do
     get root_path
     assert_response :success
-    assert_select "h2", text: "Agents"
+    assert_select "h2", text: "Shop with AI"
     assert_select "h2", text: "Humans"
-    assert_select "h2", text: /print server/i
+    assert_select "h2", text: /Agents & print servers/i
+    assert_select ".hero-shopkeeper form[action=?]", chat_path
+    assert_select ".hero-chat-messages[data-controller='chat-scroll']"
     assert_select "a[href=?]", docs_path
+  end
+
+  test "landing shopkeeper retains the complete stored conversation" do
+    get chat_path
+    conversation = ChatConversation.find(session[:chat_conversation_id])
+    conversation.update!(turns: [
+      { "role" => "user", "parts" => [ { "text" => "old question" } ] },
+      { "role" => "model", "parts" => [ { "text" => "old answer" } ] },
+      { "role" => "user", "parts" => [ { "text" => "latest question" } ] },
+      { "role" => "model", "parts" => [ { "text" => "latest answer" } ] }
+    ])
+
+    get root_path
+
+    assert_select ".hero-chat-messages", text: /old question.*old answer.*latest question.*latest answer/
   end
 end

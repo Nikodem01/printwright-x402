@@ -1,6 +1,14 @@
 require "test_helper"
 
 class ApplicationHelperTest < ActionView::TestCase
+  test "formats offer prices and token amounts as USDC" do
+    offer = Struct.new(:price_cents).new(250)
+
+    assert_equal "2.50 USDC", offer_price(offer)
+    assert_equal "2.50 USDC", format_usdc_cents(250)
+    assert_equal "2.50 USDC", format_base_units(2_500_000, "0.0.429274")
+  end
+
   test "printability_label uses the known label and humanizes unknown keys" do
     assert_equal "Supports", printability_label("supports")
     assert_equal "Minimum bed", printability_label("bed_min_mm")

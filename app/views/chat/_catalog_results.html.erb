@@ -1,0 +1,33 @@
+<% if results.present? %>
+  <div class="chat-catalog-results" aria-label="Catalog results">
+    <% results.each do |model| %>
+      <%= link_to chat_catalog_model_path(model), class: "chat-model-result",
+            data: { turbo_frame: "_top" } do %>
+        <% if model[:thumbnail_url].present? %>
+          <%= image_tag model[:thumbnail_url], alt: "", loading: "lazy", decoding: "async" %>
+        <% else %>
+          <span class="chat-model-result-thumb" aria-hidden="true"></span>
+        <% end %>
+
+        <span class="chat-model-result-copy">
+          <strong><%= model[:title] %></strong>
+          <% if model[:designer].present? %>
+            <span class="chat-model-result-designer">by <%= model[:designer] %></span>
+          <% end %>
+          <span class="chat-model-result-offers">
+            <% Array(model[:license_offers]).each do |offer| %>
+              <% offer = offer.with_indifferent_access %>
+              <span><%= offer[:kind].to_s.humanize %> · <strong><%= offer[:price] %></strong></span>
+            <% end %>
+          </span>
+        </span>
+
+        <span class="chat-model-result-arrow" aria-hidden="true">→</span>
+      <% end %>
+    <% end %>
+    <% if results.size > 2 %>
+      <%= link_to "+#{results.size - 2} more results in full chat →", chat_path,
+            class: "chat-catalog-more", data: { turbo_frame: "_top" } %>
+    <% end %>
+  </div>
+<% end %>

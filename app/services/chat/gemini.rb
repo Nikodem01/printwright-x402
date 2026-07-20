@@ -42,7 +42,10 @@ module Chat
         open_timeout: TIMEOUT_SECONDS, read_timeout: TIMEOUT_SECONDS
       ) { |http| http.request(req) }
 
-      return nil unless response.code.to_i == 200
+      unless response.code.to_i == 200
+        Rails.logger.warn("Chat::Gemini: provider returned HTTP #{response.code}")
+        return nil
+      end
       return nil if response.body.bytesize > MAX_RESPONSE_BYTES
 
       JSON.parse(response.body).dig("candidates", 0, "content", "parts")

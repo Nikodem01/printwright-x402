@@ -99,7 +99,7 @@ class Chat::PurchaseApprovalTest < ActiveSupport::TestCase
       "title" => "Cable Clip",
       "license_kind" => "personal",
       "price_cents" => 90,
-      "display_price" => "$0.90",
+      "display_price" => "0.90 USDC",
       "purchase_path" => PURCHASE_PATH,
       "expires_at" => 10.minutes.from_now.iso8601
     }
@@ -154,7 +154,7 @@ class Chat::PurchaseApprovalConcurrencyTest < ActiveSupport::TestCase
       ChatConversation.create!(purchase_proposal: {
         "nonce" => "concurrent-#{index}", "state" => "pending", "model_id" => 5,
         "title" => "Clip", "license_kind" => "personal", "price_cents" => 60,
-        "display_price" => "$0.60", "purchase_path" => path, "expires_at" => 10.minutes.from_now.iso8601
+        "display_price" => "0.60 USDC", "purchase_path" => path, "expires_at" => 10.minutes.from_now.iso8601
       }).id
     end
     ready = Queue.new

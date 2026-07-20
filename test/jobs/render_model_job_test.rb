@@ -10,14 +10,14 @@ class RenderModelJobTest < ActiveJob::TestCase
     )
   end
 
-  test "attaches four automatic render files and replaces them idempotently" do
+  test "attaches twelve automatic render files and replaces them idempotently" do
     with_fake_openscad do
       RenderModelJob.perform_now(@model.id)
       RenderModelJob.perform_now(@model.id)
     end
 
-    assert_equal 4, @model.reload.render_files.length
-    assert_equal %w[back front left right], @model.render_files.map { |file| file.file.filename.to_s }
+    assert_equal 12, @model.reload.render_files.length
+    assert_equal 12.times.map { |index| format("angle-%03d", index * 30) }, @model.render_files.map { |file| file.file.filename.to_s }
       .map { |name| name.delete_prefix(RenderModelJob::AUTO_PREFIX).delete_suffix(".png") }.sort
     assert @model.render_files.all? { |file| file.file.content_type == "image/png" }
   end
@@ -31,7 +31,7 @@ class RenderModelJobTest < ActiveJob::TestCase
 
     with_fake_openscad { RenderModelJob.perform_now(@model.id, true) }
 
-    assert_equal 4, @model.reload.render_files.length
+    assert_equal 12, @model.reload.render_files.length
     assert @model.render_files.none? { |file| file.file.filename.to_s == "designer.png" }
   end
 

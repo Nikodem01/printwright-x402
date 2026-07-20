@@ -12,7 +12,7 @@
       brand: { "@type": "Person", name: @model.designer.display_name },
       offers: @model.license_offers.map { |offer|
         { "@type": "Offer", price: format("%.2f", offer.price_cents / 100.0),
-          priceCurrency: "USD",
+          priceCurrency: "USDC",
           availability: offer.sold_out? ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
           name: "#{offer.kind.humanize} license",
           url: api_v1_model_download_url(model_id: @model.id, license: offer.kind),
@@ -29,43 +29,39 @@
 <% end %>
 
 <div class="model-page">
-  <div class="model-main">
-    <header class="model-head">
-      <% if @model.category.present? %>
-        <p class="card-taxonomy"><%= Model3d.category_definition(@model.category).fetch(:name) %></p>
-      <% end %>
-      <h1><%= @model.title %></h1>
-      <p class="t-small muted">by <%= link_to @model.designer.display_name, designer_path(@model.designer) %><%= " ✓" if @model.designer.identity_verified? %></p>
-    </header>
+  <header class="model-head">
+    <% if @model.category.present? %>
+      <p class="card-taxonomy"><%= Model3d.category_definition(@model.category).fetch(:name) %></p>
+    <% end %>
+    <h1><%= @model.title %></h1>
+    <p class="t-small muted">by <%= link_to @model.designer.display_name, designer_path(@model.designer) %><%= " ✓" if @model.designer.identity_verified? %></p>
+  </header>
 
-    <% preview_file = @model.preview_file %>
+  <div class="model-main">
     <% render_files = @model.render_files.select { |file| file.file.attached? } %>
-    <% render_file = render_files.first %>
-    <div class="gallery model-preview" data-controller="model-preview"
-         <% if preview_file&.file&.attached? %>
-           data-model-preview-url-value="<%= rails_storage_proxy_path(preview_file.file) %>"
-         <% end %>>
-      <div class="model-preview-stage" data-model-preview-target="stage">
+    <% turntable_files = render_files.select { |file| file.file.filename.to_s.start_with?(RenderModelJob::AUTO_PREFIX) } %>
+    <% display_files = turntable_files.many? ? turntable_files : render_files %>
+    <% render_file = display_files.first || render_files.first %>
+    <% frame_urls = display_files.map { |file| rails_storage_proxy_path(file.file) } %>
+    <div class="gallery model-preview" data-controller="render-turntable"
+         data-render-turntable-frames-value="<%= frame_urls.to_json %>">
+      <div class="model-preview-stage render-turntable-stage" tabindex="0" role="group"
+           aria-label="Rendered model turntable"
+           data-action="pointerdown->render-turntable#start pointermove->render-turntable#move pointerup->render-turntable#stop pointercancel->render-turntable#stop wheel->render-turntable#zoom keydown->render-turntable#keydown">
         <% if render_file&.file&.attached? %>
-          <%= image_tag render_file.file, alt: @model.title, data: { model_preview_target: "fallback" } %>
+          <%= image_tag render_file.file, alt: "#{@model.title} rendered view",
+                draggable: false, data: { render_turntable_target: "image" } %>
         <% else %>
-          <div class="model-preview-placeholder" data-model-preview-target="fallback">Preview render unavailable</div>
+          <div class="model-preview-placeholder">Preview render unavailable</div>
         <% end %>
       </div>
-      <p class="t-caption muted model-preview-status" data-model-preview-target="status" aria-live="polite">
-        <% if preview_file&.file&.attached? %>
-          Loading a coarse, non-printable preview…
+      <p class="t-caption muted model-preview-status" data-render-turntable-target="status" aria-live="polite">
+        <% if display_files.many? %>
+          Rendered turntable ready — drag to change view, scroll to zoom.
         <% else %>
-          Interactive preview unavailable — showing the designer render.
+          Designer render.
         <% end %>
       </p>
-      <% if render_files.many? %>
-        <div class="turntable-thumbnails" aria-label="Turntable views">
-          <% render_files.each_with_index do |file, index| %>
-            <%= image_tag file.file, alt: "#{@model.title} view #{index + 1} of #{render_files.length}", loading: "lazy" %>
-          <% end %>
-        </div>
-      <% end %>
     </div>
 
     <%# The drawing-sheet title block. One of the two places in the system
@@ -85,11 +81,12 @@
 
     <div class="trust-strip" data-controller="clipboard">
       <span>
-        file hash
+        printable bundle fingerprint (SHA-256)
         <span class="mono" data-clipboard-target="source"><%= @model.file_hash&.truncate(24) %></span>
         <button class="copy-btn" type="button"
-                data-action="clipboard#copy" data-clipboard-full-value="<%= @model.file_hash %>">copy</button>
+                data-action="clipboard#copy" data-clipboard-full-value="<%= @model.file_hash %>">copy full hash</button>
       </span>
+      <span class="t-caption muted">Public integrity check for the licensed file bundle—not a download key.</span>
       <%# The licence count is already a cell in the title block below — one
           fact, one place. %>
       <% if @successful_prints.positive? %>
@@ -110,15 +107,18 @@
   </div>
 
   <aside>
-    <div class="buy-panel" data-controller="checkout"
-         data-checkout-download-url-value="<%= "/api/v1/models/#{@model.id}/download" %>"
-         <%# An explicit local signer is reserved for development/test. Customer
-             checkout otherwise loads the connected-wallet module on demand. %>
-         <% if (wallet_url = ENV["DEMO_WALLET_URL"].presence) %>data-checkout-wallet-url-value="<%= wallet_url %>"<% end %>>
+    <%= form_with url: cart_items_path, class: "buy-panel", data: {
+          controller: "checkout",
+          checkout_download_url_value: "/api/v1/models/#{@model.id}/download",
+          checkout_batch_url_value: api_v1_batches_path,
+          checkout_model_id_value: @model.id,
+          checkout_wallet_url_value: ENV["DEMO_WALLET_URL"].presence
+        }.compact do %>
+      <%= hidden_field_tag :model_id, @model.id %>
       <h3>Buy a license</h3>
       <% @model.license_offers.each_with_index do |offer, index| %>
-        <%# price-display carries the server-formatted price (ℏ · $ for HBAR-lead offers, live
-            rate) so the controller can relabel the button without flattening it to bare USD. %>
+        <%# price-display carries the server-formatted USDC price so the controller can relabel
+            the button without reconstructing a currency string client-side. %>
         <label class="offer-row" data-checkout-target="offer" data-price-cents="<%= offer.price_cents %>"
                data-price-display="<%= offer_price(offer) %>">
           <input type="radio" name="license" value="<%= offer.kind %>" <%= "checked" if index.zero? %>
@@ -136,6 +136,19 @@
           </span>
           <span class="price"><%= offer_price(offer) %></span>
         </label>
+      <% end %>
+      <% @model.license_offers.select { |offer| offer.kind == "commercial_unit" }.each do |offer| %>
+        <% quantity_max = [ [ offer.units_remaining || 20, 20 ].min, 1 ].max %>
+        <div class="license-quantity" data-checkout-target="quantity"
+             data-license-kind="<%= offer.kind %>" hidden>
+          <label for="commercial-unit-quantity">Units</label>
+          <input id="commercial-unit-quantity" type="number" inputmode="numeric" value="1" min="1"
+                 max="<%= quantity_max %>" name="quantity" aria-label="Commercial units"
+                 data-action="input->checkout#updatePrice change->checkout#updatePrice">
+          <span class="license-quantity-total t-caption" data-quantity-total>
+            <%= offer_price(offer) %> each
+          </span>
+        </div>
       <% end %>
       <% if @model.license_offers.any?(&:max_units) %>
         <p class="t-caption muted">A license issuance cap limits how many licenses Printwright
@@ -157,12 +170,15 @@
               data-checkout-target="button" data-action="checkout#buy">
         Buy license · <%= offer_price(@model.license_offers.first) %>
       </button>
+      <button class="btn btn-block" type="submit" data-checkout-target="cartButton">
+        Add selection to cart
+      </button>
       <div class="checkout-status" data-checkout-target="status" aria-live="polite" tabindex="-1"></div>
       <div data-checkout-target="receipt" hidden tabindex="-1"></div>
       <p class="t-caption muted">
         Pays via x402 on Hedera <%= Hedera::Network.name %> · HBAR or USDC.
         Your connected wallet signs only; the facilitator pays the network fee.
       </p>
-    </div>
+    <% end %>
   </aside>
 </div>

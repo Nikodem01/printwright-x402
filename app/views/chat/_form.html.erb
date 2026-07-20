@@ -1,5 +1,7 @@
-<%= form_with url: chat_path, method: :post, id: "chat_form", class: "chat-form" do %>
+<%= form_with url: chat_path, method: :post, id: "chat_form", class: "chat-form",
+              data: { chat_prompt_target: "form" } do %>
   <input type="text" name="message" placeholder="Ask about a model…" aria-label="Message"
-         autocomplete="off" autofocus required>
+         autocomplete="off" <%= "autofocus" if local_assigns.fetch(:autofocus, true) %>
+         required data-chat-prompt-target="input">
   <button class="btn" type="submit">Send</button>
 <% end %>

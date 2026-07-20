@@ -118,7 +118,7 @@ function pickOffer(model) {
 }
 
 function money(offer) {
-  return `$${(offer.price_cents / 100).toFixed(2)} (${offer.currency}-lead)`;
+  return `${(offer.price_cents / 100).toFixed(2)} USDC (${offer.currency}-lead)`;
 }
 
 async function waitForCertificate(certId, attempts = 10) {

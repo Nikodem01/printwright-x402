@@ -9,6 +9,8 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     ENV["CHAT_MAX_SPEND_CENTS"] = "0"
     ENV["CHAT_DAILY_SPEND_CENTS"] = "0"
     ENV["CHAT_DAILY_MESSAGE_LIMIT"] = "500"
+    ENV["CHAT_DAILY_VISITOR_MESSAGE_LIMIT"] = "25"
+    ENV["CHAT_DAILY_PROVIDER_CALL_LIMIT"] = "500"
   end
 
   teardown do
@@ -16,6 +18,8 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     ENV.delete("CHAT_MAX_SPEND_CENTS")
     ENV.delete("CHAT_DAILY_SPEND_CENTS")
     ENV.delete("CHAT_DAILY_MESSAGE_LIMIT")
+    ENV.delete("CHAT_DAILY_VISITOR_MESSAGE_LIMIT")
+    ENV.delete("CHAT_DAILY_PROVIDER_CALL_LIMIT")
     RateLimitStore.backend = nil
   end
 
@@ -24,6 +28,9 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "form#chat_form"
     assert_select "#chat_empty_state"
+    assert_select "[data-controller='chat-prompt']"
+    assert_select "button[data-action='chat-prompt#choose']", 2
+    assert_select "button[data-chat-prompt-message-param*='buy']", minimum: 1
   end
 
   test "asking a question shows the tool trace before the answer, and the prices match the API" do
@@ -38,13 +45,14 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
       { body: { candidates: [ { content: { parts: [
           { functionCall: { name: "search_models", args: { query: "cable" } } }
         ] } } ] }.to_json, headers: { "content-type" => "application/json" } },
-      { body: { candidates: [ { content: { parts: [ { text: "We have a Cable Clip for $1.50." } ] } } ] }.to_json,
+      { body: { candidates: [ { content: { parts: [ { text: "We have a Cable Clip for 1.50 USDC." } ] } } ] }.to_json,
         headers: { "content-type" => "application/json" } }
     )
     stub_request(:get, %r{\Ahttp://localhost:3000/api/v1/models\?}).to_return(
       body: { models: [ {
         "id" => model.id, "title" => model.title, "slug" => model.slug,
         "url" => "http://localhost:3000/api/v1/models/#{model.id}",
+        "render_url" => "http://localhost:3000/cable-clip.png",
         "license_offers" => [ { "kind" => "personal", "price_cents" => 150, "currency" => "USDC" } ]
       } ], count: 1 }.to_json,
       headers: { "content-type" => "application/json" }
@@ -54,7 +62,9 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
 
     assert_turbo_stream action: "append", target: "chat_messages" do
       assert_select "code.mono", text: /search_models\(query: "cable"\)/
-      assert_select ".chat-msg-assistant", text: /Cable Clip.*\$1\.50/
+      assert_select ".chat-model-result[href=?]", model_page_path(model.slug), text: /Cable Clip.*1\.50 USDC/
+      assert_select ".chat-model-result img[src=?]", "http://localhost:3000/cable-clip.png"
+      assert_select ".chat-msg-assistant", text: /Cable Clip.*1\.50 USDC/
     end
     assert_turbo_stream action: "replace", target: "chat_form"
   ensure
@@ -83,6 +93,26 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     post chat_path, params: { message: "   " }, as: :turbo_stream
     assert_response :success
     assert_no_turbo_stream action: "append", target: "chat_messages"
+  end
+
+  test "reset deletes the server-side conversation and starts fresh" do
+    get chat_path
+    conversation = ChatConversation.find(session[:chat_conversation_id])
+    conversation.update!(
+      turns: [ { "role" => "user", "parts" => [ { "text" => "old question" } ] } ],
+      purchase_proposal: proposal
+    )
+
+    delete chat_path, headers: { "HTTP_REFERER" => chat_url }
+
+    assert_redirected_to chat_url
+    assert_nil session[:chat_conversation_id]
+    assert_not ChatConversation.exists?(conversation.id)
+
+    follow_redirect!
+    assert_select "#chat_empty_state"
+    assert_select ".chat-msg", count: 0
+    assert_select "button", text: "Reset chat", count: 1
   end
 
   test "a long conversation persists in the database while the cookie keeps only its id" do
@@ -130,7 +160,7 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
 
     assert_turbo_stream action: "replace", target: "chat_purchase" do
       assert_select ".chat-purchase-card", text: /Canonical Clip/
-      assert_select "button", text: /Approve and buy.*\$0\.90/
+      assert_select "button", text: /Approve and buy.*0\.90 USDC/
     end
     assert_not_requested :get, %r{/download}
     assert_not_requested :post, %r{/sign|/verify|/settle}
@@ -166,7 +196,7 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     assert_not_requested :post, GEMINI
 
     RateLimitStore.backend = ActiveSupport::Cache::MemoryStore.new
-    20.times { post chat_path, params: { message: "" }, as: :turbo_stream }
+    10.times { post chat_path, params: { message: "" }, as: :turbo_stream }
     post chat_path, params: { message: "" }, as: :turbo_stream
     assert_response :too_many_requests
     assert_equal "60", response.headers["Retry-After"]
@@ -174,9 +204,9 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
   end
 
-  test "the global daily provider budget fails closed without a second Gemini call" do
+  test "the per-visitor daily limit stops one person consuming the shared allowance" do
     ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
-    ENV["CHAT_DAILY_MESSAGE_LIMIT"] = "1"
+    ENV["CHAT_DAILY_VISITOR_MESSAGE_LIMIT"] = "1"
     RateLimitStore.backend = ActiveSupport::Cache::MemoryStore.new
     stub_request(:post, GEMINI).to_return(
       body: { candidates: [ { content: { parts: [ { text: "First answer." } ] } } ] }.to_json,
@@ -187,7 +217,32 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     post chat_path, params: { message: "second" }, as: :turbo_stream
 
     assert_response :success
-    assert_match(/daily message budget/i, ChatConversation.find(session[:chat_conversation_id]).turns.last.dig("parts", 0, "text"))
+    assert_match(/fair-use limit/i, ChatConversation.find(session[:chat_conversation_id]).turns.last.dig("parts", 0, "text"))
+    assert_requested :post, GEMINI, times: 1
+  ensure
+    ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
+  end
+
+  test "the global provider-call budget fails closed without another Gemini call" do
+    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
+    ENV["CHAT_DAILY_PROVIDER_CALL_LIMIT"] = "1"
+    RateLimitStore.backend = ActiveSupport::Cache::MemoryStore.new
+    stub_request(:post, GEMINI).to_return(
+      body: { candidates: [ { content: { parts: [
+        { functionCall: { name: "search_models", args: { query: "cable" } } }
+      ] } } ] }.to_json,
+      headers: { "content-type" => "application/json" }
+    )
+    stub_request(:get, %r{\Ahttp://localhost:3000/api/v1/models\?}).to_return(
+      body: { models: [], count: 0 }.to_json,
+      headers: { "content-type" => "application/json" }
+    )
+
+    post chat_path, params: { message: "find a cable organizer" }, as: :turbo_stream
+
+    assert_response :success
+    assert_match(/shared daily assistant budget/i,
+      ChatConversation.find(session[:chat_conversation_id]).turns.last.dig("parts", 0, "text"))
     assert_requested :post, GEMINI, times: 1
   ensure
     ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
@@ -209,7 +264,7 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
       "title" => "Stored Clip",
       "license_kind" => "personal",
       "price_cents" => 90,
-      "display_price" => "$0.90",
+      "display_price" => "0.90 USDC",
       "purchase_path" => "/api/v1/models/5/download?license=personal",
       "expires_at" => 10.minutes.from_now.iso8601
     }

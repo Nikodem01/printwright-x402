@@ -6,7 +6,7 @@ class CatalogAssetsTest < ActiveSupport::TestCase
     output, status = Open3.capture2e(RbConfig.ruby, Rails.root.join("scripts/check_seed_assets.rb").to_s)
 
     assert_predicate status, :success?, output
-    assert_includes output, "Seed assets valid: 36"
+    assert_includes output, "Seed assets valid: 37"
   end
 
   test "seed upgrade preserves a purchased legacy file and publishes a replacement" do
@@ -34,7 +34,10 @@ class CatalogAssetsTest < ActiveSupport::TestCase
 
     seed_slugs = PROVENANCE.values.pluck("slug")
     seeded_models = Model3d.where(slug: seed_slugs).includes(model_files: { file_attachment: :blob })
-    assert_equal 36, seeded_models.length
+    assert_equal 37, seeded_models.length
+    racer = seeded_models.find { |model| model.slug == "open-wheel-toy-racer" }
+    assert_equal "Open-Wheel Toy Racer", racer.title
+    assert_includes racer.tags, "car"
     seeded_models.each do |seeded_model|
       assert_includes Model3d::CATEGORIES.keys, seeded_model.category
       assert_empty seeded_model.collections - Model3d::COLLECTIONS.keys

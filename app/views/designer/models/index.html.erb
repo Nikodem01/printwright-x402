@@ -9,7 +9,7 @@
         <td><%= link_to model.title, edit_designer_model_path(model) %></td>
         <td><%= render "shared/state", state: model.published? ? "settled" : "pending",
                        label: model.status.humanize %></td>
-        <td><%= model.license_offers.map { |o| "#{o.kind} $#{format('%.2f', o.price_cents / 100.0)}" }.join(" · ") %></td>
+        <td><%= model.license_offers.map { |o| "#{o.kind} #{format_usdc_cents(o.price_cents)}" }.join(" · ") %></td>
         <td class="mono"><%= model.file_hash&.truncate(18) || "—" %></td>
         <td><%= link_to "view", model_page_path(model.slug) if model.published? %></td>
       </tr>

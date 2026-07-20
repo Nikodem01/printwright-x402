@@ -62,7 +62,7 @@ module Chat
           title: body["title"].to_s.first(200),
           license_kind: kind,
           price_cents: price_cents,
-          display_price: format("$%.2f", price_cents / 100.0),
+          display_price: format_usdc(price_cents),
           purchase_path: "/api/v1/models/#{id}/download?#{URI.encode_www_form(license: kind)}",
           expires_at: Chat::PurchasePolicy::PROPOSAL_LIFETIME.from_now.iso8601
         }
@@ -73,17 +73,18 @@ module Chat
     # (files, license terms text, hedera account id, ...) would waste tokens
     # and bury the answer in noise.
     #
-    # price_cents is always US cents, regardless of settlement currency (see
-    # ApplicationHelper#offer_price) — handing that raw over unlabeled once
-    # had the model read 90 price_cents as "90 USDC" instead of $0.90.
-    # Formatting it as a dollar string here is what keeps the price honest.
+    # price_cents is always hundredths of USDC, regardless of the lead
+    # settlement option. Handing that raw value to the model once made it read
+    # 90 price_cents as 90 USDC instead of 0.90 USDC.
     def summarize(model, detailed: false)
       summary = {
         id: model["id"],
+        slug: model["slug"],
         title: model["title"],
         designer: model.dig("designer", "name"),
+        thumbnail_url: model["render_url"],
         license_offers: Array(model["license_offers"]).map do |offer|
-          { kind: offer["kind"], price: format("$%.2f", offer["price_cents"].to_i / 100.0), settles_in: offer["currency"] }
+          { kind: offer["kind"], price: format_usdc(offer["price_cents"].to_i), settles_in: offer["currency"] }
         end,
         # The API's own "url" field is the JSON endpoint (an agent's door) — a
         # human told to "visit the model's page" needs the storefront page,
@@ -117,6 +118,10 @@ module Chat
       string = value.to_s
       string.match?(/\A[1-9]\d*\z/) ? string.to_i : nil
     end
-    private_class_method :strict_positive_integer
+
+    def format_usdc(price_cents)
+      format("%.2f USDC", price_cents / 100.0)
+    end
+    private_class_method :strict_positive_integer, :format_usdc
   end
 end

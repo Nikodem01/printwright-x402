@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Scene 3: a print server that pays its own royalties. Every job start buys a
-// commercial per-unit license over x402 — machine-speed, sub-$1, no human, no
+// commercial per-unit license over x402 — machine-speed, sub-1-USDC, no human, no
 // card — and gets back a public certificate for the unit it is about to print.
 //
 // Usage: node scripts/print-job.mjs --qty 3 [--query "snap cable clip"]

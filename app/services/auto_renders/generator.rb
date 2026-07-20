@@ -8,7 +8,10 @@ module AutoRenders
 
     WIDTH = 800
     HEIGHT = 600
-    VIEWS = { "front" => 45, "right" => 135, "back" => 225, "left" => 315 }.freeze
+    VIEWS = 12.times.to_h do |index|
+      angle = index * 30
+      [ format("angle-%03d", angle), angle + 45 ]
+    end.freeze
     PNG_SIGNATURE = "\x89PNG\r\n\x1a\n".b.freeze
 
     class << self

@@ -1,12 +1,8 @@
 {
   "ignored_warnings": [
     {
-      "fingerprint": "ff6d9eda8650d0a07039dc878d76e96f07795e86a66b8fb461f4f2d074f6b4c3",
+      "fingerprint": "60f86f457641a9be368bc65c02a504e425d4465feb2cc6c5f481bfa44f54c77b",
       "note": "json_escape into a script tag is Rails' JSON-LD escaping boundary; the storefront controller test proves a designer-supplied </script><script> string remains inert while the JSON round-trips."
-    },
-    {
-      "fingerprint": "97c78cbc65109de34ddde2b301585f42e2c337892841728767fe36745e96eb3e",
-      "note": "Static CASE skeleton interpolated; every user value passes through sanitize_sql_like/sanitize_sql_array (model3d search ranking)."
     },
     {
       "fingerprint": "b3fc99a9fa75aaf3c0abed39ad8d439190289664f00f9d2cca5259bb58ec5c88",

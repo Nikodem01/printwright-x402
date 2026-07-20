@@ -25,6 +25,21 @@ class Model3dSearchTest < ActiveSupport::TestCase
     assert_equal @beaver.id, Model3d.search("beaver").first.id
   end
 
+  test "linguistic matching finds car and cars without matching card or carabiner" do
+    racer = Model3d.create!(
+      designer: designers(:one), title: "Open-Wheel Racer", slug: "racer-#{SecureRandom.hex(3)}",
+      description: "A compact open-wheel toy car.", tags: %w[race car], status: "published"
+    )
+    Model3d.create!(designer: designers(:one), title: "Business Card Rail", slug: "card-#{SecureRandom.hex(3)}",
+                    description: "Display stand for cards.", tags: %w[business card], status: "published")
+    Model3d.create!(designer: designers(:one), title: "Bag Hook", slug: "hook-#{SecureRandom.hex(3)}",
+                    description: "A carabiner-style hook.", tags: %w[hook], status: "published")
+
+    assert_equal [ racer.id ], Model3d.exact_search("car").pluck(:id)
+    assert_equal [ racer.id ], Model3d.exact_search("cars").pluck(:id)
+    assert_empty Model3d.exact_search("unrelated manufacturer")
+  end
+
   test "garbage finds nothing" do
     assert_empty Model3d.search("zxqvw")
     assert_empty Model3d.search("")

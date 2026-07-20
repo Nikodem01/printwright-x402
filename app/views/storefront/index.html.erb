@@ -8,7 +8,7 @@
 <% content_for :title, page_title %>
 <% content_for :description, @catalog_definition.fetch(:description) if @catalog_definition %>
 
-<section class="hero">
+<section class="hero<%= " hero-compact" if @catalog_definition %>">
   <% if @catalog_definition %>
     <p class="t-caption muted">Curated catalog</p>
     <h1><%= @catalog_definition.fetch(:name) %></h1>
@@ -17,21 +17,55 @@
     <%# The line claims a shelf rather than describing an attribute. Rights
         move from headline to proof: the licence claim lives one line down,
         where it is evidence for the promise instead of the promise. %>
-    <h1>The 3D model store for agents.</h1>
-    <p>Agents, print servers, and people — all buying over the same endpoint.
-      No account, no card, no API key. Every purchase mints a certificate
-      anyone can check.</p>
+    <div class="hero-copy">
+      <h1>The 3D model store for agents.</h1>
+      <p>Agents, print servers, and people — all buying over the same endpoint.
+        No account, no card, no API key. Every purchase mints a certificate
+        anyone can check.</p>
+    </div>
+    <section class="hero-shopkeeper" aria-labelledby="hero_shopkeeper_title" data-controller="chat-prompt">
+      <div class="hero-shopkeeper-head">
+        <div>
+          <p class="eyebrow">Live catalog · human approval</p>
+          <h2 id="hero_shopkeeper_title">Ask the shopkeeper</h2>
+        </div>
+        <div class="hero-shopkeeper-actions t-caption">
+          <%= button_to "Reset chat", chat_path, method: :delete, class: "linklike" %>
+          <%= link_to "Open full chat →", chat_path %>
+        </div>
+      </div>
+      <div id="chat_messages" class="chat-messages hero-chat-messages" aria-live="polite"
+           data-controller="chat-scroll">
+        <% if @turns.empty? %>
+          <div id="chat_empty_state" class="empty-state">
+            <p class="t-small">Describe what you need. Every answer shows the real catalog tool call behind it.</p>
+            <div class="chat-prompts" aria-label="Try a prompt">
+              <button type="button" class="prompt-chip" data-action="chat-prompt#choose"
+                      data-chat-prompt-message-param="Find something to tidy the cables on my desk.">
+                Find a cable organizer
+              </button>
+              <button type="button" class="prompt-chip" data-action="chat-prompt#choose"
+                      data-chat-prompt-message-param="Find a cable organizer under 3 USDC and help me buy a personal license.">
+                Help me buy with AI
+              </button>
+            </div>
+          </div>
+        <% end %>
+        <%= render partial: "chat/turn", collection: @turns, as: :turn %>
+      </div>
+      <%= render "chat/purchase", proposal: @purchase_proposal %>
+      <%= render "chat/form", autofocus: false %>
+      <p class="hero-shopkeeper-note t-caption muted">The assistant can propose; only you can approve and sign on Hedera testnet. Fair use: <%= Chat::UsageBudget.daily_visitor_messages %> messages per visitor each day.</p>
+    </section>
   <% end %>
 </section>
 
 <% unless @catalog_definition %>
 <div class="doors-grid" role="group" aria-label="Three ways to buy">
   <div class="door">
-    <h2>Agents</h2>
-    <p class="t-small">REST + x402 over plain HTTP: request a download, get a
-      <span class="mono">402</span> with payment requirements, pay in HBAR or USDC on Hedera,
-      get the file and certificate back. No account, no card, no API key.
-      <%= link_to "API docs →", docs_path %></p>
+    <h2>Shop with AI</h2>
+    <p class="t-small">Describe what you need. The shopkeeper searches through Printwright's
+      real public API, shows every tool call, and prepares a bounded offer for your approval.</p>
   </div>
   <div class="door">
     <h2>Humans</h2>
@@ -39,9 +73,9 @@
       by a wallet instead of a script.</p>
   </div>
   <div class="door">
-    <h2>Print servers</h2>
-    <p class="t-small">A print job can pay a per-print royalty automatically at job start,
-      before the job runs.</p>
+    <h2>Agents &amp; print servers</h2>
+    <p class="t-small">REST + x402 over plain HTTP lets software pay a per-print royalty on
+      Hedera and receive the file plus certificate. <%= link_to "API docs →", docs_path %></p>
   </div>
 </div>
 
@@ -65,7 +99,7 @@
     <h2>Categories</h2>
     <div class="browse-grid">
       <% Model3d::CATEGORIES.each do |key, definition| %>
-        <%= link_to category_path(key), class: "browse-card",
+        <%= link_to category_path(key, anchor: "models"), class: "browse-card",
               "aria-current": (@category_key == key ? "page" : nil) do %>
           <strong><%= definition.fetch(:name) %></strong>
           <span><%= pluralize(@category_counts.fetch(key, 0), "model") %></span>
@@ -77,7 +111,7 @@
     <h2>Collections</h2>
     <div class="browse-grid">
       <% Model3d::COLLECTIONS.each do |key, definition| %>
-        <%= link_to collection_path(key), class: "browse-card",
+        <%= link_to collection_path(key, anchor: "models"), class: "browse-card",
               "aria-current": (@collection_key == key ? "page" : nil) do %>
           <strong><%= definition.fetch(:name) %></strong>
           <span><%= pluralize(@collection_counts.fetch(key, 0), "model") %></span>
@@ -102,15 +136,26 @@
   </div>
 <% end %>
 
+<section id="models" class="catalog-results" aria-labelledby="models_heading">
+<div class="catalog-results-head">
+  <div>
+    <p class="eyebrow">Printable catalog</p>
+    <h2 id="models_heading"><%= @query.present? ? "Results for “#{@query}”" : "Models" %></h2>
+  </div>
+  <% if @query.present? || params[:supports_free].present? || params[:material].present? || params[:max_price_cents].present? %>
+    <%= link_to "Clear search and filters", root_path(anchor: "models"), class: "t-small" %>
+  <% end %>
+</div>
+
 <div class="filters" role="group" aria-label="Filters">
   <%= link_to "Support-free",
-        url_for(request.query_parameters.merge(supports_free: params[:supports_free].present? ? nil : "1").compact),
+        url_for(request.query_parameters.merge(supports_free: params[:supports_free].present? ? nil : "1").compact) + "#models",
         class: "pill", "aria-current": (params[:supports_free].present? ? "true" : nil) %>
   <%= link_to "PLA",
-        url_for(request.query_parameters.merge(material: params[:material] == "PLA" ? nil : "PLA").compact),
+        url_for(request.query_parameters.merge(material: params[:material] == "PLA" ? nil : "PLA").compact) + "#models",
         class: "pill", "aria-current": (params[:material] == "PLA" ? "true" : nil) %>
-  <%= link_to "≤ $3",
-        url_for(request.query_parameters.merge(max_price_cents: params[:max_price_cents].present? ? nil : 300).compact),
+  <%= link_to "≤ 3 USDC",
+        url_for(request.query_parameters.merge(max_price_cents: params[:max_price_cents].present? ? nil : 300).compact) + "#models",
         class: "pill", "aria-current": (params[:max_price_cents].present? ? "true" : nil) %>
 </div>
 
@@ -121,6 +166,7 @@
 <% else %>
   <div class="empty-state">
     <h2>No matches</h2>
-    <p>Try <%= link_to "“beaver”", root_path(q: "beaver") %> — or clear the filters.</p>
+    <p>Try <%= link_to "“beaver”", root_path(q: "beaver", anchor: "models") %> — or clear the filters.</p>
   </div>
 <% end %>
+</section>

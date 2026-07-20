@@ -25,6 +25,7 @@ class StorefrontController < ApplicationController
       scope = scope.where(id: affordable)
     end
     @models = @query.present? ? scope : scope.order(:title)
+    assign_shopkeeper unless @catalog_definition
   end
 
   def show
@@ -35,5 +36,13 @@ class StorefrontController < ApplicationController
                                      license_offers: { model3d_id: @model.id }).count
     @successful_prints = PrintReport.joins(license: { purchase: :license_offer })
                                     .where(license_offers: { model3d_id: @model.id }).count
+  end
+
+  private
+
+  def assign_shopkeeper
+    conversation = ChatConversation.active.find_by(id: session[:chat_conversation_id])
+    @turns = conversation&.turns || []
+    @purchase_proposal = conversation&.purchase_proposal&.deep_stringify_keys || {}
   end
 end

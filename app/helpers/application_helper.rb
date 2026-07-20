@@ -1,4 +1,8 @@
 module ApplicationHelper
+  def storefront_cart_count
+    StorefrontCart.new(session).count
+  end
+
   def hashscan_tx_link(tx_id)
     return "" if tx_id.blank?
     link_to tx_id.truncate(22), "#{Hedera::Network.hashscan_base}/transaction/#{tx_id}", class: "mono"
@@ -9,20 +13,18 @@ module ApplicationHelper
     if asset == "0.0.0"
       "#{format('%.2f', amount / 100_000_000.0)} ℏ"
     else
-      format("$%.2f", amount / 1_000_000.0)
+      format("%.2f USDC", amount / 1_000_000.0)
     end
   end
 
-  # Prices are set in US cents; HBAR-lead offers settle in ℏ, so show the ℏ
-  # amount (live rate) with the USD reference — never a bare "$" for an offer
-  # that charges HBAR. Falls back to USD-only when no rate is available.
-  def offer_price(offer)
-    usd = format("$%.2f", offer.price_cents / 100.0)
-    return usd unless offer.currency == "HBAR"
+  def format_usdc_cents(cents)
+    format("%.2f USDC", cents / 100.0)
+  end
 
-    tinybars = Hedera::ExchangeRate.tinybars_for_cents(offer.price_cents)
-    return usd if tinybars.nil?
-    "#{format('%.2f', tinybars / 100_000_000.0)} ℏ · #{usd}"
+  # Every offer has an exact USDC settlement option. HBAR remains available in
+  # the x402 challenge, but the storefront keeps one stable price denomination.
+  def offer_price(offer)
+    format_usdc_cents(offer.price_cents)
   end
 
   # /docs renders openapi.json's response objects directly; some are shared

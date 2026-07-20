@@ -5,6 +5,8 @@
   </p>
 <% when :user_message %>
   <div class="chat-msg chat-msg-user"><p><%= chat_turn_text(turn) %></p></div>
+<% when :tool_response %>
+  <%= render "chat/catalog_results", results: chat_catalog_results(turn) %>
 <% when :assistant_message %>
-  <div class="chat-msg chat-msg-assistant"><%= simple_format(chat_turn_text(turn)) %></div>
+  <div class="chat-msg chat-msg-assistant"><%= simple_format(chat_assistant_text(turn)) %></div>
 <% end %>

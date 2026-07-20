@@ -39,7 +39,7 @@ class Designer::SalesControllerTest < ActionDispatch::IntegrationTest
     assert_select "td", text: /refunded/, count: 1
     # owed balance = exactly the one owed share (225000 base units)
     assert_match "Owed to you", response.body
-    assert_match "$0.22", response.body
+    assert_match "0.22 USDC", response.body
     assert_equal [ owed.id ], LedgerEntry.owed.where(designer: @designer).pluck(:purchase_id)
   end
 

@@ -22,6 +22,7 @@ class CheckoutTest < ApplicationSystemTestCase
     ENV["X402_PAY_TO"] = "0.0.9584959"
     ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "250" # 25c offer => exactly 0.1 HBAR, matching the fixture
     FacilitatorClient.reset_cache!
+    TestWalletController.reset!
     ActionMailer::Base.deliveries.clear
     stub_request(:get, "#{FACILITATOR}/supported")
       .to_return(body: fixture("supported.json"), headers: { "content-type" => "application/json" })
@@ -37,6 +38,7 @@ class CheckoutTest < ApplicationSystemTestCase
 
   teardown do
     FacilitatorClient.reset_cache!
+    TestWalletController.reset!
     @env_was.each { |k, v| v.nil? ? ENV.delete(k) : ENV[k] = v }
   end
 
@@ -50,7 +52,7 @@ class CheckoutTest < ApplicationSystemTestCase
     settled_tx = JSON.parse(fixture("settle_ok.json"))["transaction"]
 
     visit model_page_path(@model.slug)
-    click_button "Buy license · 0.10 ℏ · $0.25"
+    click_button "Buy license · 0.25 USDC"
 
     assert_selector ".badge-ok", text: "licensed"
     assert_text "Licensed — unit #1 of 25"
@@ -59,7 +61,7 @@ class CheckoutTest < ApplicationSystemTestCase
     assert_selector "a", text: settled_tx
     assert_selector "a", text: /\Apw-\d{6,}\z/
     assert_link "Download files"
-    assert_no_button "Buy license · 0.10 ℏ · $0.25"
+    assert_no_button "Buy license · 0.25 USDC"
 
     purchase = Purchase.last
     assert_equal "delivered", purchase.status
@@ -95,7 +97,7 @@ class CheckoutTest < ApplicationSystemTestCase
       .to_return(body: fixture("verify_invalid.json"), headers: { "content-type" => "application/json" })
 
     visit model_page_path(@model.slug)
-    click_button "Buy license · 0.10 ℏ · $0.25"
+    click_button "Buy license · 0.25 USDC"
 
     assert_selector ".badge-bad", text: "failed"
     assert_text "The payment could not be completed."
@@ -109,7 +111,7 @@ class CheckoutTest < ApplicationSystemTestCase
 
     visit model_page_path(@model.slug)
     assert_no_changes -> { Purchase.count } do
-      click_button "Buy license · 0.10 ℏ · $0.25"
+      click_button "Buy license · 0.25 USDC"
       assert_selector ".badge-bad", text: "failed"
       assert_text "You declined the payment request in your wallet."
       assert_text "wallet refused: signing refused"
@@ -122,7 +124,7 @@ class CheckoutTest < ApplicationSystemTestCase
 
     visit model_page_path(@model.slug)
     assert_no_changes -> { Purchase.count } do
-      click_button "Buy license · 0.10 ℏ · $0.25"
+      click_button "Buy license · 0.25 USDC"
       assert_selector ".badge-bad", text: "failed"
       assert_text "This offer is sold out — there are no license slots left."
       assert_selector "button[disabled]", text: "Sold out"
@@ -138,14 +140,84 @@ class CheckoutTest < ApplicationSystemTestCase
     @model.license_offers.create!(kind: "commercial_unit", price_cents: 50, currency: "HBAR", terms_md: "T.")
 
     visit model_page_path(@model.slug)
-    click_button "Buy license · 0.10 ℏ · $0.25"
+    click_button "Buy license · 0.25 USDC"
     assert_selector "button[disabled]", text: "Sold out"
 
     find("input[type=radio][value=commercial_unit]").click
 
     assert_no_selector "button[disabled]"
-    assert_button "Buy license · 0.20 ℏ · $0.50"
+    assert_button "Buy 1 commercial unit · 0.50 USDC"
     assert_no_selector ".badge-bad"
+  end
+
+  test "commercial quantity settles once and delivers one license per unit" do
+    @model.license_offers.create!(
+      kind: "commercial_unit", price_cents: 60, currency: "USDC", terms_md: "T.", max_units: 5
+    )
+    stub_request(:post, "#{FACILITATOR}/verify")
+      .to_return(body: fixture("verify_ok.json"), headers: { "content-type" => "application/json" })
+    stub_request(:post, "#{FACILITATOR}/settle")
+      .to_return(body: fixture("settle_ok.json"), headers: { "content-type" => "application/json" })
+
+    visit model_page_path(@model.slug)
+    find("input[type=radio][value=commercial_unit]").click
+    fill_in "Units", with: 3
+
+    assert_button "Buy 3 commercial units · 1.80 USDC"
+    click_button "Buy 3 commercial units · 1.80 USDC"
+
+    assert_selector ".badge-ok", text: "licensed"
+    assert_text "3 commercial units licensed"
+    assert_selector ".batch-license", count: 3
+    assert_selector ".batch-download", count: 3
+    assert_equal 3, Purchase.where(license_offer: @model.license_offers.find_by!(kind: "commercial_unit")).count
+    assert_equal [ "delivered" ], Purchase.distinct.pluck(:status)
+    assert_equal 1, PurchaseBatch.count
+    assert_requested :post, "#{FACILITATOR}/settle", times: 1
+  end
+
+  test "cart combines different models and settles them with one wallet approval" do
+    second = Model3d.create!(
+      designer: designers(:one), title: "Batch Companion", slug: "batch-companion",
+      file_hash: "sha256:#{Digest::SHA256.hexdigest('batch companion')}", status: "published"
+    )
+    file = second.model_files.create!(kind: "stl", position: 0)
+    file.file.attach(io: StringIO.new("solid b\nendsolid b\n"), filename: "b.stl", content_type: "model/stl")
+    second.license_offers.create!(kind: "commercial_unit", price_cents: 60, currency: "USDC", max_units: 5)
+    stub_request(:post, "#{FACILITATOR}/verify")
+      .to_return(body: fixture("verify_ok.json"), headers: { "content-type" => "application/json" })
+    stub_request(:post, "#{FACILITATOR}/settle")
+      .to_return(body: fixture("settle_ok.json"), headers: { "content-type" => "application/json" })
+
+    visit model_page_path(@model.slug)
+    click_button "Add selection to cart"
+    assert_link "Cart (1)"
+
+    visit model_page_path(second.slug)
+    fill_in "Units", with: 2
+    click_button "Add selection to cart"
+    click_link "Cart (3)"
+
+    page.driver.browser.manage.window.resize_to(360, 900)
+    overflow = page.evaluate_script("document.documentElement.scrollWidth - document.documentElement.clientWidth")
+    assert_operator overflow, :<=, 1, "filled cart overflows horizontally at 360px"
+    assert_text "Your cart"
+    assert_text "Browser Buy"
+    assert_text "Batch Companion"
+    assert_text "1.45 USDC"
+    click_button "Approve cart · 1.45 USDC"
+
+    assert_selector ".badge-ok", text: "licensed"
+    assert_text "3 licenses purchased"
+    assert_selector ".batch-license", count: 3
+    assert_equal 3, Purchase.count
+    assert_equal 1, PurchaseBatch.count
+    assert_equal 1, TestWalletController.sign_calls
+    assert_requested :post, "#{FACILITATOR}/settle", times: 1
+
+    visit root_path
+    assert_link "Cart"
+    assert_no_link "Cart (3)"
   end
 
   test "retrying a rejected payment surfaces duplicate_payment as a terminal, non-retryable state" do
@@ -153,7 +225,7 @@ class CheckoutTest < ApplicationSystemTestCase
       .to_return(body: fixture("verify_invalid.json"), headers: { "content-type" => "application/json" })
 
     visit model_page_path(@model.slug)
-    click_button "Buy license · 0.10 ℏ · $0.25"
+    click_button "Buy license · 0.25 USDC"
     assert_selector ".badge-bad", text: "failed"
     assert_button "Try again"
 

@@ -30,7 +30,7 @@ if (!from || !to || !key) die("HEDERA_ACCOUNT_ID, HEDERA_PRIVATE_KEY and BUYER_A
 if (from === to) die(`operator and buyer are the same account (${from}) — nothing to move`);
 if (!(hbar >= 0) || !(usdc >= 0)) die("--hbar and --usdc must be non-negative numbers");
 
-console.log(`funding ${to} from ${from} on ${NET}: ${hbar} ℏ + $${usdc} USDC`);
+console.log(`funding ${to} from ${from} on ${NET}: ${hbar} ℏ + ${usdc} USDC`);
 await report("before");
 
 if (dryRun) {
@@ -66,7 +66,7 @@ async function report(label) {
   if (!res.ok) return console.log(`  (${label}: mirror returned ${res.status})`);
   const { balance } = await res.json();
   const held = (balance.tokens || []).find((t) => t.token_id === USDC)?.balance ?? 0;
-  console.log(`  ${label}: ${(balance.balance / 1e8).toFixed(2)} ℏ · $${(held / 1e6).toFixed(2)} USDC`);
+  console.log(`  ${label}: ${(balance.balance / 1e8).toFixed(2)} ℏ · ${(held / 1e6).toFixed(2)} USDC`);
 }
 
 function die(msg) {

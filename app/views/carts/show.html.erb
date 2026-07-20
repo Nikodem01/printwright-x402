@@ -1,0 +1,74 @@
+<% content_for :title, "Your cart — Printwright" %>
+
+<div class="cart-page">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">One Hedera approval</p>
+      <h1>Your cart</h1>
+      <p class="muted">Combine licenses from the catalog, then approve them with one exact x402 payment.</p>
+    </div>
+  </header>
+
+  <% if @cart.empty? %>
+    <div class="empty-state cart-empty">
+      <h2>Your cart is empty</h2>
+      <p>Add a license from any model page. Commercial quantities and different models can share one checkout.</p>
+      <%= link_to "Browse models", root_path(anchor: "models"), class: "btn btn-primary" %>
+    </div>
+  <% else %>
+    <div class="cart-layout">
+      <section class="cart-lines" aria-label="Cart items">
+        <% @cart.entries.each do |entry| %>
+          <% offer = entry.offer %>
+          <% model = offer.model3d %>
+          <article class="cart-line">
+            <%= link_to model_page_path(model.slug), class: "cart-line-thumb", aria: { label: model.title } do %>
+              <% if (render_file = model.render_file)&.file&.attached? %>
+                <%= image_tag render_file.file, alt: "", loading: "lazy", decoding: "async" %>
+              <% else %>
+                <span aria-hidden="true"></span>
+              <% end %>
+            <% end %>
+            <div class="cart-line-copy">
+              <p class="eyebrow"><%= offer.kind.humanize %></p>
+              <h2><%= link_to model.title, model_page_path(model.slug) %></h2>
+              <p class="t-small muted"><%= offer_price(offer) %> per license</p>
+            </div>
+            <div class="cart-line-actions">
+              <% if offer.kind == "commercial_unit" %>
+                <% maximum = [ offer.units_remaining || StorefrontCart::MAX_ITEMS, StorefrontCart::MAX_ITEMS ].min %>
+                <%= form_with url: cart_item_path(offer), method: :patch, class: "cart-quantity-form" do %>
+                  <label for="quantity_<%= offer.id %>">Units</label>
+                  <input id="quantity_<%= offer.id %>" type="number" name="quantity"
+                         min="1" max="<%= maximum %>" value="<%= entry.quantity %>" required>
+                  <button class="btn" type="submit">Update</button>
+                <% end %>
+              <% else %>
+                <span class="t-small">Quantity 1</span>
+              <% end %>
+              <%= button_to "Remove", cart_item_path(offer), method: :delete, class: "linklike cart-remove" %>
+            </div>
+            <strong class="cart-line-subtotal"><%= format_usdc_cents(entry.subtotal_cents) %></strong>
+          </article>
+        <% end %>
+      </section>
+
+      <aside class="cart-summary" data-controller="checkout"
+             data-checkout-batch-url-value="<%= api_v1_batches_path %>"
+             data-checkout-items-value="<%= @cart.payment_items.to_json %>"
+             data-checkout-completion-url-value="<%= cart_path %>"
+             <% if (wallet_url = ENV["DEMO_WALLET_URL"].presence) %>data-checkout-wallet-url-value="<%= wallet_url %>"<% end %>>
+        <p class="eyebrow"><%= pluralize(@cart.count, "license") %></p>
+        <h2>Cart total</h2>
+        <p class="cart-total"><%= format_usdc_cents(@cart.total_cents) %></p>
+        <p class="t-small muted">One wallet signature. One Hedera transaction. One certificate and download grant per license.</p>
+        <button class="btn btn-primary btn-block" type="button"
+                data-checkout-target="button" data-action="checkout#buy">
+          Approve cart · <%= format_usdc_cents(@cart.total_cents) %>
+        </button>
+        <div class="checkout-status" data-checkout-target="status" aria-live="polite" tabindex="-1"></div>
+        <div data-checkout-target="receipt" hidden tabindex="-1"></div>
+      </aside>
+    </div>
+  <% end %>
+</div>

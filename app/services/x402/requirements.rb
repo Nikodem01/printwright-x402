@@ -7,6 +7,13 @@ module X402
     def self.network = Hedera::Network.caip2
 
     def self.usdc_asset = Hedera::Network.usdc_asset
+
+    def self.pay_to_for(offer)
+      designer = offer.model3d.designer
+      return designer.hedera_account_id if designer.payout_account_verified?
+
+      ENV.fetch("X402_PAY_TO")
+    end
     USDC_BASE_UNITS_PER_CENT = 10_000 # 6 decimals: $0.01 = 10_000 units
     MAX_TIMEOUT_SECONDS = 180
     MATCH_KEYS = %w[scheme network amount asset payTo].freeze
@@ -86,19 +93,10 @@ module X402
       {
         scheme: "exact",
         network: self.class.network,
-        payTo: pay_to,
+        payTo: self.class.pay_to_for(@offer),
         maxTimeoutSeconds: MAX_TIMEOUT_SECONDS,
         extra: { feePayer: FacilitatorClient.fee_payer(self.class.network) }
       }
-    end
-
-    # Money goes straight to the designer when their account passed the
-    # publish-time mirror check; otherwise treasury custody (owed balance
-    # tracked in the ledger via held_by).
-    def pay_to
-      designer = @model.designer
-      return designer.hedera_account_id if designer.payout_account_verified?
-      ENV.fetch("X402_PAY_TO")
     end
   end
 end
