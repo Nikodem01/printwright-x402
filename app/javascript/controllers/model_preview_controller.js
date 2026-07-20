@@ -47,6 +47,7 @@ export default class extends Controller {
 
     try {
       const THREE = this.THREE
+      geometry = this.weldGeometry(geometry)
       this.geometry = geometry
       geometry.computeVertexNormals()
       geometry.center()
@@ -62,7 +63,7 @@ export default class extends Controller {
       this.camera.position.set(radius * 2.2, -radius * 2.5, radius * 1.8)
 
       this.material = new THREE.MeshStandardMaterial({
-        color: 0x0d9488, roughness: 0.72, metalness: 0.04, side: THREE.DoubleSide, flatShading: true
+        color: 0x0d9488, roughness: 0.72, metalness: 0.04, side: THREE.DoubleSide
       })
       this.mesh = new THREE.Mesh(geometry, this.material)
       this.scene.add(this.mesh)
@@ -85,6 +86,10 @@ export default class extends Controller {
       this.controls.maxDistance = radius * 8
       this.controls.autoRotate = !window.matchMedia("(prefers-reduced-motion: reduce)").matches
       this.controls.autoRotateSpeed = 1.2
+      this.controls.addEventListener("start", () => {
+        this.controls.autoRotate = false
+        this.element.dataset.previewInteraction = "user"
+      })
       this.controls.update()
 
       this.resizeObserver = new ResizeObserver(() => this.resize())
@@ -109,6 +114,32 @@ export default class extends Controller {
     this.renderer.setSize(width, height, false)
     this.camera.aspect = width / height
     this.camera.updateProjectionMatrix()
+  }
+
+  weldGeometry(source) {
+    const THREE = this.THREE
+    const positions = source.getAttribute("position")
+    const vertices = []
+    const indices = []
+    const seen = new Map()
+
+    for (let index = 0; index < positions.count; index += 1) {
+      const point = [positions.getX(index), positions.getY(index), positions.getZ(index)]
+      const key = point.map((value) => Math.round(value * 100000)).join(":")
+      let vertexIndex = seen.get(key)
+      if (vertexIndex === undefined) {
+        vertexIndex = vertices.length / 3
+        seen.set(key, vertexIndex)
+        vertices.push(...point)
+      }
+      indices.push(vertexIndex)
+    }
+
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3))
+    geometry.setIndex(indices)
+    source.dispose()
+    return geometry
   }
 
   render() {

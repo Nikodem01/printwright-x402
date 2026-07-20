@@ -39,4 +39,34 @@ class ChatHelperTest < ActionView::TestCase
 
     assert_equal :tool_response, chat_turn_kind(turn)
   end
+
+  test "extracts and deduplicates catalog cards from symbol or string keyed tool results" do
+    turn = {
+      "role" => "user",
+      "parts" => [
+        { "functionResponse" => { "name" => "search_models", "response" => {
+          models: [ { id: 7, slug: "cable-clip", title: "Cable Clip" } ]
+        } } },
+        { "functionResponse" => { "name" => "get_model", "response" => {
+          "id" => 7, "slug" => "cable-clip", "title" => "Cable Clip"
+        } } }
+      ]
+    }
+
+    results = chat_catalog_results(turn)
+    assert_equal 1, results.length
+    assert_equal "cable-clip", results.first[:slug]
+  end
+
+  test "cleans stray Markdown markers from assistant copy" do
+    turn = { "role" => "model", "parts" => [ { "text" => "**Found one**\n* **Personal:** 0.90 USDC" } ] }
+
+    assert_equal "Found one\n• Personal: 0.90 USDC", chat_assistant_text(turn)
+  end
+
+  test "uses the stored local storefront URL for older catalog results" do
+    result = { url: "http://localhost:3000/models/cable-clip" }
+
+    assert_equal "/models/cable-clip", chat_catalog_model_path(result)
+  end
 end

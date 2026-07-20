@@ -89,7 +89,13 @@ Rails.application.routes.draw do
   post "designer-early-access", to: "early_access_signups#create", as: :designer_early_access
   get "categories/:category", to: "storefront#index", as: :category
   get "collections/:collection", to: "storefront#index", as: :collection
+  get "search/suggestions", to: "search_suggestions#index", as: :search_suggestions
   get "models/:slug", to: "storefront#show", as: :model_page
+  get "cart", to: "carts#show", as: :cart
+  post "cart/items", to: "carts#create", as: :cart_items
+  patch "cart/items/:offer_id", to: "carts#update", as: :cart_item
+  delete "cart/items/:offer_id", to: "carts#remove"
+  delete "cart", to: "carts#destroy"
   get "verify/:cert_id", to: "verify#show", as: :verify
   get "verify/:cert_id/badge", to: "verify#badge", as: :verify_badge, defaults: { format: :svg }
   get "verify/:cert_id/share-card", to: "verify#share_card", as: :verify_share_card,
@@ -113,9 +119,9 @@ Rails.application.routes.draw do
   get "about", to: "pages#about", as: :about
   get "pricing", to: "pages#pricing", as: :pricing
   get "open-books", to: "pages#open_books", as: :open_books
-  get "agent-sellers", to: "pages#agent_sellers", as: :agent_sellers
   get "chaos-log", to: "pages#chaos_log", as: :chaos_log
   get "chat", to: "chat#show", as: :chat
   post "chat", to: "chat#create"
+  delete "chat", to: "chat#destroy"
   post "chat/approve", to: "chat#approve", as: :approve_chat_purchase
 end

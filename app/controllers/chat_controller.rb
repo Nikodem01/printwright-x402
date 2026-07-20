@@ -6,7 +6,7 @@ class ChatController < ApplicationController
 
   MAX_MESSAGE_BYTES = 4.kilobytes
 
-  rate_limit to: 20, within: 1.minute, only: :create, store: RateLimitStore,
+  rate_limit to: 10, within: 1.minute, only: :create, store: RateLimitStore,
     name: "messages", with: :chat_rate_limited
   rate_limit to: 5, within: 1.minute, only: :approve, store: RateLimitStore,
     name: "approvals", with: :chat_rate_limited
@@ -38,11 +38,14 @@ class ChatController < ApplicationController
             ])
           else
             turns << { "role" => "user", "parts" => [ { "text" => text } ] }
-            if Chat::UsageBudget.consume?
-              turns = Chat::ToolLoop.new(turns: turns).run.turns
+            client = Chat::Gemini.new
+            if !client.available?
+              turns << { "role" => "model", "parts" => [ { "text" => Chat::ToolLoop::NOT_CONFIGURED_MESSAGE } ] }
+            elsif Chat::UsageBudget.consume_visitor_message?(visitor_key)
+              turns = Chat::ToolLoop.new(turns: turns, client: client).run.turns
             else
               turns << { "role" => "model", "parts" => [ {
-                "text" => "The shopkeeper's daily message budget is reached. Please try again tomorrow."
+                "text" => Chat::UsageBudget.visitor_limit_message
               } ] }
             end
           end
@@ -56,6 +59,12 @@ class ChatController < ApplicationController
 
     assign_conversation
     respond_to { |format| format.turbo_stream }
+  end
+
+  def destroy
+    @conversation.destroy!
+    session.delete(:chat_conversation_id)
+    redirect_back fallback_location: chat_path, status: :see_other
   end
 
   # No model, license, URL, price, asset, or amount parameters are accepted.
@@ -107,5 +116,9 @@ class ChatController < ApplicationController
   def chat_rate_limited
     response.set_header("Retry-After", "60")
     render json: { error: "rate_limited", retry_after: 60 }, status: :too_many_requests
+  end
+
+  def visitor_key
+    Digest::SHA256.hexdigest(request.remote_ip.to_s)
   end
 end

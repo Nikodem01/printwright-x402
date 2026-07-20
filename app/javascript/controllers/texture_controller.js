@@ -15,6 +15,7 @@ export default class extends Controller {
     this.onResize = this.onResize.bind(this)
     this.draw()
     window.addEventListener("resize", this.onResize)
+    document.addEventListener("theme:change", this.draw)
     // Redraw when the OS theme flips — the line colour comes from --text.
     this.themeQuery = window.matchMedia("(prefers-color-scheme: dark)")
     this.themeQuery.addEventListener("change", this.draw)
@@ -22,6 +23,7 @@ export default class extends Controller {
 
   disconnect() {
     window.removeEventListener("resize", this.onResize)
+    document.removeEventListener("theme:change", this.draw)
     this.themeQuery?.removeEventListener("change", this.draw)
     clearTimeout(this.timer)
   }

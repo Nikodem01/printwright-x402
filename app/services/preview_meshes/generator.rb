@@ -1,13 +1,12 @@
 require "zip"
 
 module PreviewMeshes
-  # Produces an intentionally incomplete, coarse STL for the public viewer.
-  # It is useful for judging shape but cannot substitute for the paid mesh:
-  # vertices are quantized, faces are sampled, and faces are deliberately
-  # removed so the result is open/non-printable.
+  # Produces an intentionally coarse, open STL for the public viewer. It is
+  # useful for judging shape but cannot substitute for the paid mesh: vertices
+  # are heavily quantized and the underside is removed so the shell cannot be
+  # sliced as a printable solid.
   class Generator
-    MAX_TRIANGLES = 900
-    GRID_DIVISIONS = 48
+    GRID_DIVISIONS = 32
     HEADER = "PRINTWRIGHT PREVIEW ONLY - OPEN DECIMATED NON-PRINTABLE".b.freeze
 
     class << self
@@ -16,11 +15,8 @@ module PreviewMeshes
         return if triangles.length < 2
 
         triangles = quantize(triangles)
-        triangles = sample(triangles)
-        # Even tiny/simple solids must not leak a closed printable shell.
-        triangles = triangles.each_with_index.filter_map do |triangle, index|
-          triangle unless (index % 11).zero?
-        end
+        triangles = triangles.uniq { |triangle| triangle.sort }
+        triangles = open_underside(triangles)
         return if triangles.empty?
 
         binary_stl(triangles)
@@ -81,10 +77,12 @@ module PreviewMeshes
         end
       end
 
-      def sample(triangles)
-        target = [ triangles.length, MAX_TRIANGLES ].min
-        stride = triangles.length.fdiv(target)
-        target.times.map { |index| triangles[(index * stride).floor] }
+      def open_underside(triangles)
+        minimum = triangles.flatten(1).map { |point| point[2] }.min
+        opened = triangles.reject { |triangle| triangle.all? { |point| (point[2] - minimum).abs <= Float::EPSILON } }
+        # A mesh without a flat bottom still needs one missing face so even a
+        # tiny tetrahedron cannot become a free printable shell.
+        opened.length == triangles.length ? triangles.drop(1) : opened
       end
 
       def binary_stl(triangles)

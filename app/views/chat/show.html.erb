@@ -1,7 +1,10 @@
 <% content_for :title, "Ask the shopkeeper — Printwright" %>
 
-<div class="chat-page">
-  <h1>Ask the shopkeeper</h1>
+<div class="chat-page" data-controller="chat-prompt">
+  <div class="page-heading-row">
+    <h1>Ask the shopkeeper</h1>
+    <%= button_to "Reset chat", chat_path, method: :delete, class: "btn" %>
+  </div>
   <p class="muted t-small">
     Search the catalog in conversation — the same public API any outside agent calls, so every
     answer traces back to a real tool call. Purchases require a separate human approval and settle
@@ -10,7 +13,7 @@
 
   <p class="chat-cap-banner t-small">
     <% if Chat::PurchasePolicy.enabled? %>
-      <strong>Spend guard:</strong> at most <%= number_to_currency(@chat_spend_cap_cents / 100.0) %>
+      <strong>Spend guard:</strong> at most <%= format_usdc_cents(@chat_spend_cap_cents) %>
       per conversation, exact USDC only. Chat can prepare a proposal; only your button click can approve it.
     <% else %>
       <strong>Purchases are disabled.</strong> Catalog search remains available.
@@ -22,7 +25,16 @@
       <div id="chat_empty_state" class="empty-state">
         <h2>Nothing asked yet</h2>
         <p class="t-small">Answers appear here, each one showing the tool call it came from.</p>
-        <p class="t-small">Try “do you have anything to tidy the cables on my desk?”</p>
+        <div class="chat-prompts" aria-label="Try a prompt">
+          <button type="button" class="prompt-chip" data-action="chat-prompt#choose"
+                  data-chat-prompt-message-param="Find something to tidy the cables on my desk.">
+            Find a cable organizer
+          </button>
+          <button type="button" class="prompt-chip" data-action="chat-prompt#choose"
+                  data-chat-prompt-message-param="Find a cable organizer under 3 USDC and help me buy a personal license.">
+            Help me buy with AI
+          </button>
+        </div>
       </div>
     <% end %>
     <%= render partial: "chat/turn", collection: @turns, as: :turn %>

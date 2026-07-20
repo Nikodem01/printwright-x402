@@ -225,7 +225,7 @@ Top up from the operator account:
 
 ```bash
 node scripts/fund-buyer.mjs --dry-run    # shows both balances, sends nothing
-node scripts/fund-buyer.mjs              # default: 200 ℏ + $20 USDC
+node scripts/fund-buyer.mjs              # default: 200 ℏ + 20 USDC
 ```
 
 The buyer must already be associated with USDC to receive it (`buy.mjs`

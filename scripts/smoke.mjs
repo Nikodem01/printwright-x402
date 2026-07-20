@@ -92,12 +92,12 @@ async function checkBuyerFunds() {
   }
   const hbar = account.balance?.balance ?? 0;
   const usdc = (account.balance?.tokens || []).find((t) => t.token_id === USDC_ID)?.balance ?? 0;
-  ok(`buyer ${process.env.BUYER_ACCOUNT_ID} holds ${(hbar / 1e8).toFixed(2)} ℏ · $${(usdc / 1e6).toFixed(2)} USDC`);
+  ok(`buyer ${process.env.BUYER_ACCOUNT_ID} holds ${(hbar / 1e8).toFixed(2)} ℏ · ${(usdc / 1e6).toFixed(2)} USDC`);
 
   // Both rails are thin enough that the next settle probably fails. Say so with
   // the number, rather than letting the facilitator's opaque preflight error do it.
   if (hbar < 4e8 && usdc < 500_000) {
-    fail(`buyer is nearly out of funds (${(hbar / 1e8).toFixed(2)} ℏ, $${(usdc / 1e6).toFixed(2)} USDC) — ` +
+    fail(`buyer is nearly out of funds (${(hbar / 1e8).toFixed(2)} ℏ, ${(usdc / 1e6).toFixed(2)} USDC) — ` +
       `top up at https://portal.hedera.com/dashboard before demoing`);
   }
 }

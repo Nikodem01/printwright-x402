@@ -76,10 +76,14 @@ class Model3d < ApplicationRecord
   # 0.45 — 0.42 sits in that gap (see V29 report for the full measurements).
   SEMANTIC_DISTANCE_THRESHOLD = 0.42
 
-  # Keyword search v3: exact pass (every term matches somewhere, ranked by
-  # match strength), then a semantic (embedding) pass when nothing matched
-  # and embeddings are available, then a pg_trgm similarity pass as the final
-  # fallback — for typos, and for when embeddings are unavailable.
+  SEARCH_DOCUMENT = <<~SQL.squish.freeze
+    setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
+    setweight(to_tsvector('english', coalesce(array_to_string(tags, ' '), '')), 'B') ||
+    setweight(to_tsvector('english', coalesce(description, '')), 'C')
+  SQL
+
+  # Search v4: PostgreSQL linguistic matching first (so car/cars match, but
+  # card/carabiner do not), then semantic matching, then pg_trgm for typos.
   def self.search(query)
     exact = exact_search(query)
     return exact if exact.any?
@@ -91,19 +95,14 @@ class Model3d < ApplicationRecord
   end
 
   def self.exact_search(query)
-    terms = query.to_s.split.map { |t| "%#{sanitize_sql_like(t)}%" }
-    return none if terms.empty?
+    q = query.to_s.strip
+    return none if q.blank?
 
-    tag_match = "EXISTS (SELECT 1 FROM unnest(tags) tag WHERE tag ILIKE ?)"
-    scope = terms.reduce(all) do |relation, pattern|
-      relation.where(
-        sanitize_sql_array([ "title ILIKE ? OR description ILIKE ? OR #{tag_match}", pattern, pattern, pattern ])
-      )
-    end
-    rank = terms.map do |pattern|
-      sanitize_sql_array([ "(CASE WHEN title ILIKE ? THEN 2 WHEN #{tag_match} THEN 1 ELSE 0 END)", pattern, pattern ])
-    end.join(" + ")
-    scope.order(Arel.sql("(#{rank}) DESC, title"))
+    rank = sanitize_sql_array([
+      "ts_rank_cd(#{SEARCH_DOCUMENT}, plainto_tsquery('english', ?)) DESC", q
+    ])
+    where("#{SEARCH_DOCUMENT} @@ plainto_tsquery('english', ?)", q)
+      .order(Arel.sql(rank), :title)
   end
 
   def self.fuzzy_search(query)

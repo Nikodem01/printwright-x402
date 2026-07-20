@@ -1,0 +1,30 @@
+<%= turbo_frame_tag "catalog_search_suggestions" do %>
+  <div class="search-suggestion-list" role="listbox" aria-label="Model suggestions">
+    <% @models.each do |model| %>
+      <%= link_to model_page_path(model.slug), class: "search-suggestion", role: "option",
+            data: { turbo_frame: "_top" } do %>
+        <% if (render_file = model.render_file)&.file&.attached? %>
+          <%= image_tag render_file.file, alt: "", loading: "lazy", decoding: "async" %>
+        <% else %>
+          <span class="search-suggestion-thumb" aria-hidden="true"></span>
+        <% end %>
+        <span class="search-suggestion-copy">
+          <strong><%= model.title %></strong>
+          <span>by <%= model.designer.display_name %></span>
+        </span>
+        <% if (offer = model.license_offers.min_by(&:price_cents)) %>
+          <span class="search-suggestion-price"><%= offer_price(offer) %></span>
+        <% end %>
+      <% end %>
+    <% end %>
+
+    <% if @models.empty? %>
+      <p class="search-suggestion-empty">No matching models yet.</p>
+    <% end %>
+
+    <% if @query.present? %>
+      <%= link_to "See all results for “#{@query}” →", root_path(q: @query, anchor: "models"),
+            class: "search-suggestion-all", data: { turbo_frame: "_top" } %>
+    <% end %>
+  </div>
+<% end %>

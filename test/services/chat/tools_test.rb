@@ -18,6 +18,7 @@ class Chat::ToolsTest < ActiveSupport::TestCase
   test "search_models trims each hit to what's useful and caps the result count" do
     models = Array.new(8) do |i|
       { "id" => i, "title" => "Model #{i}", "designer" => { "name" => "Demo" },
+        "slug" => "model-#{i}", "render_url" => "http://localhost:3000/render-#{i}.png",
         "url" => "http://localhost:3000/api/v1/models/#{i}", "description" => "long unwanted text",
         "license_offers" => [ { "kind" => "personal", "price_cents" => 100, "currency" => "USDC" } ] }
     end
@@ -27,11 +28,12 @@ class Chat::ToolsTest < ActiveSupport::TestCase
     result = Chat::Tools.search_models("widget")
     assert_equal Chat::Tools::RESULT_LIMIT, result[:models].length
     hit = result[:models].first
-    assert_equal %i[id title designer license_offers url], hit.keys
-    assert_equal [ { kind: "personal", price: "$1.00", settles_in: "USDC" } ], hit[:license_offers]
+    assert_equal %i[id slug title designer thumbnail_url license_offers url], hit.keys
+    assert_equal "http://localhost:3000/render-0.png", hit[:thumbnail_url]
+    assert_equal [ { kind: "personal", price: "1.00 USDC", settles_in: "USDC" } ], hit[:license_offers]
   end
 
-  test "price_cents (always US cents) is formatted as a dollar string, never handed over raw" do
+  test "price_cents is formatted as USDC, never handed over raw" do
     stub_request(:get, "http://localhost:3000/api/v1/models/5").to_return(
       body: { "id" => 5, "title" => "Snap Cable Clip", "slug" => "snap-cable-clip", "designer" => { "name" => "Demo" },
               "url" => "http://localhost:3000/api/v1/models/5",
@@ -40,7 +42,7 @@ class Chat::ToolsTest < ActiveSupport::TestCase
     )
 
     offer = Chat::Tools.get_model("5")[:license_offers].first
-    assert_equal "$0.90", offer[:price]
+    assert_equal "0.90 USDC", offer[:price]
     assert_equal "USDC", offer[:settles_in]
   end
 
@@ -103,7 +105,7 @@ class Chat::ToolsTest < ActiveSupport::TestCase
       title: "Snap Cable Clip",
       license_kind: "personal",
       price_cents: 90,
-      display_price: "$0.90",
+      display_price: "0.90 USDC",
       purchase_path: "/api/v1/models/5/download?license=personal"
     }, result[:proposal].except(:expires_at))
     assert_not_requested :get, %r{/download}

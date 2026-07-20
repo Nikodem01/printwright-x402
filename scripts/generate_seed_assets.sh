@@ -17,6 +17,7 @@ models=(
   measuring-scoop mini-funnel pen-tray phone-stand picture-stand plant-saucer
   plant-trellis planter-mini puzzle-tile soap-dish spacer-set spinning-top star-knob
   tealight-lantern tube-squeezer vase-spiral wall-bracket whistle
+  open-wheel-toy-racer
 )
 
 for model in "${models[@]}"; do

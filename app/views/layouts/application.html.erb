@@ -29,6 +29,14 @@
     <link rel="canonical" href="<%= request.base_url + request.path %>">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
+    <%= javascript_tag nonce: true do %>
+      (() => {
+        try {
+          const theme = localStorage.getItem("printwright-theme")
+          if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme
+        } catch (_error) {}
+      })()
+    <% end %>
 
     <%= yield :head %>
 
@@ -51,7 +59,7 @@
     <%# The contour ground. Fixed, non-interactive, one per page. %>
     <canvas id="ground-tex" aria-hidden="true" data-controller="texture"></canvas>
 
-    <header class="site-header">
+    <header class="site-header" data-controller="sticky-header">
       <div class="container">
         <%= link_to root_path, class: "wordmark" do %>
           <%= render "shared/brand_mark", size: 40 %>
@@ -60,12 +68,31 @@
             <span class="tagline">3D model store for agents.</span>
           </span>
         <% end %>
-        <%= form_with url: root_path, method: :get, class: "search-form" do %>
-          <input type="search" name="q" value="<%= params[:q] %>" placeholder="Search models — try 'beaver'"
-                 aria-label="Search models">
-          <button class="btn" type="submit">Search</button>
-        <% end %>
+        <div class="catalog-search" data-controller="catalog-search"
+             data-catalog-search-url-value="<%= search_suggestions_path %>"
+             data-action="click@window->catalog-search#dismiss keydown->catalog-search#navigate">
+          <%= form_with url: root_path(anchor: "models"), method: :get, class: "search-form",
+                role: "search", data: { action: "submit->catalog-search#submit" } do %>
+            <label class="visually-hidden" for="catalog_search_input">Search the model catalog</label>
+            <input id="catalog_search_input" type="search" name="q" value="<%= params[:q] %>"
+                   placeholder="Search models — try ‘beaver’" autocomplete="off" spellcheck="false"
+                   role="combobox" aria-autocomplete="list" aria-expanded="false"
+                   aria-controls="catalog_search_suggestions"
+                   data-catalog-search-target="input"
+                   data-action="input->catalog-search#queue keydown->catalog-search#keydown">
+            <button class="search-clear" type="button" aria-label="Clear search"
+                    data-catalog-search-target="clear" data-action="catalog-search#clear"
+                    <%= "hidden" if params[:q].blank? %>>×</button>
+            <button class="btn" type="submit">Search</button>
+          <% end %>
+          <%= turbo_frame_tag "catalog_search_suggestions", class: "search-suggestions",
+                hidden: true, data: { catalog_search_target: "results",
+                                     action: "turbo:frame-load->catalog-search#loaded" } %>
+        </div>
         <nav class="header-actions t-small" aria-label="Account and wallet">
+          <% cart_count = storefront_cart_count %>
+          <%= link_to cart_count.positive? ? "Cart (#{cart_count})" : "Cart", cart_path,
+                data: { cart_link: true } %>
           <%= link_to "My library", new_license_library_path %>
           <% if authenticated? %>
             <%= link_to "Dashboard", designer_models_path %>
@@ -82,6 +109,9 @@
                       data-action="wallet-loader#disconnectWallet" hidden>Disconnect</button>
             </span>
           <% end %>
+          <button type="button" class="theme-toggle" data-controller="theme"
+                  data-action="theme#toggle" data-theme-target="button"
+                  aria-label="Switch to dark mode" aria-pressed="false">Dark mode</button>
         </nav>
       </div>
     </header>
@@ -107,7 +137,6 @@
           <%= link_to "Takedown", takedown_path %> · <%= link_to "API docs", docs_path %> ·
           <%= link_to "Open books", open_books_path %> ·
           <%= link_to "Chaos log", chaos_log_path %> ·
-          <%= link_to "Agent sellers", agent_sellers_path %> ·
           <%= link_to "License library", new_license_library_path %> ·
           <%= link_to "License texts", license_document_path(version: "v1", kind: "personal") %> ·
           <%= link_to "Ask the shopkeeper", chat_path %>

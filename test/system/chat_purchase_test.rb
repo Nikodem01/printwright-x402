@@ -60,16 +60,20 @@ class ChatPurchaseTest < ApplicationSystemTestCase
   end
 
   test "proposal requires one human click then uses the existing wallet and receipt path" do
-    visit chat_path
-    find("input[name=message]").fill_in with: "Buy the personal license for Chat Approval Clip."
-    click_button "Send"
+    visit root_path
+    page.execute_script("localStorage.setItem('printwright-theme', 'light')")
+    refresh
+    click_button "Help me buy with AI"
 
+    assert_selector ".chat-msg-user"
+    assert_equal "rgb(251, 252, 251)",
+      page.evaluate_script("getComputedStyle(document.querySelector('.chat-msg-user p')).color")
     assert_selector ".chat-purchase-card", text: "Chat Approval Clip"
-    assert_button "Approve and buy · $0.25"
+    assert_button "Approve and buy · 0.25 USDC"
     assert_equal 0, Purchase.count
     assert_equal 0, TestWalletController.sign_calls
 
-    click_button "Approve and buy · $0.25"
+    click_button "Approve and buy · 0.25 USDC"
 
     assert_selector ".badge-ok", text: "licensed"
     assert_text "Licensed — unit #1"
@@ -77,6 +81,8 @@ class ChatPurchaseTest < ApplicationSystemTestCase
     assert_equal 1, TestWalletController.sign_calls
     assert_equal "delivered", Purchase.sole.status
     assert_equal "completed", ChatConversation.order(:created_at).last.purchase_proposal["state"]
+  ensure
+    page.execute_script("localStorage.removeItem('printwright-theme')") if page.current_url.present?
   end
 
   test "a settlement timeout retries the identical signed payment without a second wallet prompt" do
@@ -89,7 +95,7 @@ class ChatPurchaseTest < ApplicationSystemTestCase
     visit chat_path
     find("input[name=message]").fill_in with: "Buy the personal license for Chat Approval Clip."
     click_button "Send"
-    click_button "Approve and buy · $0.25"
+    click_button "Approve and buy · 0.25 USDC"
 
     assert_text "temporarily unavailable"
     assert_button "Try again"
@@ -100,6 +106,19 @@ class ChatPurchaseTest < ApplicationSystemTestCase
     assert_selector ".badge-ok", text: "licensed"
     assert_equal 1, TestWalletController.sign_calls
     assert_equal 1, Purchase.count
+  end
+
+  test "reset chat returns the homepage shopkeeper to a fresh conversation" do
+    visit root_path
+    click_button "Help me buy with AI"
+    assert_selector ".chat-msg-user"
+    assert_button "Reset chat"
+
+    click_button "Reset chat"
+
+    assert_selector "#chat_empty_state", text: "Describe what you need"
+    assert_no_selector ".chat-msg"
+    assert_button "Reset chat"
   end
 
   private

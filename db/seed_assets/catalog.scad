@@ -381,6 +381,42 @@ module spinning_top() {
     polygon([[0, 0], [2, 0], [25, 18], [18, 32], [6, 38], [6, 50], [0, 50]]);
 }
 
+module open_wheel_toy_racer() {
+  // A compact, logo-free open-wheel desk toy. Every part meets
+  // the bed or intersects the chassis, so it prints as one support-free piece.
+  union() {
+    difference() {
+      hull() {
+        translate([-38, -13, 6]) cube([29, 26, 8]);
+        translate([27, -6, 6]) cube([19, 12, 6]);
+      }
+      // Shallow open cockpit; it stops above the floor.
+      translate([-10, 0, 16]) scale([1.25, 0.82, 0.62]) sphere(r = 10, $fn = 32);
+    }
+
+    // Four short lower suspension links replace a visually implausible solid
+    // beam across the chassis. Twelve-sided tyres sit on a broad print flat.
+    for (x = [-30, 30]) {
+      translate([x - 3, 6, 6]) cube([6, 14, 3]);
+      translate([x - 3, -20, 6]) cube([6, 14, 3]);
+      for (y = [-25, 25])
+        translate([x, y, 9.66]) rotate([90, 0, 0]) rotate([0, 0, 15])
+          cylinder(h = 12, r = 10, center = true, $fn = 12);
+    }
+
+    // Broad, neutral wings make the silhouette read at thumbnail size.
+    translate([42, -32, 5]) cube([12, 64, 4]);
+    translate([-52, -31, 5]) cube([10, 62, 7]);
+
+    // Abstract headrest and engine cover.
+    translate([-21, -8, 6]) cube([14, 16, 12]);
+    hull() {
+      translate([-34, -10, 6]) cube([13, 20, 8]);
+      translate([-20, -7, 6]) cube([8, 14, 11]);
+    }
+  }
+}
+
 color("#e26d5a") {
   if (model == "phone-stand") rotate([0, 0, 180]) phone_stand();
   else if (model == "cable-clip") cable_clip();
@@ -418,4 +454,5 @@ color("#e26d5a") {
   else if (model == "hose-adapter") hose_adapter();
   else if (model == "puzzle-tile") puzzle_tile();
   else if (model == "spinning-top") spinning_top();
+  else if (model == "open-wheel-toy-racer") open_wheel_toy_racer();
 }

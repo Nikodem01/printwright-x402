@@ -12,7 +12,7 @@
            data-price-display="<%= proposal["display_price"] %>">
         <input type="radio" name="chat_license" value="<%= proposal["license_kind"] %>" checked hidden>
         <p class="t-small">
-          <strong><%= proposal["license_kind"].to_s.humanize %></strong> · <%= proposal["display_price"] %> USDC
+          <strong><%= proposal["license_kind"].to_s.humanize %></strong> · <%= proposal["display_price"] %>
         </p>
       </div>
       <button class="btn btn-primary btn-block" type="button" data-checkout-target="button" data-action="checkout#buy">

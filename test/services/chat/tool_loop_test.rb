@@ -16,6 +16,12 @@ class Chat::ToolLoopTest < ActiveSupport::TestCase
     ENV.delete("CHAT_DAILY_SPEND_CENTS")
   end
 
+  test "availability answers require fresh and progressively broader catalog searches" do
+    assert_includes Chat::ToolLoop::SYSTEM_PROMPT, "fresh search_models call"
+    assert_includes Chat::ToolLoop::SYSTEM_PROMPT, "make one broader search"
+    assert_includes Chat::ToolLoop::SYSTEM_PROMPT, "explicit non-affiliation disclaimer"
+  end
+
   test "executes a functionCall, echoes it and the result back, then returns the model's text" do
     thought_signature = "opaque-thought-signature"
     final_thought_signature = "opaque-final-thought-signature"
@@ -151,7 +157,7 @@ class Chat::ToolLoopTest < ActiveSupport::TestCase
     turns = [ { "role" => "user", "parts" => [ { "text" => "hi" } ] } ]
     result = Chat::ToolLoop.new(turns: turns, client: Chat::Gemini.new(api_key: nil)).run
 
-    assert_match(/couldn.t reach/i, result.turns.last.dig("parts", 0, "text"))
+    assert_match(/isn.t configured/i, result.turns.last.dig("parts", 0, "text"))
     assert_not_requested :post, GEMINI
   end
 

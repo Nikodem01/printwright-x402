@@ -28,13 +28,33 @@ class ModelPreviewTest < ApplicationSystemTestCase
     @model.license_offers.create!(kind: "personal", price_cents: 100)
   end
 
-  test "decimated preview loads through importmap and retains its render fallback" do
+  test "rendered turntable changes frame on drag and zooms without exposing the mesh" do
+    page.driver.browser.manage.window.resize_to(1280, 900)
     visit model_page_path(@model.slug)
 
-    assert_selector ".model-preview[data-preview-state='ready']", wait: 10
-    assert_selector ".model-preview-stage canvas[role='img']"
-    assert_selector ".model-preview-stage img[hidden]", visible: :all
-    assert_selector ".turntable-thumbnails img", count: 4
-    assert_text "drag to rotate"
+    assert_selector ".model-preview[data-turntable-frame='0']", wait: 10
+    assert_selector ".render-turntable-stage img"
+    assert_text "drag to change view"
+    assert_button "Add selection to cart"
+
+    preview_top = find(".model-preview").rect.y
+    checkout_top = find(".buy-panel").rect.y
+    assert_in_delta preview_top, checkout_top, 2,
+      "preview and checkout should begin on the same grid row"
+
+    stage = find(".render-turntable-stage")
+    dimensions = stage.rect
+    assert_in_delta 4.0 / 3, dimensions.width.to_f / dimensions.height, 0.02
+
+    # Drag farther than the complete frame set. JavaScript's `%` preserves a
+    # negative sign, so one added frame count was not enough to wrap this case.
+    page.driver.browser.action.move_to(stage.native).click_and_hold.move_by(120, 0).release.perform
+    frame = find(".model-preview")["data-turntable-frame"].to_i
+    assert_includes 0...4, frame
+    assert_text(/Rendered view [1-4] of 4/)
+
+    stage.execute_script("this.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, bubbles: true, cancelable: true }))")
+    transform = find(".render-turntable-stage img").evaluate_script("this.style.transform")
+    assert_match(/scale\(1\.15/, transform)
   end
 end

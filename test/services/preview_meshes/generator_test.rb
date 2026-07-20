@@ -8,6 +8,7 @@ class PreviewMeshes::GeneratorTest < ActiveSupport::TestCase
     assert_equal preview, PreviewMeshes::Generator.call(bytes: source, kind: "stl")
     assert preview.start_with?(PreviewMeshes::Generator::HEADER)
     assert_operator triangle_count(preview), :<, triangle_count(source)
+    assert_operator triangle_count(preview), :>, triangle_count(source) / 10
     assert_operator preview.bytesize, :<, source.bytesize
     assert_operator open_edge_count(preview), :>, 0
   end

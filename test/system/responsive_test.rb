@@ -31,7 +31,7 @@ class ResponsiveTest < ApplicationSystemTestCase
       [ "terms", terms_path ],
       [ "open books", open_books_path ],
       [ "chaos log", chaos_log_path ],
-      [ "agent sellers", agent_sellers_path ]
+      [ "shopkeeper", chat_path ]
     ]
 
     WIDTHS.each do |width|

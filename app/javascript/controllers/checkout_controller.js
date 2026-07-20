@@ -23,6 +23,7 @@ const FAILURE_COPY = {
   approval_already_used: () => "This approval has already been used.",
   invalid_purchase_intent: () => "The server could not verify this purchase approval.",
   payment_intent_replayed: () => "This approval is already bound to a different signed payment.",
+  incompatible_payees: () => "These items pay different designers directly and cannot share one Hedera transfer.",
 }
 
 // These are terminal for the purchase attempt: no retry button. Everything
@@ -32,6 +33,7 @@ const TERMINAL_ERRORS = new Set([
   "sold_out", "duplicate_payment", "invalid_payload", "purchases_disabled", "spend_cap_exceeded",
   "daily_spend_cap_exceeded", "approval_expired", "stale_proposal", "approval_already_used",
   "invalid_purchase_intent", "payment_intent_replayed",
+  "incompatible_payees",
 ])
 const TERMINAL_LABELS = { sold_out: "Sold out", duplicate_payment: "Already submitted", invalid_payload: "Unavailable" }
 
@@ -39,9 +41,13 @@ const TERMINAL_LABELS = { sold_out: "Sold out", duplicate_payment: "Already subm
 // -> success | failed. Customer builds use Hedera WalletConnect; an explicitly
 // configured local signer remains available for deterministic development tests.
 export default class extends Controller {
-  static targets = ["offer", "button", "status", "receipt"]
+  static targets = ["offer", "quantity", "button", "cartButton", "status", "receipt"]
   static values = {
     downloadUrl: String,
+    batchUrl: String,
+    modelId: Number,
+    items: Array,
+    completionUrl: String,
     walletUrl: String,
     approvalUrl: String,
     buttonPrefix: { type: String, default: "Buy license" },
@@ -54,6 +60,9 @@ export default class extends Controller {
   updatePrice() {
     const offer = this.selectedOffer()
     if (!this.hasButtonTarget || !offer) return
+    this.quantityTargets.forEach((control) => {
+      control.hidden = control.dataset.licenseKind !== this.offerKind(offer)
+    })
     // A failure belongs to the offer that produced it. Picking a different one
     // clears it — otherwise a terminal state (sold out, already submitted)
     // leaves the button disabled for an offer that is still buyable. In-flight
@@ -63,14 +72,40 @@ export default class extends Controller {
       this.buttonTarget.disabled = false
       this.statusTarget.innerHTML = ""
     }
-    // Prefer the server-rendered price: HBAR-lead offers show "ℏ · $" at the
-    // live rate, which a client-side cents-to-dollars format would discard.
-    const display = offer.dataset.priceDisplay || `$${(offer.dataset.priceCents / 100).toFixed(2)}`
-    this.buttonTarget.textContent = `${this.buttonPrefixValue} · ${display}`
+    const quantity = this.quantityFor(offer)
+    const display = offer.dataset.priceDisplay || `${(offer.dataset.priceCents / 100).toFixed(2)} USDC`
+    if (this.offerKind(offer) === "commercial_unit" && this.quantityControlFor(offer)) {
+      const total = `${((Number(offer.dataset.priceCents) * quantity) / 100).toFixed(2)} USDC`
+      const noun = quantity === 1 ? "commercial unit" : "commercial units"
+      this.quantityControlFor(offer).querySelector("[data-quantity-total]").textContent = `${display} each · ${total} total`
+      this.buttonTarget.textContent = `Buy ${quantity} ${noun} · ${total}`
+    } else {
+      this.buttonTarget.textContent = `${this.buttonPrefixValue} · ${display}`
+    }
   }
 
   selectedOffer() {
-    return this.offerTargets.find((o) => o.querySelector("input").checked) || this.offerTargets[0]
+    return this.offerTargets.find((offer) => offer.querySelector("input[type=radio]").checked) || this.offerTargets[0]
+  }
+
+  offerKind(offer) {
+    return offer.querySelector("input[type=radio]").value
+  }
+
+  quantityControlFor(offer) {
+    const kind = this.offerKind(offer)
+    return this.quantityTargets.find((control) => control.dataset.licenseKind === kind)
+  }
+
+  quantityFor(offer) {
+    const input = this.quantityControlFor(offer)?.querySelector("input[type=number]")
+    if (!input) return 1
+
+    const min = Number(input.min) || 1
+    const max = Number(input.max) || 20
+    const quantity = Math.min(max, Math.max(min, Math.floor(Number(input.value) || min)))
+    input.value = quantity
+    return quantity
   }
 
   async buy() {
@@ -80,8 +115,16 @@ export default class extends Controller {
       // Door 1 can reconcile by transaction digest.
       if (this.pendingPayment) return await this.submitPendingPayment()
 
-      const kind = this.selectedOffer().querySelector("input").value
-      let url = `${this.downloadUrlValue}?license=${kind}`
+      const offer = this.hasItemsValue ? null : this.selectedOffer()
+      const kind = offer ? this.offerKind(offer) : null
+      const quantity = offer ? this.quantityFor(offer) : 1
+      let url = offer ? `${this.downloadUrlValue}?license=${kind}` : this.batchUrlValue
+      let method = "GET"
+      let requestBody
+      if (this.hasItemsValue) {
+        method = "POST"
+        requestBody = JSON.stringify({ items: this.itemsValue })
+      }
       let quote
       let purchaseIntent
       if (this.hasApprovalUrlValue) {
@@ -100,7 +143,16 @@ export default class extends Controller {
         purchaseIntent = body.purchase_intent
       } else {
         this.setState("quoting", "Fetching payment terms…")
-        const leg1 = await fetch(url, { headers: { accept: "application/json" } })
+        if (!requestBody && kind === "commercial_unit" && quantity > 1) {
+          url = this.batchUrlValue
+          method = "POST"
+          requestBody = JSON.stringify({
+            items: Array.from({ length: quantity }, () => ({ model_id: this.modelIdValue, license: kind })),
+          })
+        }
+        const requestHeaders = { accept: "application/json" }
+        if (requestBody) requestHeaders["content-type"] = "application/json"
+        const leg1 = await fetch(url, { method, headers: requestHeaders, body: requestBody })
         if (leg1.status !== 402) {
           const body = await leg1.json().catch(() => ({}))
           return this.fail(body.error, `expected a 402 quote, got ${leg1.status}`, body.retry_after)
@@ -120,7 +172,8 @@ export default class extends Controller {
 
       const paymentHeaders = { accept: "application/json", ...headers }
       if (purchaseIntent) paymentHeaders["X-Printwright-Purchase-Intent"] = purchaseIntent
-      this.pendingPayment = { url, headers: paymentHeaders }
+      if (requestBody) paymentHeaders["content-type"] = "application/json"
+      this.pendingPayment = { url, method, body: requestBody, headers: paymentHeaders }
       await this.submitPendingPayment()
     } catch (error) {
       this.fail(null, error.message)
@@ -128,9 +181,9 @@ export default class extends Controller {
   }
 
   async submitPendingPayment() {
-    const { url, headers } = this.pendingPayment
+    const { url, method, body: requestBody, headers } = this.pendingPayment
     this.setState("settling", "Submitting to Hedera…")
-    const leg2 = await fetch(url, { headers })
+    const leg2 = await fetch(url, { method, headers, body: requestBody })
     const body = await leg2.json()
     if (leg2.status !== 200) {
       // These failures can be recovered only by replaying this same signed
@@ -140,7 +193,7 @@ export default class extends Controller {
     }
 
     this.pendingPayment = null
-    this.success(body)
+    await this.success(body)
   }
 
   async sign(paymentRequired) {
@@ -165,6 +218,7 @@ export default class extends Controller {
   setState(state, message) {
     this.element.dataset.checkoutState = state
     this.buttonTarget.disabled = true
+    if (this.hasCartButtonTarget) this.cartButtonTarget.disabled = true
     const badge = { quoting: "badge-pending", wallet: "badge-pending", settling: "badge-pending" }[state]
     this.statusTarget.innerHTML = `<span class="badge ${badge}">${state}</span> <span class="t-small">${this.escape(message)}</span>`
     this.statusTarget.focus()
@@ -178,6 +232,7 @@ export default class extends Controller {
     const terminal = TERMINAL_ERRORS.has(code)
     this.element.dataset.checkoutState = "failed"
     this.buttonTarget.disabled = terminal
+    if (this.hasCartButtonTarget) this.cartButtonTarget.disabled = false
     this.buttonTarget.textContent = terminal ? (TERMINAL_LABELS[code] || "Unavailable") : "Try again"
     const message = (FAILURE_COPY[code] && FAILURE_COPY[code](retryAfter)) || "The payment could not be completed."
     this.statusTarget.innerHTML = `<span class="badge badge-bad">failed</span> <span class="t-small">${this.escape(message)}</span>` +
@@ -185,7 +240,9 @@ export default class extends Controller {
     this.statusTarget.focus()
   }
 
-  success(body) {
+  async success(body) {
+    if (Array.isArray(body.licenses)) return await this.successBatch(body)
+
     this.element.dataset.checkoutState = "success"
     const txId = body.transaction_id
     const maxUnits = body.license.max_units
@@ -217,7 +274,57 @@ export default class extends Controller {
     this.receiptTarget.hidden = false
     this.statusTarget.innerHTML = ""
     this.buttonTarget.hidden = true
+    if (this.hasCartButtonTarget) this.cartButtonTarget.hidden = true
     this.offerTargets.forEach((o) => (o.hidden = true))
+    this.quantityTargets.forEach((control) => (control.hidden = true))
+    this.receiptTarget.focus()
+  }
+
+  async successBatch(body) {
+    if (this.hasCompletionUrlValue) {
+      await fetch(this.completionUrlValue, {
+        method: "DELETE",
+        headers: { "x-csrf-token": this.csrfToken() },
+      })
+      document.querySelectorAll("[data-cart-link]").forEach((link) => (link.textContent = "Cart"))
+    }
+    this.element.dataset.checkoutState = "success"
+    const licenses = body.licenses
+    const first = licenses[0]
+    const maxUnits = first?.max_units
+    const capNote = maxUnits
+      ? `<p class="t-caption muted">${first.remaining_units} of ${maxUnits} license slots now remain. This cap does not technically restrict physical printing.</p>`
+      : ""
+    const rows = licenses.map((license, index) => {
+      const receiptLink = license.receipt
+        ? `<a href="${this.escape(license.receipt.url)}?token=${encodeURIComponent(license.receipt.token)}">Open receipt</a>`
+        : ""
+      return `<li class="batch-license">
+        <strong>Unit ${index + 1}</strong>
+        <a class="batch-download" href="${this.escape(license.files[0]?.url || "#")}" download>Download files</a>
+        <a class="mono" href="${this.escape(license.verify_url)}">${this.escape(license.cert_id)}</a>
+        ${receiptLink}
+      </li>`
+    }).join("")
+
+    const allCommercial = licenses.every((license) => license.kind === "commercial_unit")
+    const heading = allCommercial
+      ? `${licenses.length} commercial units licensed`
+      : `${licenses.length} licenses purchased`
+    this.receiptTarget.innerHTML = `
+      <div class="badge badge-ok">✓ licensed</div>
+      <h3 style="margin-top: var(--s-2)">${heading}</h3>
+      ${capNote}
+      <ol class="batch-license-list">${rows}</ol>
+      <dl class="t-small" style="margin-bottom:0">
+        <dt class="muted">transaction</dt>
+        <dd style="margin:0"><a class="mono" href="${this.escape(body.hashscan_url)}" target="_blank" rel="noopener">${this.escape(body.transaction_id)}</a></dd>
+      </dl>`
+    this.receiptTarget.hidden = false
+    this.statusTarget.innerHTML = ""
+    this.buttonTarget.hidden = true
+    this.offerTargets.forEach((offer) => (offer.hidden = true))
+    this.quantityTargets.forEach((control) => (control.hidden = true))
     this.receiptTarget.focus()
   }
 

@@ -2,7 +2,9 @@
 
 <% if @new_turns.present? %>
   <%= turbo_stream.append "chat_messages" do %>
-    <%= render partial: "chat/turn", collection: @new_turns, as: :turn %>
+    <div class="chat-exchange">
+      <%= render partial: "chat/turn", collection: @new_turns, as: :turn %>
+    </div>
   <% end %>
 <% end %>
 

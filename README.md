@@ -7,7 +7,7 @@ purchase anchored as a tamper-evident **HCS license certificate** ("unit N of mo
 at time T") that anyone can verify against the public mirror node.
 
 DRM can't stop a printer, so Printwright doesn't sell copy protection. It makes **honesty
-frictionless** — a sub-$1 royalty paid at machine speed, in one HTTP round-trip — and
+frictionless** — a sub-1-USDC royalty paid at machine speed, in one HTTP round-trip — and
 **authorized units provable** — a $0.0001 public certificate per licensed unit, auditable by
 anyone without trusting the marketplace. Card rails can do neither; both are native to x402
 on Hedera.
@@ -71,9 +71,7 @@ run `node scripts/buy.mjs --query "cable clip" --sandbox`. The app still returns
 verify → settle → certificate, but through its built-in mock facilitator and local throwaway
 topic. Sandbox output is visibly fake and contains only a text receipt—never paid geometry.
 The public [`conformance/`](conformance/) runner lints the raw x402 v2 challenge and completes
-that sandbox contract with no credentials. The small
-[`/agent-sellers`](app/views/pages/agent_sellers.html.erb) directory records other machine
-endpoints whose unpaid challenges were manually checked.
+that sandbox contract with no credentials.
 
 ## Buy a model from the command line (Scene 1a)
 
@@ -107,7 +105,7 @@ Five tools: `search_models`, `get_model`, `buy_license` (refuses without `confir
 capped by `MAX_SPEND_CENTS`), `check_license` (machine-decidable use/quantity), and
 `verify_certificate` (fetches the on-chain HCS message from
 the public mirror node and diffs it against the marketplace copy). Then ask:
-*"find a printable beaver with a hat under $3 and buy a personal license."*
+*"find a printable beaver with a hat under 3 USDC and buy a personal license."*
 
 ## Run the marketplace locally
 
@@ -156,13 +154,15 @@ development tests only, `DEMO_WALLET_URL=http://localhost:4022` enables
 `scripts/demo-wallet.mjs` instead.
 
 **Shopkeeper chat:** `/chat` runs Gemini `gemini-3.1-flash-lite` server-side and dogfoods the
-same public catalog API. Search works with purchases disabled. To enable testnet proposals,
-set `CHAT_PURCHASES_ENABLED=true`, `CHAT_MAX_SPEND_CENTS`, and `CHAT_DAILY_SPEND_CENTS`.
+same public catalog API. Search works with purchases disabled. The production deploy enables
+testnet proposals with bounded 5 USDC per-conversation and 25 USDC daily defaults; override
+`CHAT_PURCHASES_ENABLED`, `CHAT_MAX_SPEND_CENTS`, and `CHAT_DAILY_SPEND_CENTS` as needed.
 Gemini can only prepare a proposal: a separate human button re-prices it, reserves the caps,
 restricts settlement to exact USDC, and binds one signed transaction to that model/license.
 Private keys remain in the wallet process; payment headers, receipts, and bearer download URLs
-never enter the Gemini conversation. `CHAT_DAILY_MESSAGE_LIMIT` bounds total provider calls in
-addition to the per-IP request rate limit.
+never enter the Gemini conversation. `CHAT_DAILY_VISITOR_MESSAGE_LIMIT` prevents one IP from
+consuming the shared allowance; `CHAT_DAILY_PROVIDER_CALL_LIMIT` bounds every Gemini request,
+including tool-loop follow-ups, in addition to the short per-IP burst limit.
 
 Agent discovery: `/.well-known/x402-catalog.json` (crawlable live offers) ·
 [`/openapi.json`](public/openapi.json) · [`/llms.txt`](public/llms.txt).
@@ -215,9 +215,9 @@ the build if key/token/signature material ever reaches a log.
 
 ## Why this needs Web3 (and Hedera specifically)
 
-A 3D model license is a *right* — designers need per-print royalties (often under $1), buyers
+A 3D model license is a *right* — designers need per-print royalties (often under 1 USDC), buyers
 increasingly are software (print servers, procurement agents), and both sides are global.
-Card rails can't do sub-$1 fees, can't pay at machine speed, and can't onboard a designer in
+Card rails can't do sub-1-USDC fees, can't pay at machine speed, and can't onboard a designer in
 minutes worldwide. x402-on-Hedera can: fixed sub-cent fees make micro-royalties viable, the
 facilitator model means neither party runs infrastructure, and a $0.0001 HCS message gives
 every license a public, tamper-evident receipt no Web2 service can match. Every purchase
