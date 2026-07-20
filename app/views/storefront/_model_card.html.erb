@@ -1,24 +1,24 @@
 <%= link_to model_page_path(model.slug), class: "model-card" do %>
   <% if (render_file = model.render_file)&.file&.attached? %>
-    <%= image_tag render_file.file, alt: model.title %>
+    <%= image_tag render_file.file, alt: model.title, loading: "lazy", decoding: "async" %>
+  <% else %>
+    <div class="card-thumb"></div>
   <% end %>
   <div class="card-body">
-    <h3><%= model.title %></h3>
-    <div class="t-small muted"><%= model.designer.display_name %></div>
     <% if model.category.present? %>
-      <div class="t-caption card-taxonomy"><%= Model3d.category_definition(model.category).fetch(:name) %></div>
+      <p class="card-taxonomy"><%= Model3d.category_definition(model.category).fetch(:name) %></p>
     <% end %>
-    <div class="t-caption muted">
+    <h3 class="card-name"><%= model.title %></h3>
+    <div class="t-small muted">by <%= model.designer.display_name %></div>
+    <div class="card-price-row">
+      <% if (offer = model.license_offers.min_by(&:price_cents)) %>
+        <span class="price card-price"><%= offer_price(offer) %></span>
+      <% end %>
       <% p = model.printability %>
-      <%= [ p["est_print_minutes"] && "#{p['est_print_minutes']} min",
-            p["materials"]&.join("/"),
-            p["supports"] == false ? "no supports" : nil ].compact.join(" · ") %>
+      <span class="card-units">
+        <%= [ p["est_print_minutes"] && "#{p['est_print_minutes']} min",
+              p["materials"]&.first ].compact.join(" · ") %>
+      </span>
     </div>
-    <% if (offer = model.license_offers.min_by(&:price_cents)) %>
-      <div class="card-price-row">
-        <span class="price"><%= offer_price(offer) %></span>
-        <span class="badge badge-kind"><%= offer.kind.humanize.downcase %></span>
-      </div>
-    <% end %>
   </div>
 <% end %>

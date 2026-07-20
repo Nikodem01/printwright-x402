@@ -6,10 +6,10 @@ class BrandSurfacesTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select 'meta[name="description"][content=?]',
-      "License printable designs, pay per print, and verify every right on Hedera."
+      "Licensed 3D-printable models an AI agent, print server, or person can buy over plain HTTP. Pay in HBAR or USDC on Hedera; every purchase mints a verifiable certificate."
     assert_select 'meta[property="og:type"][content="website"]'
     assert_select 'meta[property="og:site_name"][content="Printwright"]'
-    assert_select 'meta[property="og:title"][content="Printwright — every print, licensed"]'
+    assert_select 'meta[property="og:title"][content="Printwright — the 3D model store for AI agents"]'
     assert_select 'meta[property="og:image"][content$="/og-printwright.png"]'
     assert_select 'meta[property="og:image:width"][content="1200"]'
     assert_select 'meta[property="og:image:height"][content="630"]'
@@ -17,7 +17,11 @@ class BrandSurfacesTest < ActionDispatch::IntegrationTest
     assert_select 'link[rel="manifest"][href="/manifest.json"]'
     assert_select 'link[rel="icon"][sizes="32x32"][href="/favicon-32.png"]'
     assert_select 'link[rel="apple-touch-icon"][sizes="180x180"][href="/apple-touch-icon.png"]'
-    assert_select '.wordmark img[src="/brand-mark.svg"]'
+    # The lockup is composed in ERB rather than shipped as a flattened SVG, so
+    # the wordmark stays real type and the mark inherits currentColor — which
+    # is what lets it take --chain in both themes.
+    assert_select ".wordmark svg.brand-mark"
+    assert_select ".wordmark .wordmark-name", text: "Printwright"
   end
 
   test "manifest carries the public brand" do
@@ -26,9 +30,38 @@ class BrandSurfacesTest < ActionDispatch::IntegrationTest
     assert_response :success
     manifest = response.parsed_body
     assert_equal "Printwright", manifest.fetch("name")
-    assert_equal "Every print, licensed.", manifest.fetch("description")
-    assert_equal "#0f766e", manifest.fetch("theme_color")
+    assert_equal "The 3D model store for agents.", manifest.fetch("description")
+    assert_equal "#1B5E45", manifest.fetch("theme_color")
     assert_equal %w[192x192 512x512], manifest.fetch("icons").map { |icon| icon.fetch("sizes") }
+  end
+
+  test "header exposes buyer recovery and the correct designer account action" do
+    get root_url
+
+    assert_select ".header-actions a[href=?]", new_license_library_path, text: "My library"
+    assert_select ".header-actions a[href=?]", new_session_path, text: "For designers"
+    assert_select ".header-actions a[href=?]", designer_models_path, count: 0
+
+    sign_in_as designers(:one)
+    get root_url
+
+    assert_select ".header-actions a[href=?]", designer_models_path, text: "Dashboard"
+    assert_select ".header-actions a[href=?]", new_session_path, count: 0
+  end
+
+  test "configured browser wallet is local, lazy, and names its Hedera network" do
+    previous = ENV["WALLETCONNECT_PROJECT_ID"]
+    ENV["WALLETCONNECT_PROJECT_ID"] = "public-test-project"
+
+    get root_url
+
+    assert_select 'body[data-controller="wallet-loader"]'
+    assert_select 'body[data-wallet-loader-module-url-value*="hedera_wallet"]'
+    assert_select '[data-hedera-wallet][data-network="testnet"]'
+    assert_select "button[data-wallet-connect]", text: "Connect wallet"
+    assert_no_match(/<script[^>]+src=[^>]+hedera_wallet/, response.body)
+  ensure
+    ENV["WALLETCONNECT_PROJECT_ID"] = previous
   end
 
   test "generated brand images retain their contract dimensions" do

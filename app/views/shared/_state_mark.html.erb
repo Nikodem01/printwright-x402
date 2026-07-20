@@ -1,0 +1,14 @@
+<%# The glyph alone — filled / open / barred on a 16 grid. Only ever rendered
+    next to a word: either by shared/_state, or by a container (a flash, a
+    verify banner) whose own text supplies the word. %>
+<svg class="state-mark" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+  <% if state.to_s == "settled" %>
+    <rect x="1" y="1" width="14" height="14" rx="5" fill="currentColor"/>
+  <% else %>
+    <rect x="1.9" y="1.9" width="12.2" height="12.2" rx="4.2"
+          fill="none" stroke="currentColor" stroke-width="1.9"/>
+    <% if state.to_s == "void" %>
+      <path d="M3.4 12.6 12.6 3.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+    <% end %>
+  <% end %>
+</svg>

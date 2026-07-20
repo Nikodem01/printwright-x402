@@ -17,7 +17,11 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # order-dependent, so it passed locally and failed in CI on a different seed.
   # Every browser test needs its driver reachable; assert that up front.
   setup do
-    WebMock.disable_net_connect!(allow_localhost: true) if defined?(WebMock)
+    if defined?(WebMock)
+      WebMock.disable_net_connect!(allow_localhost: true)
+      WebMock.stub_request(:get, %r{https://testnet\.mirrornode\.hedera\.com/api/v1/topics/.+/messages})
+        .to_return(body: { messages: [] }.to_json)
+    end
   end
 end
 

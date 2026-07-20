@@ -19,7 +19,8 @@
             <h2><%= model.title %></h2>
             <p class="mono t-small"><%= license.cert_id %> · unit #<%= license.serial %></p>
             <p><%= link_to "Open receipt", purchase_receipt_path(license.cert_id, token: receipt_token) %> ·
-              <%= link_to "Re-download", purchase_receipt_download_path(license.cert_id, token: receipt_token) %></p>
+              <%= link_to "Re-download", purchase_receipt_download_path(license.cert_id, token: receipt_token),
+                    data: { turbo: false } %></p>
           </div>
         </article>
       <% end %>

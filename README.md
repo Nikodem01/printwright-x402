@@ -118,7 +118,7 @@ testnet USDC comes from the [Circle faucet](https://faucet.circle.com) — pick 
 ```bash
 sudo apt install postgresql-16-pgvector openscad  # or your platform's equivalent packages
 cp .env.example .env                     # fill in the marked values
-echo "HEDERA_PRIVATE_KEY=0x..." > sidecar/.env   # operator key stays with the signer
+cp sidecar/.env.example sidecar/.env     # fill keys here; never in the Rails env
 bin/setup --skip-server                  # bundle + db:prepare
 bin/rails db:seed                        # 36 demo models
 (cd sidecar && npm install && npm start) &        # HCS signing sidecar on :4021
@@ -144,11 +144,16 @@ Sentry smoke checks, on-demand backup, and guarded restore rehearsal steps.
 The x402 facilitator is hosted ([Blocky402 testnet](https://blocky402.com), open access) —
 nothing to run. It is not a single point of dependency: [`selfhost-facilitator/`](selfhost-facilitator/)
 is a working fallback you can run yourself, and switching is one env var
-(`X402_FACILITATOR_URL`). `docker-compose up` starts Postgres + sidecar if you prefer containers.
+(`X402_FACILITATOR_URL`). `docker-compose up` starts pgvector/Postgres + sidecar if you prefer
+containers; Compose reads the operator key only from `sidecar/.env`.
 
-**Browser checkout:** the storefront's Buy button signs through a local demo-wallet daemon
-(`BUYER_ACCOUNT_ID=... BUYER_PRIVATE_KEY=0x... node scripts/demo-wallet.mjs`) — a separate
-key-holding process, the drop-in upgrade point for HashPack pairing.
+**Browser checkout:** set the public `WALLETCONNECT_PROJECT_ID` from Reown and register the exact
+app origin. The Connect wallet control uses the maintained Hedera WalletConnect/AppKit native
+adapter. HashPack (or another compatible Hedera wallet) signs and returns the exact x402 transfer;
+the facilitator remains the transaction fee payer and the browser never submits or exposes a key.
+The wallet bundle is locally hosted and loads only after Connect/Buy is clicked. For deterministic
+development tests only, `DEMO_WALLET_URL=http://localhost:4022` enables
+`scripts/demo-wallet.mjs` instead.
 
 **Shopkeeper chat:** `/chat` runs Gemini `gemini-3.1-flash-lite` server-side and dogfoods the
 same public catalog API. Search works with purchases disabled. To enable testnet proposals,
@@ -195,6 +200,7 @@ bin/rails test:system     # Capybara: storefront + chat checkout, designer publi
 cd sidecar && npm test    # sidecar suite (SDK faked)
 cd mcp && npm test        # MCP stdio smoke (spawns the real server over stdio)
 cd verifier && npm test   # PWC-1 validation + direct-mirror CLI contracts
+cd wallet && npm test     # browser transaction/header contract (no live wallet popup)
 ```
 
 All suites run on every push via GitHub Actions ([ci.yml](.github/workflows/ci.yml)), plus
@@ -220,7 +226,7 @@ Hedera account.
 
 ## Post-bounty roadmap
 
-- HashPack pairing as the browser signer (the demo-wallet daemon is the drop-in seam)
+- Independent buyer/designer validation and public marketplace launch
 - Print-server royalty hook (OctoPrint): one `commercial_unit` purchase per job start
 - On-chain royalty splits (designer + marketplace legs in one transfer)
 - Mainnet + listing in the x402 ecosystem directory / x402scan

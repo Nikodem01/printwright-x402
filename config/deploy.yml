@@ -33,6 +33,7 @@ env:
     - SENTRY_DSN
   clear:
     APP_HOST: <%= ENV.fetch("APP_HOST") %>
+    WALLETCONNECT_PROJECT_ID: <%= ENV.fetch("WALLETCONNECT_PROJECT_ID") %>
     MAIL_FROM: <%= ENV.fetch("MAIL_FROM") %>
     SMTP_ADDRESS: <%= ENV.fetch("SMTP_ADDRESS") %>
     SMTP_PORT: <%= ENV.fetch("SMTP_PORT", "587") %>

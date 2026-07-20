@@ -66,11 +66,14 @@ Rails.application.configure do
   }
 
   config.action_mailer.smtp_settings = {
-    user_name: ENV.fetch("SMTP_USERNAME"),
-    password: ENV.fetch("SMTP_PASSWORD"),
-    address: ENV.fetch("SMTP_ADDRESS"),
+    # Asset precompilation boots production with SECRET_KEY_BASE_DUMMY and no
+    # runtime secrets. The production-requirements initializer still refuses a
+    # real boot when any of these are absent.
+    user_name: ENV["SMTP_USERNAME"],
+    password: ENV["SMTP_PASSWORD"],
+    address: ENV.fetch("SMTP_ADDRESS", "localhost"),
     port: ENV.fetch("SMTP_PORT", "587").to_i,
-    domain: ENV.fetch("SMTP_DOMAIN", ENV.fetch("APP_HOST")),
+    domain: ENV.fetch("SMTP_DOMAIN", ENV.fetch("APP_HOST", "example.com")),
     authentication: :plain,
     enable_starttls_auto: true
   }

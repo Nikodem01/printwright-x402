@@ -19,9 +19,11 @@
 
   <div id="chat_messages" class="chat-messages">
     <% if @turns.empty? %>
-      <p id="chat_empty_state" class="empty-state t-small">
-        Ask about a model — try “do you have anything to tidy the cables on my desk?”
-      </p>
+      <div id="chat_empty_state" class="empty-state">
+        <h2>Nothing asked yet</h2>
+        <p class="t-small">Answers appear here, each one showing the tool call it came from.</p>
+        <p class="t-small">Try “do you have anything to tidy the cables on my desk?”</p>
+      </div>
     <% end %>
     <%= render partial: "chat/turn", collection: @turns, as: :turn %>
   </div>

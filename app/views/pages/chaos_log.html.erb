@@ -18,17 +18,25 @@
     <p class="t-small"><%= link_to "Exact mirror message ↗", @heartbeat[:message_url], class: "mono" %> ·
       <%= link_to "Heartbeat topic on HashScan ↗", @heartbeat[:hashscan_url], class: "mono" %></p>
   <% elsif @heartbeat[:status] == "not_configured" %>
-    <p class="verify-banner banner-pending"><strong>Not configured.</strong> No heartbeat topic is
-      claimed for this deployment.</p>
+    <p class="verify-banner banner-pending">
+      <%= render "shared/state", state: "pending", label: "Not configured" %>
+      <span>No heartbeat topic is claimed for this deployment.</span>
+    </p>
   <% elsif @heartbeat[:status] == "stale" %>
-    <p class="verify-banner banner-pending"><strong>Stale.</strong> The latest valid heartbeat was
-      <time datetime="<%= @heartbeat[:observed_at] %>"><%= @heartbeat[:observed_at] %></time>, more
-      than twelve hours ago.</p>
+    <p class="verify-banner banner-pending">
+      <%= render "shared/state", state: "pending", label: "Stale" %>
+      <span>The latest valid heartbeat was
+        <time datetime="<%= @heartbeat[:observed_at] %>"><%= @heartbeat[:observed_at] %></time>, more
+        than twelve hours ago.</span>
+    </p>
     <p class="t-small"><%= link_to "Exact stale mirror message ↗", @heartbeat[:message_url], class: "mono" %> ·
       <%= link_to "Heartbeat topic on HashScan ↗", @heartbeat[:hashscan_url], class: "mono" %></p>
   <% else %>
-    <p class="verify-banner banner-pending"><strong>Unavailable.</strong> The mirror did not return
-      a valid PWH-1 message, so this page does not substitute a local health check.</p>
+    <p class="verify-banner banner-pending">
+      <%= render "shared/state", state: "pending", label: "Unavailable" %>
+      <span>The mirror did not return a valid PWH-1 message, so this page does not substitute a
+        local health check.</span>
+    </p>
   <% end %>
   <p class="t-caption muted">A PWH-1 message proves the Rails scheduler and key-holding sidecar
     reached HCS at that time. It does not prove every storefront or payment dependency is healthy.</p>

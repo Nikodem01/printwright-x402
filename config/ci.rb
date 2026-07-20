@@ -7,12 +7,13 @@ CI.run do
 
   step "Security: Gem audit", "bin/bundler-audit"
   step "Security: Importmap vulnerability audit", "bin/importmap audit"
-  step "Security: Brakeman code analysis", "bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error"
+  step "Security: Brakeman code analysis", "bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error --skip-files node_modules/,sidecar/node_modules/,mcp/node_modules/,verifier/node_modules/,wallet/node_modules/,scripts/spike/,app/assets/javascripts/hedera_wallet.js -i config/brakeman.ignore"
+  step "Tests: Clean database", "env RAILS_ENV=test bin/rails db:test:purge db:test:prepare"
   step "Tests: Rails", "bin/rails test"
+  step "Tests: System", "bin/rails test:system"
   step "Tests: Seeds", "env RAILS_ENV=test bin/rails db:seed:replant"
-
-  # Optional: Run system tests
-  # step "Tests: System", "bin/rails test:system"
+  step "Tests: Restore clean database", "env RAILS_ENV=test bin/rails db:test:purge db:test:prepare"
+  step "Security: Log hygiene", "bin/log-hygiene-check"
 
   # Optional: set a green GitHub commit status to unblock PR merge.
   # Requires the `gh` CLI and `gh extension install basecamp/gh-signoff`.

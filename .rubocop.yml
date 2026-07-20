@@ -14,6 +14,7 @@ AllCops:
     - "scripts/**/*"
     - "mcp/node_modules/**/*"
     - "selfhost-facilitator/node_modules/**/*"
+    - "wallet/node_modules/**/*"
     - "node_modules/**/*"
     - "vendor/**/*"
     - "db/schema.rb"

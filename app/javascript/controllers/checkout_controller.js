@@ -36,13 +36,13 @@ const TERMINAL_ERRORS = new Set([
 const TERMINAL_LABELS = { sold_out: "Sold out", duplicate_payment: "Already submitted", invalid_payload: "Unavailable" }
 
 // S3 checkout state machine (plan 06): idle -> quoting -> wallet -> settling
-// -> success | failed. The signer is a local demo-wallet daemon; the states,
-// copy and receipt are exactly what a HashPack-backed signer would use.
+// -> success | failed. Customer builds use Hedera WalletConnect; an explicitly
+// configured local signer remains available for deterministic development tests.
 export default class extends Controller {
   static targets = ["offer", "button", "status", "receipt"]
   static values = {
     downloadUrl: String,
-    walletUrl: { type: String, default: "http://localhost:4022" },
+    walletUrl: String,
     approvalUrl: String,
     buttonPrefix: { type: String, default: "Buy license" },
   }
@@ -111,16 +111,12 @@ export default class extends Controller {
 
       this.setState("wallet",
         `Sign in wallet: ${this.formatAmount(accept)} → ${accept.payTo} (network fee paid by facilitator)`)
-      const signed = await fetch(`${this.walletUrlValue}/sign`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ paymentRequired: quote }),
-      })
-      if (!signed.ok) {
-        const body = await signed.json().catch(() => ({}))
-        return this.fail("wallet_refused", `wallet refused: ${body.error || signed.status}`)
+      let headers
+      try {
+        headers = await this.sign(quote)
+      } catch (error) {
+        return this.fail("wallet_refused", error.message)
       }
-      const { headers } = await signed.json()
 
       const paymentHeaders = { accept: "application/json", ...headers }
       if (purchaseIntent) paymentHeaders["X-Printwright-Purchase-Intent"] = purchaseIntent
@@ -145,6 +141,25 @@ export default class extends Controller {
 
     this.pendingPayment = null
     this.success(body)
+  }
+
+  async sign(paymentRequired) {
+    if (this.hasWalletUrlValue) {
+      const signed = await fetch(`${this.walletUrlValue}/sign`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ paymentRequired }),
+      })
+      if (!signed.ok) {
+        const body = await signed.json().catch(() => ({}))
+        throw new Error(`wallet refused: ${body.error || signed.status}`)
+      }
+      return (await signed.json()).headers
+    }
+
+    if (!window.loadPrintwrightWallet) throw new Error("Wallet checkout is not configured")
+    const wallet = await window.loadPrintwrightWallet()
+    return wallet.sign(paymentRequired)
   }
 
   setState(state, message) {

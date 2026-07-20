@@ -3,7 +3,7 @@
   elsif @query.present?
     "#{@query} — Printwright"
   else
-    "Printwright — every print, licensed"
+    "Printwright — the 3D model store for AI agents"
   end %>
 <% content_for :title, page_title %>
 <% content_for :description, @catalog_definition.fetch(:description) if @catalog_definition %>
@@ -14,33 +14,50 @@
     <h1><%= @catalog_definition.fetch(:name) %></h1>
     <p class="muted"><%= @catalog_definition.fetch(:description) %></p>
   <% else %>
-    <h1>Every print, licensed.</h1>
-    <p class="t-small muted">A marketplace for licensed 3D-printable models. Every purchase mints
-      a tamper-evident license certificate on Hedera — proof of what was licensed, to whom, and
-      when, checkable by anyone, independent of Printwright.</p>
+    <%# The line claims a shelf rather than describing an attribute. Rights
+        move from headline to proof: the licence claim lives one line down,
+        where it is evidence for the promise instead of the promise. %>
+    <h1>The 3D model store for agents.</h1>
+    <p>Agents, print servers, and people — all buying over the same endpoint.
+      No account, no card, no API key. Every purchase mints a certificate
+      anyone can check.</p>
   <% end %>
 </section>
 
 <% unless @catalog_definition %>
 <div class="doors-grid" role="group" aria-label="Three ways to buy">
   <div class="door">
-    <h3>Agents</h3>
+    <h2>Agents</h2>
     <p class="t-small">REST + x402 over plain HTTP: request a download, get a
       <span class="mono">402</span> with payment requirements, pay in HBAR or USDC on Hedera,
       get the file and certificate back. No account, no card, no API key.
       <%= link_to "API docs →", docs_path %></p>
   </div>
   <div class="door">
-    <h3>Humans</h3>
+    <h2>Humans</h2>
     <p class="t-small">This storefront — the Buy button runs the same x402 negotiation, signed
       by a wallet instead of a script.</p>
   </div>
   <div class="door">
-    <h3>Print servers</h3>
+    <h2>Print servers</h2>
     <p class="t-small">A print job can pay a per-print royalty automatically at job start,
       before the job runs.</p>
   </div>
 </div>
+
+<section class="early-access-panel">
+  <div>
+    <h2>Design printable models?</h2>
+    <p class="t-small muted">Join designer early access. One email when onboarding opens;
+      no account, newsletter, or public profile is created.</p>
+  </div>
+  <%= form_with url: designer_early_access_path, class: "early-access-form" do %>
+    <%= label_tag :email_address, "Designer email", class: "visually-hidden" %>
+    <%= email_field_tag :email_address, nil, required: true, autocomplete: "email",
+          placeholder: "designer@example.com", "aria-label": "Designer email" %>
+    <%= submit_tag "Join early access", class: "btn btn-primary" %>
+  <% end %>
+</section>
 <% end %>
 
 <nav class="catalog-browse<%= " catalog-browse-compact" if @catalog_definition %>" aria-label="Browse the catalog">
@@ -88,13 +105,13 @@
 <div class="filters" role="group" aria-label="Filters">
   <%= link_to "Support-free",
         url_for(request.query_parameters.merge(supports_free: params[:supports_free].present? ? nil : "1").compact),
-        class: "pill", "aria-pressed": params[:supports_free].present? %>
+        class: "pill", "aria-current": (params[:supports_free].present? ? "true" : nil) %>
   <%= link_to "PLA",
         url_for(request.query_parameters.merge(material: params[:material] == "PLA" ? nil : "PLA").compact),
-        class: "pill", "aria-pressed": params[:material] == "PLA" %>
+        class: "pill", "aria-current": (params[:material] == "PLA" ? "true" : nil) %>
   <%= link_to "≤ $3",
         url_for(request.query_parameters.merge(max_price_cents: params[:max_price_cents].present? ? nil : 300).compact),
-        class: "pill", "aria-pressed": params[:max_price_cents].present? %>
+        class: "pill", "aria-current": (params[:max_price_cents].present? ? "true" : nil) %>
 </div>
 
 <% if @models.any? %>

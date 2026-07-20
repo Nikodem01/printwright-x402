@@ -1,0 +1,9 @@
+<%# Stack Seal — a disc of four strata: a seal and a sliced solid at once.
+    Drawn with fill-rule="evenodd" so the strata are knockouts, not painted
+    bars, which lets it sit on any background without a halo and recolour by
+    a single attribute. Inline (not an <img>) so it inherits currentColor and
+    stays themeable. %>
+<svg class="brand-mark" width="<%= local_assigns.fetch(:size, 40) %>" height="<%= local_assigns.fetch(:size, 40) %>"
+     viewBox="0 0 64 64" fill="currentColor" aria-hidden="true" focusable="false">
+  <path fill-rule="evenodd" d="M6 32A26 26 0 1 1 58 32A26 26 0 1 1 6 32Z M35 15.5H45.09A3 3 0 0 1 45.09 21.5H35A3 3 0 0 1 35 15.5Z M14.49 24.5H49.51A3 3 0 0 1 49.51 30.5H14.49A3 3 0 0 1 14.49 24.5Z M14.49 33.5H49.51A3 3 0 0 1 49.51 39.5H14.49A3 3 0 0 1 14.49 33.5Z M18.91 42.5H45.09A3 3 0 0 1 45.09 48.5H18.91A3 3 0 0 1 18.91 42.5Z"/>
+</svg>

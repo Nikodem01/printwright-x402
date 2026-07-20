@@ -30,7 +30,7 @@ jobs:
       - name: Lint (rubocop)
         run: bin/rubocop
       - name: Static security analysis (brakeman)
-        run: bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error --skip-files node_modules/,sidecar/node_modules/,mcp/node_modules/,verifier/node_modules/,scripts/spike/ -i config/brakeman.ignore
+        run: bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error --skip-files node_modules/,sidecar/node_modules/,mcp/node_modules/,verifier/node_modules/,wallet/node_modules/,scripts/spike/,app/assets/javascripts/hedera_wallet.js -i config/brakeman.ignore
       - name: Rails tests
         run: bin/rails test
       - name: Payment decoder fuzz and state-machine properties
@@ -39,6 +39,8 @@ jobs:
         run: bin/rails test:system
       - name: Seeds boot
         run: bin/rails db:seed:replant
+      - name: Restore clean test database
+        run: bin/rails db:test:purge db:test:prepare
       - name: Public x402 sandbox conformance
         run: |
           bin/rails server -p 3000 > tmp/conformance-server.log 2>&1 &
@@ -60,7 +62,7 @@ jobs:
           node-version: 20
       - name: Sidecar tests
         working-directory: sidecar
-        run: npm ci && npm test
+        run: npm ci && npm audit --audit-level=high && npm test
       - name: Sidecar production image
         run: docker build -t printwright-sidecar:ci sidecar
 
@@ -72,7 +74,7 @@ jobs:
         with:
           node-version: 20
       - name: Load harness contract
-        run: npm ci && npm run test:load && npm run test:conformance
+        run: npm ci && npm audit --audit-level=high && npm run test:load && npm run test:conformance
       - name: Client SDK tests and audit
         working-directory: client
         run: npm ci && npm audit --audit-level=high && npm test
@@ -86,7 +88,25 @@ jobs:
           node-version: 20
       - name: MCP stdio smoke
         working-directory: mcp
-        run: npm ci && npm test
+        run: npm ci && npm audit --audit-level=high && npm test
+
+  wallet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Browser wallet contract, audit, and deterministic bundle
+        working-directory: wallet
+        run: npm ci && npm audit --audit-level=high && npm test && npm run build && git diff --exit-code -- ../app/assets/javascripts/hedera_wallet.js
+
+  app-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rails production image
+        run: docker build -t printwright-app:ci .
 
   verifier:
     runs-on: ubuntu-latest
@@ -116,6 +136,8 @@ jobs:
         run: |
           set -e
           # ECDSA hex keys, PEM blocks, or real-looking env assignments.
+          # The deterministic wallet bundle contains public curve constants;
+          # its authored source is scanned here and its build is checked above.
           ! git grep -IE '(BEGIN (EC )?PRIVATE KEY|PRIVATE_KEY=[0-9a-fA-Fx]{32,}|[0-9a-f]{96,})' \
-              -- ':!*.lock' ':!*package-lock.json' \
+              -- ':!*.lock' ':!*package-lock.json' ':!app/assets/javascripts/hedera_wallet.js' \
             || (echo 'possible secret material found' && exit 1)

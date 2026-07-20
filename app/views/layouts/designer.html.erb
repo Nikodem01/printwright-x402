@@ -1,9 +1,7 @@
 <% content_for :content do %>
   <div class="dash">
     <nav class="dash-nav" aria-label="Designer">
-      <div class="t-caption muted" style="margin-bottom: var(--s-2)">
-        <%= Current.designer&.display_name %>
-      </div>
+      <div class="dash-who"><%= Current.designer&.display_name %></div>
       <%= link_to "Models", designer_models_path %>
       <%= link_to "Upload", new_designer_model_path %>
       <%= link_to "Bulk import", designer_imports_path %>

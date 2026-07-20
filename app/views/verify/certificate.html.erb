@@ -3,34 +3,59 @@
 <head>
   <meta charset="utf-8">
   <title>License certificate <%= @license.cert_id %> — Printwright</title>
+  <%# Paper is the target here, so this document keeps its own sheet rather
+      than the app's surfaces — there are no tonal planes on paper. It still
+      loads the app stylesheet, because the one thing it must not do is
+      change typeface: the serial and the hashes stay in the same families
+      they have everywhere else. %>
+  <%= stylesheet_link_tag :app %>
   <style>
     @page { size: A4; margin: 18mm; }
-    body { font: 13px/1.6 Georgia, serif; color: #16181d; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
-    .frame { border: 3px double #16181d; padding: 2rem 2.2rem; }
-    h1 { font-size: 21px; letter-spacing: .04em; margin: 0 0 .25rem; }
-    .sub { color: #555; font-size: 12px; margin-bottom: 1.4rem; }
-    dl { display: grid; grid-template-columns: 11em 1fr; gap: .35rem 1rem; margin: 1.2rem 0; }
-    dt { color: #555; } dd { margin: 0; font-family: ui-monospace, monospace; font-size: 12px; word-break: break-all; }
+    body {
+      font: 400 13px/1.6 var(--font-sans); font-stretch: 100%;
+      color: #141916; background: #fff;
+      max-width: 660px; margin: 2rem auto; padding: 0 1rem;
+    }
+    .frame { padding: 2rem 2.2rem; }
+    .eyebrow {
+      font-size: 10px; font-weight: 600; letter-spacing: .19em;
+      text-transform: uppercase; color: #566059;
+    }
+    h1 {
+      margin: .4rem 0 0; font-family: var(--font-mono); font-weight: 500;
+      font-size: 34px; letter-spacing: -.035em;
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+    .sub { color: #566059; font-size: 12px; margin: .5rem 0 1.6rem; }
+    /* Tabulated data — the one place a rule survives. */
+    dl { display: grid; grid-template-columns: 9em minmax(0, 1fr); margin: 1.4rem 0; }
+    dt { padding: .55rem 1rem .55rem 0; color: #566059; font-size: 11.5px; }
+    dd {
+      margin: 0; padding: .55rem 0; font-family: var(--font-mono);
+      font-size: 12px; font-variant-numeric: tabular-nums; word-break: break-all;
+    }
+    dt:not(:first-of-type), dt:not(:first-of-type) + dd { border-top: 1px solid #CBD3CE; }
     .qr { float: right; width: 108px; margin: 0 0 .8rem 1rem; }
-    .urls { font-size: 10.5px; color: #444; border-top: 1px solid #ccc; padding-top: .8rem; margin-top: 1.2rem; }
-    .urls div { word-break: break-all; font-family: ui-monospace, monospace; }
+    .urls { font-size: 10.5px; color: #566059; border-top: 1px solid #CBD3CE; padding-top: .8rem; margin-top: 1.2rem; }
+    .urls div { word-break: break-all; font-family: var(--font-mono); }
     .print-btn { position: fixed; top: 12px; right: 12px; }
     @media print { .print-btn { display: none } body { margin: 0 } }
   </style>
 </head>
 <body>
-  <button class="print-btn" id="print-btn">Print / save as PDF</button>
+  <button class="btn print-btn" id="print-btn">Print / save as PDF</button>
   <%= javascript_tag nonce: true do %>
     document.getElementById("print-btn").addEventListener("click", () => window.print());
   <% end %>
   <div class="frame">
     <div class="qr"><%= raw @qr_svg %></div>
-    <h1><%= @license.purchase.sandbox? ? "Sandbox Rehearsal Certificate" : "License Certificate" %></h1>
+    <span class="eyebrow"><%= @license.purchase.sandbox? ? "Sandbox rehearsal certificate" : "License certificate" %></span>
+    <h1><%= @license.cert_id %></h1>
     <div class="sub">
       <% if @license.purchase.sandbox? %>
         SANDBOX SIMULATION — not a Hedera record, payment, or printable-model license.
       <% else %>
-        Printwright ⬡ — every print, licensed. Publicly anchored on Hedera.
+        Printwright — the 3D model store for agents. Publicly anchored on Hedera.
       <% end %>
     </div>
 
@@ -50,7 +75,8 @@
     <% end %>
 
     <dl>
-      <dt>Certificate</dt><dd><%= @license.cert_id %></dd>
+      <%# The certificate id is the h1 above — repeating it here would make the
+          sheet's largest element compete with a row of small print. %>
       <dt>Model hash</dt><dd><%= @cert["model_hash"] %></dd>
       <dt><%= @license.purchase.sandbox? ? "Fake transaction" : "Payment tx" %></dt><dd><%= @cert["payment_tx"] %></dd>
       <dt>Terms hash</dt><dd><%= @cert["terms_hash"] %></dd>

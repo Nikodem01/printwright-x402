@@ -82,12 +82,12 @@ class CheckoutTest < ApplicationSystemTestCase
     assert_text "Your license library"
     assert_text "Browser Buy"
 
-    grant_count = DownloadGrant.count
+    grant_count = DownloadGrant.uncached { DownloadGrant.count }
     click_link "Re-download"
     Timeout.timeout(Capybara.default_max_wait_time) do
-      sleep 0.05 until DownloadGrant.count == grant_count + 1
+      sleep 0.05 until DownloadGrant.uncached { DownloadGrant.count } == grant_count + 1
     end
-    assert_equal grant_count + 1, DownloadGrant.count
+    assert_equal grant_count + 1, DownloadGrant.uncached { DownloadGrant.count }
   end
 
   test "facilitator rejection surfaces the failed state with a human message, retry button, and the raw reason" do

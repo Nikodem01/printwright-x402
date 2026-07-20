@@ -16,14 +16,14 @@
 <% end %>
 
 <% if @profile %>
-  <section style="margin-top: var(--s-5)">
+  <section class="section-block">
     <h2>Review <%= @profile.profile_name %></h2>
     <p class="t-small">Profile: <%= link_to @profile.profile_url, @profile.profile_url,
       target: "_blank", rel: "noopener noreferrer", class: "mono" %></p>
     <%= form_with url: designer_imports_path do %>
       <%= hidden_field_tag :profile_url, @profile.feed_url %>
       <%= hidden_field_tag :profile_digest, @profile.digest %>
-      <table class="facts-table" style="width:100%">
+      <table class="facts-table">
         <thead><tr><th>model</th><th>source license</th><th>decision</th></tr></thead>
         <tbody>
           <% @profile.models.each do |model| %>
@@ -48,14 +48,13 @@
         </tbody>
       </table>
       <% if @profile.models.any?(&:compatible) %>
-        <%= submit_tag "Import selected warranted drafts", class: "btn btn-primary",
-              style: "margin-top: var(--s-3)" %>
+        <%= submit_tag "Import selected warranted drafts", class: "btn btn-primary" %>
       <% end %>
     <% end %>
   </section>
 <% end %>
 
-<h2 style="margin-top: var(--s-6)">From a catalog ZIP</h2>
+<h2 class="section-head">From a catalog ZIP</h2>
 <p class="muted">Up to 50 models. The archive must contain <code>manifest.json</code> plus every referenced STL/3MF/STEP and optional PNG/JPEG render.</p>
 
 <%= form_with url: designer_imports_path, multipart: true do %>

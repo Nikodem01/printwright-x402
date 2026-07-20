@@ -49,6 +49,8 @@ class HardeningTest < ActionDispatch::IntegrationTest
     assert_includes csp, "script-src 'self' 'nonce-"
     assert_includes csp, "default-src 'self'"
     assert_includes csp, "frame-ancestors 'none'"
+    assert_includes csp, "wss://relay.walletconnect.com"
+    assert_includes csp, "frame-src 'self' https://verify.walletconnect.com"
     # the importmap inline script carries the nonce (or checkout JS breaks)
     assert_match(/<script type="importmap"[^>]*nonce=/, response.body)
   end

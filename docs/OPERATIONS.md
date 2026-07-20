@@ -36,6 +36,11 @@ sidecar. The sidecar is a separate image and is the only container receiving Hed
 Copy `.env.example` values into the operator shell or a password manager; `.kamal/secrets` contains
 only indirection and must never contain literal values.
 
+Create a Reown project for the exact production origin and set its public identifier as
+`WALLETCONNECT_PROJECT_ID`. A production boot refuses to start without it. This identifier is not
+a signing secret; buyer approval remains inside the connected wallet. After deployment, connect
+HashPack and complete the HBAR/USDC browser checks in the review release checklist.
+
 Build and push the two images, validate the rendered manifest, then boot accessories before setup:
 
 ```bash

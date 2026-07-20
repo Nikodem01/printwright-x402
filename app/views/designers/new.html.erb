@@ -5,7 +5,7 @@
 
   <%= form_with model: @designer, url: designers_path do |f| %>
     <% if @designer.errors.any? %>
-      <div class="flash flash-bad"><%= @designer.errors.full_messages.to_sentence %></div>
+      <div class="flash flash-bad"><%= render "shared/state_mark", state: "void" %><span><%= @designer.errors.full_messages.to_sentence %></span></div>
     <% end %>
     <div class="field"><%= f.label :display_name, "Studio / display name" %><%= f.text_field :display_name, required: true %></div>
     <div class="field"><%= f.label :email_address %><%= f.email_field :email_address, required: true %></div>

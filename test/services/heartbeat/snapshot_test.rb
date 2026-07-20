@@ -17,23 +17,25 @@ class Heartbeat::SnapshotTest < ActiveSupport::TestCase
   end
 
   test "accepts only a signed-topic pwh-1 message and exposes raw proof links" do
-    heartbeat = {
-      schema: "pwh-1", service: "printwright", status: "alive",
-      network: "hedera:testnet", observed_at: "2026-07-19T12:00:00Z"
-    }
-    stub_request(:get, QUERY).to_return(body: {
-      messages: [ {
-        topic_id: TOPIC, sequence_number: 3, consensus_timestamp: "1784450000.123456789",
-        message: Base64.strict_encode64(JSON.generate(heartbeat))
-      } ]
-    }.to_json)
+    travel_to Time.zone.local(2026, 7, 19, 12, 5) do
+      heartbeat = {
+        schema: "pwh-1", service: "printwright", status: "alive",
+        network: "hedera:testnet", observed_at: "2026-07-19T12:00:00Z"
+      }
+      stub_request(:get, QUERY).to_return(body: {
+        messages: [ {
+          topic_id: TOPIC, sequence_number: 3, consensus_timestamp: "1784450000.123456789",
+          message: Base64.strict_encode64(JSON.generate(heartbeat))
+        } ]
+      }.to_json)
 
-    snapshot = Heartbeat::Snapshot.call
+      snapshot = Heartbeat::Snapshot.call
 
-    assert_equal [ "ok", TOPIC, 3, "2026-07-19T12:00:00Z" ],
-                 snapshot.values_at(:status, :topic_id, :sequence_number, :observed_at)
-    assert_includes snapshot[:message_url], "/messages/3"
-    assert_includes snapshot[:hashscan_url], "/topic/#{TOPIC}"
+      assert_equal [ "ok", TOPIC, 3, "2026-07-19T12:00:00Z" ],
+                   snapshot.values_at(:status, :topic_id, :sequence_number, :observed_at)
+      assert_includes snapshot[:message_url], "/messages/3"
+      assert_includes snapshot[:hashscan_url], "/topic/#{TOPIC}"
+    end
   end
 
   test "invalid or unavailable mirror data is never presented as alive" do

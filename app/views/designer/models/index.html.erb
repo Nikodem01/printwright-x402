@@ -1,21 +1,25 @@
 <% content_for :title, "My models — Printwright" %>
 <h1>My models</h1>
 <% if @models.any? %>
-  <table class="facts-table" style="width:100%">
+  <div class="table-scroll">
+  <table class="facts-table">
     <tr><th>title</th><th>status</th><th>offers</th><th>hash</th><th></th></tr>
     <% @models.each do |model| %>
       <tr>
         <td><%= link_to model.title, edit_designer_model_path(model) %></td>
-        <td><span class="badge <%= model.published? ? "badge-ok" : "badge-pending" %>"><%= model.status %></span></td>
+        <td><%= render "shared/state", state: model.published? ? "settled" : "pending",
+                       label: model.status.humanize %></td>
         <td><%= model.license_offers.map { |o| "#{o.kind} $#{format('%.2f', o.price_cents / 100.0)}" }.join(" · ") %></td>
         <td class="mono"><%= model.file_hash&.truncate(18) || "—" %></td>
         <td><%= link_to "view", model_page_path(model.slug) if model.published? %></td>
       </tr>
     <% end %>
   </table>
+  </div>
 <% else %>
   <div class="empty-state">
-    <p>No models yet.</p>
-    <%= link_to "Upload your first model", new_designer_model_path, class: "btn btn-primary", style: "width:auto" %>
+    <h2>No models yet</h2>
+    <p>Your published models and their license offers will be listed here.</p>
+    <%= link_to "Upload your first model", new_designer_model_path, class: "btn btn-primary" %>
   </div>
 <% end %>

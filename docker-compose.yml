@@ -3,7 +3,7 @@
 # - sidecar: the HCS signing service (also runs fine on the host: cd sidecar && npm start)
 services:
   postgres:
-    image: postgres:17
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: printwright
       POSTGRES_PASSWORD: printwright
@@ -14,7 +14,9 @@ services:
 
   sidecar:
     build: ./sidecar
-    env_file: .env
+    env_file:
+      - .env
+      - sidecar/.env
     ports:
       - "4021:4021"
 

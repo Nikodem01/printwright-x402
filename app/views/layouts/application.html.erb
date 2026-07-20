@@ -1,15 +1,18 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <% page_title = content_for(:title) || "Printwright — every print, licensed" %>
-    <% page_description = content_for(:description) || "License printable designs, pay per print, and verify every right on Hedera." %>
+    <%# "agents" reads bare in the header, where the page disambiguates it
+        visually. In <title> and meta there is no visual context and a cold
+        reader might think real-estate agent, so those say "AI agents". %>
+    <% page_title = content_for(:title) || "Printwright — the 3D model store for AI agents" %>
+    <% page_description = content_for(:description) || "Licensed 3D-printable models an AI agent, print server, or person can buy over plain HTTP. Pay in HBAR or USDC on Hedera; every purchase mints a verifiable certificate." %>
     <% social_image = content_for(:social_image) || "#{request.base_url}/og-printwright.png" %>
-    <% social_image_alt = content_for(:social_image_alt) || "Printwright — every print, licensed. Rights anchored on Hedera." %>
+    <% social_image_alt = content_for(:social_image_alt) || "Printwright — the 3D model store for agents. Rights anchored on Hedera." %>
     <title><%= page_title %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="application-name" content="Printwright">
     <meta name="description" content="<%= page_description %>">
-    <meta name="theme-color" content="#0f766e">
+    <meta name="theme-color" content="#1B5E45">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Printwright">
     <meta property="og:title" content="<%= page_title %>">
@@ -29,6 +32,10 @@
 
     <%= yield :head %>
 
+    <link rel="preload" href="<%= asset_path("archivo-variable.woff2") %>"
+          as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="<%= asset_path("ibm-plex-mono-600.woff2") %>"
+          as="font" type="font/woff2" crossorigin>
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
@@ -38,14 +45,19 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
+  <% wallet_project_id = ENV["WALLETCONNECT_PROJECT_ID"].presence %>
+  <body<% if wallet_project_id %> data-controller="wallet-loader"
+    data-wallet-loader-module-url-value="<%= asset_path("hedera_wallet.js") %>"<% end %>>
+    <%# The contour ground. Fixed, non-interactive, one per page. %>
+    <canvas id="ground-tex" aria-hidden="true" data-controller="texture"></canvas>
+
     <header class="site-header">
       <div class="container">
         <%= link_to root_path, class: "wordmark" do %>
-          <%= image_tag "/brand-mark.svg", alt: "", width: 40, height: 40 %>
+          <%= render "shared/brand_mark", size: 40 %>
           <span class="wordmark-copy">
             <span class="wordmark-name">Printwright</span>
-            <span class="tagline">Every print, licensed.</span>
+            <span class="tagline">3D model store for agents.</span>
           </span>
         <% end %>
         <%= form_with url: root_path, method: :get, class: "search-form" do %>
@@ -53,13 +65,34 @@
                  aria-label="Search models">
           <button class="btn" type="submit">Search</button>
         <% end %>
-        <%= link_to "For designers", new_session_path, class: "t-small" %>
+        <nav class="header-actions t-small" aria-label="Account and wallet">
+          <%= link_to "My library", new_license_library_path %>
+          <% if authenticated? %>
+            <%= link_to "Dashboard", designer_models_path %>
+          <% else %>
+            <%= link_to "For designers", new_session_path %>
+          <% end %>
+          <% if wallet_project_id %>
+            <span class="wallet-control" data-hedera-wallet
+                  data-project-id="<%= wallet_project_id %>"
+                  data-network="<%= Hedera::Network.name %>" data-connected="false">
+              <button class="linklike wallet-account" type="button" data-wallet-connect
+                      data-action="wallet-loader#connectWallet">Connect wallet</button>
+              <button class="linklike wallet-disconnect" type="button" data-wallet-disconnect
+                      data-action="wallet-loader#disconnectWallet" hidden>Disconnect</button>
+            </span>
+          <% end %>
+        </nav>
       </div>
     </header>
 
     <main class="container">
-      <% if notice %><div class="flash flash-ok"><%= notice %></div><% end %>
-      <% if alert %><div class="flash flash-bad"><%= alert %></div><% end %>
+      <% if notice %>
+        <div class="flash flash-ok"><%= render "shared/state_mark", state: "settled" %><span><%= notice %></span></div>
+      <% end %>
+      <% if alert %>
+        <div class="flash flash-bad"><%= render "shared/state_mark", state: "void" %><span><%= alert %></span></div>
+      <% end %>
       <%= content_for?(:content) ? yield(:content) : yield %>
     </main>
 
@@ -68,7 +101,7 @@
         License certificates anchor to Hedera Consensus Service topic
         <a class="mono" href="<%= Hedera::Network.hashscan_base %>/topic/<%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %>"><%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %></a>
         — publicly verifiable on the mirror node. Payments via x402 (Hedera <%= Hedera::Network.name %>, HBAR/USDC).
-        <span class="t-small" style="display:block; margin-top: var(--s-1)">
+        <span class="footer-links t-small">
           <%= link_to "About", about_path %> · <%= link_to "Pricing", pricing_path %> ·
           <%= link_to "Terms", terms_path %> · <%= link_to "Privacy", privacy_path %> ·
           <%= link_to "Takedown", takedown_path %> · <%= link_to "API docs", docs_path %> ·

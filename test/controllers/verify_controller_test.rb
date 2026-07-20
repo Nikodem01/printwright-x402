@@ -28,13 +28,17 @@ class VerifyControllerTest < ActionDispatch::IntegrationTest
       .to_return(status: status, body: JSON.generate(body), headers: { "content-type" => "application/json" })
   end
 
-  test "anchored matching cert renders the green banner with consensus time" do
+  # Status is shape-first and never green: green marks issuance only, so a
+  # settled certificate takes the ink state mark, and the accent is spent on
+  # the on-chain facts instead.
+  test "anchored matching cert renders the settled state with consensus time" do
     anchor!
     stub_mirror({ message: Base64.strict_encode64(JSON.generate(@cert)), consensus_timestamp: "1784141018.086938437" })
     get verify_path(@license.cert_id)
     assert_response :success
-    assert_select ".banner-ok", text: /Verified on Hedera/
-    assert_select ".fact-grid .mono", text: /#1/
+    assert_select ".banner-ok .st-settled", text: /Verified on Hedera/
+    assert_select ".cert-facts dd.chain", text: /1784141018\.086938437/
+    assert_select ".cert-facts dd.mono", text: /1 of/
     assert_select ".evidence-footer a", minimum: 3
     assert_select 'meta[property="og:image"][content$="/share-card"]'
   end
