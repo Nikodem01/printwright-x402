@@ -39,8 +39,6 @@ jobs:
         run: bin/rails test:system
       - name: Seeds boot
         run: bin/rails db:seed:replant
-      - name: Restore clean test database
-        run: bin/rails db:test:purge db:test:prepare
       - name: Public x402 sandbox conformance
         run: |
           bin/rails server -p 3000 > tmp/conformance-server.log 2>&1 &
@@ -51,6 +49,8 @@ jobs:
             sleep 1
           done
           node conformance/suite.mjs --url http://127.0.0.1:3000
+      - name: Restore clean test database
+        run: bin/rails db:test:purge db:test:prepare
       - name: Log hygiene
         run: bin/log-hygiene-check
   sidecar:
