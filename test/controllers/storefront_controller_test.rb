@@ -29,9 +29,9 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
     assert_select ".empty-state"
   end
 
-  test "filter pills carry pressed state" do
+  test "active filter pills expose their current state" do
     get root_path(supports_free: "1")
-    assert_select '.pill[aria-pressed="true"]', text: "Support-free"
+    assert_select '.pill[aria-current="true"]', text: "Support-free"
   end
 
   test "category pages expose curated taxonomy and only matching models" do
@@ -131,9 +131,9 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
   test "landing page narrates the three doors and how a purchase works" do
     get root_path
     assert_response :success
-    assert_select "h3", text: "Agents"
-    assert_select "h3", text: "Humans"
-    assert_select "h3", text: /print server/i
+    assert_select "h2", text: "Agents"
+    assert_select "h2", text: "Humans"
+    assert_select "h2", text: /print server/i
     assert_select "a[href=?]", docs_path
   end
 end

@@ -16,7 +16,7 @@
           <dt>Network</dt><dd><%= seller[:network] %></dd>
           <dt>Asset</dt><dd><%= seller[:asset] %></dd>
           <dt>Observed price</dt><dd><%= seller[:price] %></dd>
-          <dt>Status</dt><dd><span class="badge badge-ok">Challenge verified</span></dd>
+          <dt>Status</dt><dd><%= render "shared/state", state: "settled", label: "Challenge verified" %></dd>
         </dl>
         <p class="t-small"><%= seller[:verification] %></p>
         <p class="mono directory-endpoint"><%= seller[:endpoint] %></p>

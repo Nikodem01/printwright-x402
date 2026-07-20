@@ -1,0 +1,8 @@
+<%# Status mark plus its word. Shape carries the meaning — filled / open /
+    barred — so it survives greyscale and every form of colour blindness;
+    hue only reinforces. The word is mandatory: never render the mark alone.
+    Green never appears here. "Settled" is a judgement, not an issuance. %>
+<span class="state st-<%= state %>">
+  <%= render "shared/state_mark", state: state %>
+  <%= label %>
+</span>

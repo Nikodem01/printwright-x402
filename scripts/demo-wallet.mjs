@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Demo wallet signer: a separate local process holding ONLY the demo buyer's
 // key — architecturally a wallet (the marketplace never sees the key). The
-// browser checkout asks it to sign an x402 PaymentRequired quote; swapping
-// this call for HashPack's hashconnect.signTransaction is the planned upgrade.
+// browser checkout can use it only when DEMO_WALLET_URL is explicitly set.
+// Customer builds use the maintained WalletConnect module in wallet/.
 import "dotenv/config";
 import http from "node:http";
 import { x402Client, x402HTTPClient } from "@x402/core/client";

@@ -14,7 +14,7 @@
 <% end %>
 
 <% if @shares.any? %>
-  <table class="facts-table" style="width:100%">
+  <table class="facts-table">
     <tr><th>date</th><th>model</th><th>license</th><th>your share</th><th>money</th><th>cert</th></tr>
     <% @shares.each do |share| %>
       <% purchase = share.purchase %>

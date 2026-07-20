@@ -6,52 +6,87 @@
   <% content_for :head do %><meta http-equiv="refresh" content="5"><% end %>
 <% end %>
 
+<%# Status is shape-first: the mark carries the state so it survives greyscale
+    and every form of colour blindness, and the word next to it is mandatory.
+    No tinted banner fill — the colour lives in the mark and the label. %>
+<% state, state_word = case @check.state
+     when :anchored then [ "settled", "Settled" ]
+     when :mismatch then [ "void", "Mismatch" ]
+     else [ "pending", @check.state == :sandbox ? "Sandbox" : "Pending" ]
+   end %>
+
 <div class="verify-page">
   <% case @check.state %>
   <% when :sandbox %>
     <div class="verify-banner banner-pending banner-sandbox">
-      <strong>Sandbox simulation — not on Hedera.</strong>
-      This certificate is stored on Printwright's local throwaway topic; no funds moved and no
-      printable model was delivered.
+      <%= render "shared/state", state: "pending", label: "Sandbox" %>
+      <span>Simulation — not on Hedera. This certificate is stored on Printwright's local
+        throwaway topic; no funds moved and no printable model was delivered.</span>
     </div>
   <% when :anchored %>
     <div class="verify-banner banner-ok">
-      <strong>✓ Verified on Hedera</strong> — matches the on-chain record.
-      <span class="mono">consensus <%= @check.consensus_timestamp %></span>
+      <%= render "shared/state", state: "settled", label: "Verified on Hedera" %>
+      <span>Matches the on-chain record.</span>
     </div>
   <% when :minting %>
     <div class="verify-banner banner-pending">
-      <strong>Minting…</strong> — the certificate is being anchored to the Hedera Consensus
-      Service. This page refreshes automatically (mirror-node lag is a few seconds).
+      <%= render "shared/state", state: "pending", label: "Minting" %>
+      <span>The certificate is being anchored to the Hedera Consensus Service. This page
+        refreshes automatically — mirror-node lag is a few seconds.</span>
     </div>
   <% when :mismatch %>
     <div class="verify-banner banner-bad">
-      <strong>✗ Mismatch</strong> — the on-chain record differs from the marketplace copy in:
-      <span class="mono"><%= @check.mismatched_keys.join(", ") %></span>. Both copies shown below.
+      <%= render "shared/state", state: "void", label: "Mismatch" %>
+      <span>The on-chain record differs from the marketplace copy in
+        <span class="mono"><%= @check.mismatched_keys.join(", ") %></span>. Both copies shown below.</span>
     </div>
   <% end %>
 
   <div class="cert-card">
-    <header>
-      <span class="t-caption muted"><%= @license.purchase.sandbox? ? "Sandbox rehearsal certificate" : "License Certificate" %></span>
-      <div class="mono cert-id"><%= @license.cert_id %></div>
-    </header>
+    <div class="cert-top">
+      <div>
+        <span class="cert-eyebrow"><%= @license.purchase.sandbox? ? "Sandbox rehearsal certificate" : "License certificate" %></span>
+        <%# The largest object on this page. Nothing outranks it. %>
+        <p class="cert-id"><%= @license.cert_id %></p>
+      </div>
+      <%= render "shared/state", state: state, label: state_word %>
+    </div>
 
     <div class="cert-model">
       <% if (render_file = @model.render_file)&.file&.attached? %>
         <%= image_tag render_file.file, alt: @model.title, class: "cert-thumb" %>
       <% end %>
       <div>
-        <h2 style="margin-bottom: var(--s-1)"><%= link_to @model.title, model_page_path(@model.slug), style: "color: inherit" %></h2>
+        <h2 class="cert-model-title"><%= link_to @model.title, model_page_path(@model.slug) %></h2>
         <div class="t-small muted">by <%= link_to @model.designer.display_name, designer_path(@model.designer) %></div>
       </div>
     </div>
 
-    <% if @cert.present? %>
-      <dl class="fact-grid">
-        <dt>License type</dt><dd><%= @cert["license_type"]&.humanize %></dd>
-        <dt>Unit serial</dt><dd class="mono">#<%= @cert["unit_serial"] %></dd>
-        <dt>Issued <span class="t-caption muted">(<%= @license.purchase.sandbox? ? "local sandbox time" : "network consensus time" %>)</span></dt>
+    <%# The on-chain facts lead, at or above body size, in --chain. They are
+        the product's differentiator, not chrome — the system this replaces
+        set them two steps below body text in a footer link colour. %>
+    <dl class="cert-facts">
+      <% if @license.hcs_topic_id.present? %>
+        <dt>Topic</dt>
+        <dd class="mono chain">
+          <a href="<%= Hedera::Network.hashscan_base %>/topic/<%= @license.hcs_topic_id %>"><%= @license.hcs_topic_id %></a>
+        </dd>
+      <% end %>
+      <% if @license.hcs_sequence_number.present? %>
+        <dt>Sequence</dt><dd class="mono chain"><%= @license.hcs_sequence_number %></dd>
+      <% end %>
+      <% if @check.consensus_timestamp.present? %>
+        <dt>Consensus</dt><dd class="mono chain"><%= @check.consensus_timestamp %></dd>
+      <% end %>
+      <dt>Unit</dt>
+      <dd class="mono">
+        <%= @cert.present? ? @cert["unit_serial"] : @license.serial %> of
+        <%= @license.purchase.license_offer.max_units || "unlimited" %> ·
+        <%= @license.purchase.license_offer.kind.humanize.downcase %>
+      </dd>
+
+      <% if @cert.present? %>
+        <dt>Issued</dt>
         <dd class="mono">
           <% if @check.consensus_timestamp %>
             <% issued_at = Time.at(@check.consensus_timestamp.to_r).utc %>
@@ -61,6 +96,7 @@
           <% else %>
             <%= @cert["issued_at"] %>
           <% end %>
+          <span class="fact-note"><%= @license.purchase.sandbox? ? "local sandbox time" : "network consensus time" %></span>
         </dd>
         <dt>Designer</dt>
         <dd>
@@ -83,14 +119,17 @@
           <% if offer.terms_version && Licensing::Documents.hash(offer.terms_version, offer.kind) == @cert["terms_hash"] %>
             <%= link_to "read the licensed terms", license_document_path(version: offer.terms_version, kind: offer.kind), class: "t-small" %>
           <% else %>
-            <span class="t-caption muted">(hash of the offer's terms as they stood at purchase — the anchored hash is the contract)</span>
+            <span class="fact-note">hash of the offer's terms as they stood at purchase — the anchored hash is the contract</span>
           <% end %>
         </dd>
-      </dl>
-    <% end %>
+      <% end %>
+    </dl>
 
     <% if @check.state == :mismatch %>
       <h3>Marketplace copy vs on-chain copy</h3>
+      <%# Wide content scrolls inside its own box — the page body must never
+          scroll sideways. %>
+      <div class="table-scroll">
       <table class="facts-table">
         <tr><th>field</th><th>marketplace</th><th>on-chain</th></tr>
         <% (@check.onchain.keys | @license.cert_json.keys).each do |key| %>
@@ -101,6 +140,7 @@
           </tr>
         <% end %>
       </table>
+      </div>
     <% end %>
   </div>
 
@@ -117,7 +157,7 @@
       <a class="mono" href="<%= @check.mirror_url %>">raw mirror message ↗</a>
     <% end %>
     <% if @license.nft_serial.present? %>
-      <dl class="facts-table" style="margin-top: var(--s-3)">
+      <dl class="cert-facts">
         <dt>License NFT</dt>
         <dd>
           <a class="mono" href="<%= Hedera::Network.hashscan_base %>/token/<%= @license.nft_token_id %>/<%= @license.nft_serial %>">
@@ -130,7 +170,7 @@
         </dd>
       </dl>
     <% end %>
-    <p class="t-small" style="margin-top: var(--s-3)">
+    <p class="t-small">
       <%= link_to(@license.purchase.sandbox? ? "Printable sandbox record" : "Printable certificate",
                   verify_certificate_path(@license.verify_slug)) %> ·
       <%= link_to "Share card", verify_share_card_path(@license.verify_slug) %> ·

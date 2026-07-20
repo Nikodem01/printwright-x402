@@ -86,6 +86,7 @@ Rails.application.routes.draw do
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
   root "storefront#index"
+  post "designer-early-access", to: "early_access_signups#create", as: :designer_early_access
   get "categories/:category", to: "storefront#index", as: :category
   get "collections/:collection", to: "storefront#index", as: :collection
   get "models/:slug", to: "storefront#show", as: :model_page

@@ -31,7 +31,7 @@
 
 <h2>Ledger totals</h2>
 <div class="table-scroll">
-  <table class="facts-table" style="width:100%">
+  <table class="facts-table">
     <thead><tr><th>kind</th><th>asset</th><th>total</th><th>currently owed</th></tr></thead>
     <tbody>
       <% @ledger_totals.each do |(kind, asset), amount| %>
@@ -54,7 +54,7 @@
   <% end %>
 </nav>
 <div class="table-scroll">
-  <table class="facts-table" style="width:100%">
+  <table class="facts-table">
     <thead><tr><th>id</th><th>age</th><th>model</th><th>status</th><th>buyer / tx</th><th>actions</th></tr></thead>
     <tbody>
       <% @purchases.each do |purchase| %>
@@ -82,7 +82,7 @@
 <h2>Certificates waiting for HCS</h2>
 <% if @minting_licenses.any? %>
   <div class="table-scroll">
-    <table class="facts-table" style="width:100%">
+    <table class="facts-table">
       <% @minting_licenses.each do |license| %>
         <tr>
           <td class="mono"><%= license.cert_id %></td>
@@ -98,7 +98,7 @@
 
 <h2>Designers</h2>
 <div class="table-scroll">
-  <table class="facts-table" style="width:100%">
+  <table class="facts-table">
     <thead><tr><th>designer</th><th>identity</th><th>payout account</th><th>actions</th></tr></thead>
     <tbody>
       <% @designers.each do |designer| %>
@@ -124,7 +124,7 @@
 
 <h2>Operator audit</h2>
 <div class="table-scroll">
-  <table class="facts-table" style="width:100%">
+  <table class="facts-table">
     <thead><tr><th>time</th><th>actor</th><th>action</th><th>subject</th><th>result</th></tr></thead>
     <tbody>
       <% @audit_logs.each do |log| %>

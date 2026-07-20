@@ -23,8 +23,11 @@
       <%= link_to "Topic on HashScan ↗", hcs[:hashscan_url], class: "mono" %>
     </p>
   <% else %>
-    <p class="verify-banner banner-pending">The mirror node is temporarily unavailable. Local
-      revenue books remain visible below; no cached or database count is presented as on-chain.</p>
+    <p class="verify-banner banner-pending">
+      <%= render "shared/state", state: "pending", label: "Unavailable" %>
+      <span>The mirror node is temporarily unavailable. Local revenue books remain visible below;
+        no cached or database count is presented as on-chain.</span>
+    </p>
   <% end %>
   <p class="t-caption muted">The topic sequence is the message count because this submit-key-
     protected topic contains only PWC-1 certificates. A local difference is disclosed rather

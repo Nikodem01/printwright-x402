@@ -1,7 +1,4 @@
 import { Controller } from "@hotwired/stimulus"
-import * as THREE from "three"
-import { OrbitControls } from "three/addons/controls/OrbitControls.js"
-import { STLLoader } from "three/addons/loaders/STLLoader.js"
 
 export default class extends Controller {
   static targets = ["stage", "fallback", "status"]
@@ -27,15 +24,29 @@ export default class extends Controller {
     this.renderer?.domElement.remove()
   }
 
-  load() {
-    const loader = new STLLoader()
-    loader.load(this.urlValue, (geometry) => this.build(geometry), undefined, () => this.fallback())
+  async load() {
+    try {
+      const [THREE, { OrbitControls }, { STLLoader }] = await Promise.all([
+        import("three"),
+        import("three/addons/controls/OrbitControls.js"),
+        import("three/addons/loaders/STLLoader.js")
+      ])
+      if (this.disconnected) return
+
+      this.THREE = THREE
+      this.OrbitControls = OrbitControls
+      const loader = new STLLoader()
+      loader.load(this.urlValue, (geometry) => this.build(geometry), undefined, () => this.fallback())
+    } catch (_error) {
+      this.fallback()
+    }
   }
 
   build(geometry) {
     if (this.disconnected || !geometry.getAttribute("position")?.count) return
 
     try {
+      const THREE = this.THREE
       this.geometry = geometry
       geometry.computeVertexNormals()
       geometry.center()
@@ -67,7 +78,7 @@ export default class extends Controller {
       this.renderer.domElement.setAttribute("role", "img")
       this.stageTarget.prepend(this.renderer.domElement)
 
-      this.controls = new OrbitControls(this.camera, this.renderer.domElement)
+      this.controls = new this.OrbitControls(this.camera, this.renderer.domElement)
       this.controls.enableDamping = true
       this.controls.enablePan = false
       this.controls.minDistance = radius * 1.2

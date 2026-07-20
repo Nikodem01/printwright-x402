@@ -93,12 +93,12 @@
 
 <% if model.persisted? && !model.published? %>
   <%= form_with url: publish_designer_model_path(model), method: :post, class: "publish-form" do |pf| %>
-    <label class="t-small" style="display:block; margin-top: var(--s-3)">
+    <label class="t-small publish-note">
       <input type="checkbox" name="warranty" value="1">
       I warrant that this model is my own work or work I am licensed to sell,
       and that it prints as described. This warranty is recorded and named in
       every license certificate sold. (<%= link_to "designer warranty terms", license_document_path(version: "v1", kind: "personal"), target: "_blank" %>, §4)
     </label>
-    <%= pf.submit "Publish — freeze the bundle hash and go live", class: "btn", style: "margin-top: var(--s-2)" %>
+    <%= pf.submit "Publish — freeze the bundle hash and go live", class: "btn" %>
   <% end %>
 <% end %>

@@ -2,7 +2,7 @@
 <% content_for :head do %><meta name="robots" content="noindex,nofollow"><% end %>
 
 <div class="container" style="max-width: 760px">
-  <div class="badge badge-ok">✓ paid license</div>
+  <%= render "shared/state", state: "settled", label: "Paid license" %>
   <h1>Purchase receipt</h1>
   <p class="muted">Keep this private URL. It is a durable capability for this receipt and model re-download.</p>
 
@@ -19,9 +19,9 @@
   </dl>
 
   <p><%= link_to "Re-download model file", purchase_receipt_download_path(@license.cert_id, token: params[:token]),
-    class: "btn btn-primary" %></p>
+    class: "btn btn-primary", data: { turbo: false } %></p>
 
-  <section style="margin-top: var(--s-6)">
+  <section style="margin-top: var(--s7)">
     <h2>Optional license library</h2>
     <p class="t-small">Save this license under an email address to receive a private magic link.
       No buyer account or password is created. You can keep using this receipt URL without email.</p>

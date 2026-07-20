@@ -13,7 +13,7 @@
   <% end %>
 
   <% if @models.any? %>
-    <h2 style="margin-top: var(--s-5)"><%= pluralize(@models.size, "published model") %></h2>
+    <h2 style="margin-top: var(--s6)"><%= pluralize(@models.size, "published model") %></h2>
     <div class="card-grid">
       <%= render partial: "storefront/model_card", collection: @models, as: :model %>
     </div>

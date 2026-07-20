@@ -18,8 +18,6 @@ class ResponsiveTest < ApplicationSystemTestCase
       tags: %w[cable clip organizer desk]
     )
     @model.license_offers.create!(kind: "personal", price_cents: 90, currency: "USDC", terms_md: "T.")
-    stub_request(:get, %r{testnet\.mirrornode\.hedera\.com/api/v1/topics/.+/messages})
-      .to_return(body: { messages: [] }.to_json)
   end
 
   test "no public page scrolls horizontally at any supported width" do

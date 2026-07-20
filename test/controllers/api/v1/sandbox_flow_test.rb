@@ -93,7 +93,9 @@ class Api::V1::SandboxFlowTest < ActionDispatch::IntegrationTest
 
     get verify_certificate_path(license.verify_slug)
     assert_response :success
-    assert_select "h1", text: /Sandbox Rehearsal Certificate/
+    # The serial is the sheet's h1 now; the kind moved to the eyebrow above it.
+    assert_select "h1", text: /sandbox-pw-\d+/
+    assert_select ".eyebrow", text: /Sandbox rehearsal certificate/
     assert_includes response.body, "grants no rights"
     assert_not_includes response.body, "Publicly anchored on Hedera"
 

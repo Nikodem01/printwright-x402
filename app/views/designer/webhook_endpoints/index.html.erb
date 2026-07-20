@@ -4,7 +4,7 @@
 <p><%= link_to "Add endpoint", new_designer_webhook_endpoint_path, class: "button" %></p>
 
 <% if @endpoints.any? %>
-  <table class="facts-table" style="width:100%">
+  <table class="facts-table">
     <tr><th>endpoint</th><th>events</th><th>status</th><th></th></tr>
     <% @endpoints.each do |endpoint| %>
       <tr>
