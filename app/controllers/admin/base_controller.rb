@@ -1,7 +1,11 @@
 class Admin::BaseController < ApplicationController
   layout "admin"
 
+  before_action -> { rodauth.require_account }
   before_action :require_admin
+  # Operators hold money-moving powers, so 2FA is mandatory. An admin without it
+  # is bounced to enrollment; with it set up, login already forced the second factor.
+  before_action -> { rodauth.require_two_factor_setup }
   rate_limit to: 60, within: 1.minute, name: "all",
     by: -> { "#{Current.designer&.id}:#{request.remote_ip}" },
     store: RateLimitStore, with: :admin_rate_limited

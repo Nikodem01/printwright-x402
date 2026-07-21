@@ -1,6 +1,4 @@
 class DiscoveryController < ApplicationController
-  allow_unauthenticated_access
-
   def catalog
     expires_in 1.minute, public: true
     models = Model3d.published.includes(:designer, :license_offers).order(:slug)

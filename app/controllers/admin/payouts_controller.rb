@@ -3,6 +3,9 @@ class Admin::PayoutsController < Admin::BaseController
     by: -> { "#{Current.designer&.id}:#{request.remote_ip}" }, store: RateLimitStore,
     with: :admin_rate_limited
 
+  # Moving money requires a recent password entry (S3), not just a live session.
+  before_action -> { rodauth.require_password_authentication }, only: :run
+
   def preview
     payouts = Ledger::PayoutRunner.call(dry_run: true)
     audit!("payout_previewed", details: payout_summary(payouts))

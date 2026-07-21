@@ -103,4 +103,25 @@ class ReceiptsAndLibraryTest < ActionDispatch::IntegrationTest
       assert_equal "That library link is invalid or expired.", flash[:alert]
     end
   end
+
+  test "signing out everywhere revokes an already-issued library cookie (S7)" do
+    @license.create_library_membership!(email_address: "buyer@example.com")
+    token = LibraryMembership.access_token("buyer@example.com")
+
+    # A second device holds a valid library cookie.
+    device_b = open_session
+    device_b.get access_license_library_path, params: { token: token }
+    device_b.get license_library_path
+    assert_equal 200, device_b.response.status
+
+    # This device signs out of the library everywhere.
+    get access_license_library_path, params: { token: token }
+    delete revoke_license_library_path
+    assert_redirected_to new_license_library_path
+
+    # The second device's cookie is now void.
+    device_b.get license_library_path
+    assert_equal 302, device_b.response.status
+    assert_match %r{/library/sign-in}, device_b.response.location
+  end
 end

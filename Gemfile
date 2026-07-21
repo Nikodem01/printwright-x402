@@ -17,8 +17,17 @@ gem "stimulus-rails"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
 
-# Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
+# Authentication: Rodauth (MFA, lockout, verify/close account, sessions) over the existing designers table.
+# bcrypt is retained so legacy has_secure_password digests verify unchanged (account_password_hash_column).
 gem "bcrypt", "~> 3.1.7"
+gem "rodauth-rails", "~> 2.0"
+gem "rodauth-omniauth", "~> 0.5"
+gem "omniauth-github", "~> 2.0"
+gem "omniauth-google-oauth2", "~> 1.1"
+gem "omniauth-rails_csrf_protection", "~> 1.0"
+gem "rotp", "~> 6.3"            # TOTP secrets/verification for Rodauth otp feature
+gem "pwned", "~> 2.4"          # Have I Been Pwned breached-password k-anonymity check
+gem "zxcvbn", "~> 0.1"         # password strength scoring (dictionary/pattern aware)
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ windows jruby ]
@@ -75,3 +84,7 @@ gem "dotenv-rails", "~> 3.2", groups: [ :development, :test ]
 gem "webmock", "~> 3.26", group: :test
 
 gem "rqrcode", "~> 3.2"
+# Enables Sequel to use Active Record's database connection
+gem "sequel-activerecord_connection", "~> 2.0", require: false
+# Used by Rodauth for rendering built-in view and email templates
+gem "tilt", "~> 2.4", require: false

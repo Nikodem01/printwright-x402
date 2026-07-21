@@ -6,7 +6,7 @@
       <%= link_to "Operations", admin_root_path %>
       <%= link_to "Designer dashboard", designer_models_path %>
       <%= link_to "Public storefront", root_path %>
-      <%= button_to "Sign out", session_path, method: :delete, class: "linklike" %>
+      <%= button_to "Sign out", rodauth.logout_path, method: :post, class: "linklike" %>
     </nav>
     <section class="dash-content">
       <% if notice %><div class="flash flash-ok"><%= notice %></div><% end %>

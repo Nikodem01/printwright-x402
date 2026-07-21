@@ -1,0 +1,53 @@
+<p class="muted">Set a per-print royalty. Get paid in USDC or HBAR, worldwide, in seconds.</p>
+<%= form_with url: rodauth.create_account_path, method: :post, data: { turbo: false } do |form| %>
+  <div class="form-group mb-3">
+    <%= form.label "display_name", "Studio / display name", class: "form-label" %>
+    <%= form.text_field "display_name", value: params[:display_name], id: "display_name", required: true, class: "form-control" %>
+  </div>
+
+  <div class="form-group mb-3">
+    <%= form.label "login", rodauth.login_label, class: "form-label" %>
+    <%= form.email_field rodauth.login_param, value: params[rodauth.login_param], id: "login", autocomplete: "email", required: true, class: "form-control #{"is-invalid" if rodauth.field_error(rodauth.login_param)}", aria: ({ invalid: true, describedby: "login_error_message" } if rodauth.field_error(rodauth.login_param)) %>
+    <%= content_tag(:span, rodauth.field_error(rodauth.login_param), class: "invalid-feedback", id: "login_error_message") if rodauth.field_error(rodauth.login_param) %>
+  </div>
+
+  <% if rodauth.require_login_confirmation? %>
+    <div class="form-group mb-3">
+      <%= form.label "login-confirm", rodauth.login_confirm_label, class: "form-label" %>
+      <%= form.email_field rodauth.login_confirm_param, value: params[rodauth.login_confirm_param], id: "login-confirm", autocomplete: "email", required: true, class: "form-control #{"is-invalid" if rodauth.field_error(rodauth.login_confirm_param)}", aria: ({ invalid: true, describedby: "login-confirm_error_message" } if rodauth.field_error(rodauth.login_confirm_param)) %>
+      <%= content_tag(:span, rodauth.field_error(rodauth.login_confirm_param), class: "invalid-feedback", id: "login-confirm_error_message") if rodauth.field_error(rodauth.login_confirm_param) %>
+    </div>
+  <% end %>
+
+  <% if rodauth.create_account_set_password? %>
+    <div class="form-group mb-3">
+      <%= form.label "password", rodauth.password_label, class: "form-label" %>
+      <%= form.password_field rodauth.password_param, value: "", id: "password", autocomplete: rodauth.password_field_autocomplete_value, required: true, class: "form-control #{"is-invalid" if rodauth.field_error(rodauth.password_param)}", aria: ({ invalid: true, describedby: "password_error_message" } if rodauth.field_error(rodauth.password_param)) %>
+      <%= content_tag(:span, rodauth.field_error(rodauth.password_param), class: "invalid-feedback", id: "password_error_message") if rodauth.field_error(rodauth.password_param) %>
+    </div>
+
+    <% if rodauth.require_password_confirmation? %>
+      <div class="form-group mb-3">
+        <%= form.label "password-confirm", rodauth.password_confirm_label, class: "form-label" %>
+        <%= form.password_field rodauth.password_confirm_param, value: "", id: "password-confirm", autocomplete: "new-password", required: true, class: "form-control #{"is-invalid" if rodauth.field_error(rodauth.password_confirm_param)}", aria: ({ invalid: true, describedby: "password-confirm_error_message" } if rodauth.field_error(rodauth.password_confirm_param)) %>
+        <%= content_tag(:span, rodauth.field_error(rodauth.password_confirm_param), class: "invalid-feedback", id: "password-confirm_error_message") if rodauth.field_error(rodauth.password_confirm_param) %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <div class="form-group mb-3">
+    <%= form.label "hedera_account_id", "Hedera account id (payout target)", class: "form-label" %>
+    <%= form.text_field "hedera_account_id", value: params[:hedera_account_id], id: "hedera_account_id", placeholder: "0.0.12345", pattern: "0\\.0\\.\\d+", class: "form-control" %>
+    <span class="form-text">Optional now — testnet account, ~10 minutes at portal.hedera.com. Verified separately before payout.</span>
+  </div>
+
+  <div class="form-group mb-3">
+    <%= form.label "bio", "Short bio", class: "form-label" %>
+    <%= form.text_area "bio", value: params[:bio], id: "bio", rows: 3, class: "form-control" %>
+  </div>
+
+  <div class="form-group mb-3">
+    <%= form.submit rodauth.create_account_button, class: "btn btn-primary" %>
+  </div>
+<% end %>
+<%= render "omniauth" %>

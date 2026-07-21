@@ -1,5 +1,4 @@
 class ReceiptsController < ApplicationController
-  allow_unauthenticated_access
   rate_limit to: 60, within: 1.minute, store: RateLimitStore
 
   before_action :authorize_receipt

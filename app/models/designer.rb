@@ -1,6 +1,10 @@
 class Designer < ApplicationRecord
-  has_secure_password
-  has_many :sessions, dependent: :destroy
+  include Rodauth::Rails.model
+
+  # Rodauth account status. Prefixed so it never collides with the existing
+  # identity-badge `verified` boolean (`verified?`).
+  enum :status, { unverified: 1, verified: 2, closed: 3 }, prefix: :account
+
   has_many :models3d, class_name: "Model3d", dependent: :destroy
   has_many :catalog_imports, dependent: :destroy
   has_many :profile_verifications, dependent: :destroy
@@ -13,6 +17,11 @@ class Designer < ApplicationRecord
 
   # A changed payout account is unverified until the mirror check passes again.
   before_save -> { self.payout_account_verified_at = nil }, if: :hedera_account_id_changed?
+
+  # Email ownership proven via Rodauth verify_account (gates publish + payout, S2).
+  def email_verified?
+    account_verified?
+  end
 
   def payout_account_verified?
     hedera_account_id.present? && payout_account_verified_at.present?

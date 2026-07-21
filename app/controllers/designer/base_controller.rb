@@ -1,9 +1,5 @@
 class Designer::BaseController < ApplicationController
   layout "designer"
 
-  private
-
-  def current_designer
-    Current.designer
-  end
+  before_action -> { rodauth.require_account }
 end

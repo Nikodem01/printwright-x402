@@ -1,7 +1,7 @@
 Rails.application.routes.draw do
-  resource :session
-  resources :passwords, param: :token, only: %i[new create edit update]
-  resources :designers, only: %i[new create show] do
+  # Login, logout, create-account, password reset, MFA, account management are
+  # served by the Rodauth middleware (see app/misc/rodauth_app.rb).
+  resources :designers, only: %i[show] do
     member { get :verified_profile }
   end
 
@@ -19,6 +19,10 @@ Rails.application.routes.draw do
     resource :takedown_packet, only: %i[new create]
     resources :sales, only: :index
     resources :webhook_endpoints, only: %i[index new create destroy]
+    resource :account, only: %i[show update], controller: :account do
+      post :revoke_other_sessions
+      get :export
+    end
   end
 
   namespace :admin do
@@ -108,6 +112,7 @@ Rails.application.routes.draw do
   get "library/sign-in", to: "license_library#new", as: :new_license_library
   post "library/sign-in", to: "license_library#create"
   get "library/access", to: "license_library#access", as: :access_license_library
+  delete "library/everywhere", to: "license_library#revoke_everywhere", as: :revoke_license_library
   delete "library", to: "license_library#destroy"
   get "badge", to: "pages#badge", as: :badge_docs
   get "license/:version/:kind", to: "licenses#show", as: :license_document,

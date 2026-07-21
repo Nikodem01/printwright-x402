@@ -1,0 +1,75 @@
+<% content_for :title, "Account settings" %>
+<div class="form-page">
+  <h1>Account</h1>
+
+  <section class="account-section">
+    <h2 class="t-title">Profile</h2>
+    <%= form_with model: @designer, url: designer_account_path, method: :patch do |f| %>
+      <% if @designer.errors.any? %>
+        <div class="flash flash-bad"><%= render "shared/state_mark", state: "void" %><span><%= @designer.errors.full_messages.to_sentence %></span></div>
+      <% end %>
+      <div class="field"><%= f.label :display_name, "Studio / display name" %><%= f.text_field :display_name, required: true %></div>
+      <div class="field"><%= f.label :bio, "Short bio" %><%= f.text_area :bio, rows: 3 %></div>
+      <div class="field">
+        <%= f.label :hedera_account_id, "Hedera account id (payout target)" %>
+        <%= f.text_field :hedera_account_id, placeholder: "0.0.12345", pattern: "0\\.0\\.\\d+" %>
+        <span class="hint">
+          <% if @designer.payout_account_verified? %>Verified — sales pay this account directly.
+          <% elsif @designer.hedera_account_id.present? %>Not yet verified to receive USDC.
+          <% else %>Add one to receive payouts.<% end %>
+        </span>
+      </div>
+      <%= f.submit "Save profile", class: "btn btn-primary" %>
+    <% end %>
+  </section>
+
+  <section class="account-section">
+    <h2 class="t-title">Sign-in &amp; security</h2>
+    <dl class="account-facts">
+      <dt>Email</dt>
+      <dd>
+        <%= @designer.email_address %>
+        <% if @designer.email_verified? %><span class="t-caption muted">· verified</span>
+        <% else %><span class="t-caption">· unverified — check your inbox</span><% end %>
+      </dd>
+    </dl>
+    <div class="account-actions">
+      <%= link_to "Change email", rodauth.change_login_path, class: "btn" %>
+      <%= link_to "Change password", rodauth.change_password_path, class: "btn" %>
+      <% if rodauth.uses_two_factor_authentication? %>
+        <%= link_to "Manage two-factor", rodauth.two_factor_manage_path, class: "btn" %>
+        <%= link_to "Recovery codes", rodauth.recovery_codes_path, class: "btn" %>
+      <% else %>
+        <%= link_to "Set up two-factor", rodauth.otp_setup_path, class: "btn btn-primary" %>
+      <% end %>
+    </div>
+  </section>
+
+  <section class="account-section">
+    <h2 class="t-title">Active sessions</h2>
+    <p class="t-caption muted"><%= pluralize(@sessions.size, "active session") %> across your devices.</p>
+    <table class="account-sessions">
+      <thead><tr><th>Signed in</th><th>Last used</th></tr></thead>
+      <tbody>
+        <% @sessions.each do |sk| %>
+          <tr>
+            <td><%= sk.created_at.to_fs(:short) %></td>
+            <td><%= sk.last_use.to_fs(:short) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <% if @sessions.size > 1 %>
+      <%= button_to "Sign out other devices", revoke_other_sessions_designer_account_path,
+            method: :post, class: "btn" %>
+    <% end %>
+  </section>
+
+  <section class="account-section">
+    <h2 class="t-title">Your data</h2>
+    <div class="account-actions">
+      <%= link_to "Export my data (JSON)", export_designer_account_path, class: "btn" %>
+      <%= link_to "Close account", rodauth.close_account_path, class: "btn btn-danger" %>
+    </div>
+  </section>
+</div>

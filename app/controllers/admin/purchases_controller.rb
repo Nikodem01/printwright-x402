@@ -3,6 +3,9 @@ class Admin::PurchasesController < Admin::BaseController
     by: -> { "#{Current.designer&.id}:#{request.remote_ip}" }, store: RateLimitStore,
     with: :admin_rate_limited
 
+  # Refunds move money — require a recent password entry (S3).
+  before_action -> { rodauth.require_password_authentication }, only: :refund
+
   before_action :set_purchase, except: :reap
 
   def reconcile

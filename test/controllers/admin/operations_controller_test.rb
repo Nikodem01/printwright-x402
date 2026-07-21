@@ -6,7 +6,7 @@ class Admin::OperationsControllerTest < ActionDispatch::IntegrationTest
 
   test "operator panel requires authentication and an admin grant" do
     get admin_root_path
-    assert_redirected_to new_session_path
+    assert_redirected_to "/login"
 
     sign_in_as designers(:two)
     get admin_root_path

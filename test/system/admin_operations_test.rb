@@ -1,5 +1,6 @@
 require "application_system_test_case"
 require "webmock/minitest"
+require "rotp"
 
 class AdminOperationsTest < RackSystemTestCase
   include ActiveJob::TestHelper
@@ -42,11 +43,18 @@ class AdminOperationsTest < RackSystemTestCase
       .to_return(body: { transactionId: "0.0.9067781@88.99" }.to_json,
                  headers: { "content-type" => "application/json" })
 
-    visit new_session_path
-    fill_in "Enter your email address", with: @admin.email_address
-    fill_in "Enter your password", with: "password"
-    click_button "Sign in"
-    assert_current_path root_path
+    visit "/login"
+    fill_in "Email address", with: @admin.email_address
+    fill_in "Password", with: "password"
+    click_button "Login"
+
+    # Operators must have 2FA; enroll through Rodauth's real otp-setup flow.
+    visit "/otp-setup"
+    secret = find("#otp-key", visible: :all)[:value]
+    fill_in "password", with: "password" if page.has_field?("password")
+    fill_in "otp-auth-code", with: ROTP::TOTP.new(secret).now
+    find('input[type="submit"]').click
+
     visit admin_root_path
   end
 

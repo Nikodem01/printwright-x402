@@ -5,7 +5,7 @@ class Designer::IdentityControllerTest < ActionDispatch::IntegrationTest
   setup do
     @previous_resolver = ProfileVerifications::Fetcher.resolver
     ProfileVerifications::Fetcher.resolver = ->(_host) { [ "8.8.8.8" ] }
-    post session_path, params: { email_address: designers(:one).email_address, password: "password" }
+    sign_in_as designers(:one)
   end
 
   teardown do

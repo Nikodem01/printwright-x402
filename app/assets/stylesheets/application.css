@@ -945,6 +945,39 @@ fieldset.field textarea, fieldset.field select { background: var(--bg-card); }
 /* Errors say what happened and what to do next — no tinted wash. */
 .field-error { display: block; margin-top: var(--s1); font-size: var(--t-label); color: var(--state-void); }
 
+/* Rodauth auth pages: map the gem's Bootstrap-flavored markup onto our tokens
+   so login / signup / reset / MFA read as part of the site. */
+.form-page h1 { margin-bottom: var(--s5); }
+.form-page .form-group { margin-bottom: var(--s4); }
+.form-page .form-label { display: block; margin-bottom: var(--s1); font-size: var(--t-small); font-weight: 600; color: var(--text); }
+.form-page .form-control, .form-page .form-control-plaintext {
+  width: 100%; padding: var(--s3) var(--s4); font: inherit;
+  color: var(--text); background: var(--bg-inset);
+  border: 0; border-bottom: 1.5px solid var(--field-edge); border-radius: var(--r-sm);
+}
+.form-page .form-control:focus-visible { border-bottom-color: var(--action); outline: none; }
+.form-page .form-control::placeholder { color: var(--text-3); }
+.form-page .form-control.is-invalid { border-bottom-color: var(--state-void); }
+.form-page .form-text { display: block; margin-top: var(--s1); font-size: var(--t-label); color: var(--text-3); }
+.form-page .invalid-feedback { display: block; margin-top: var(--s1); font-size: var(--t-label); color: var(--state-void); }
+.form-page ul { list-style: none; padding: 0; margin-top: var(--s4); display: flex; flex-direction: column; gap: var(--s2); }
+.form-page .recovery-codes, .form-page pre { background: var(--bg-inset); padding: var(--s4); border-radius: var(--r-sm); overflow-x: auto; }
+
+/* Account settings hub */
+.account-section { margin-bottom: var(--s6); padding-bottom: var(--s5); border-bottom: 1px solid var(--field-edge); }
+.account-section:last-child { border-bottom: 0; }
+.account-actions { display: flex; flex-wrap: wrap; gap: var(--s3); margin-top: var(--s3); }
+.account-facts dt { font-size: var(--t-label); color: var(--text-3); }
+.account-facts dd { margin: 0 0 var(--s3); }
+.account-sessions { width: 100%; border-collapse: collapse; margin-bottom: var(--s4); }
+.account-sessions th, .account-sessions td { text-align: left; padding: var(--s2) var(--s3); border-bottom: 1px solid var(--field-edge); font-size: var(--t-small); }
+.btn.btn-danger { color: var(--state-void); }
+
+/* OAuth sign-in buttons on login / signup */
+.oauth-buttons { margin-top: var(--s5); }
+.oauth-buttons p { margin-bottom: var(--s2); }
+.oauth-buttons form { display: inline-block; margin-right: var(--s3); }
+
 .flash {
   display: flex; align-items: center; gap: var(--s3);
   margin-bottom: var(--s4); padding: var(--s3) var(--s4);
