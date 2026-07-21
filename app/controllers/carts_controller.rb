@@ -1,6 +1,4 @@
 class CartsController < ApplicationController
-  allow_unauthenticated_access
-
   before_action :load_cart
 
   def show; end

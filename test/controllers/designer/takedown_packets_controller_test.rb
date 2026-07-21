@@ -13,7 +13,7 @@ class Designer::TakedownPacketsControllerTest < ActionDispatch::IntegrationTest
       serial: 1, cert_id: "pw-000998", cert_json: { "schema" => "pwc-1" },
       hcs_topic_id: "0.0.9585069", hcs_sequence_number: 49
     )
-    post session_path, params: { email_address: designers(:one).email_address, password: "password" }
+    sign_in_as designers(:one)
   end
 
   test "designer downloads a packet for their certificate" do
@@ -27,7 +27,7 @@ class Designer::TakedownPacketsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "designer cannot generate a packet for someone else's certificate" do
-    post session_path, params: { email_address: designers(:two).email_address, password: "password" }
+    sign_in_as designers(:two)
 
     post designer_takedown_packet_path, params: {
       cert_id: @license.cert_id, infringing_url: "https://example.com/copy"

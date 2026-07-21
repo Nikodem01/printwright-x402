@@ -2,8 +2,6 @@
 # the EXACT canonical bytes, so anyone can recompute the certificate's
 # terms_hash:  curl -s <url>.txt | sha256sum
 class LicensesController < ApplicationController
-  allow_unauthenticated_access
-
   def show
     @version = params[:version]
     @kind = params[:kind]

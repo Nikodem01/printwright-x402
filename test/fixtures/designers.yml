@@ -5,8 +5,10 @@ one:
   password_digest: <%= password_digest %>
   display_name: Demo Designer One
   admin: true
+  status: verified
 
 two:
   email_address: two@example.com
   password_digest: <%= password_digest %>
   display_name: Demo Designer Two
+  status: verified

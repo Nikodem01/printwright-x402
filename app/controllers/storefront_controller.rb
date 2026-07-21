@@ -1,6 +1,4 @@
 class StorefrontController < ApplicationController
-  allow_unauthenticated_access
-
   def index
     @query = params[:q]
     @category_key = params[:category]

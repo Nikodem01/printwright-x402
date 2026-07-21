@@ -57,8 +57,8 @@ class Designer::SalesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_no_match "Other", response.body
 
-    delete session_path
+    sign_out
     get designer_sales_path
-    assert_redirected_to new_session_path
+    assert_redirected_to "/login"
   end
 end

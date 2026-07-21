@@ -5,6 +5,7 @@
   <div class="page-heading-row">
     <div><h1>Your license library</h1><p class="muted">Saved paid receipts on this email.</p></div>
     <%= button_to "Close library", license_library_path, method: :delete, class: "linklike" %>
+    <%= button_to "Sign out everywhere", revoke_license_library_path, method: :delete, class: "linklike" %>
   </div>
 
   <% if @memberships.any? %>

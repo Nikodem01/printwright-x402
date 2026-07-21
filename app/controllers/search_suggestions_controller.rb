@@ -1,6 +1,4 @@
 class SearchSuggestionsController < ApplicationController
-  allow_unauthenticated_access
-
   MAX_QUERY_LENGTH = 80
 
   rate_limit to: 60, within: 1.minute, store: RateLimitStore

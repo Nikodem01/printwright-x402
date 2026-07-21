@@ -97,7 +97,7 @@
           <% if authenticated? %>
             <%= link_to "Dashboard", designer_models_path %>
           <% else %>
-            <%= link_to "For designers", new_session_path %>
+            <%= link_to "For designers", rodauth.login_path %>
           <% end %>
           <% if wallet_project_id %>
             <span class="wallet-control" data-hedera-wallet

@@ -10,11 +10,78 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_20_002000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_22_100000) do
   # These are extensions that must be enabled in order to support this database
+  enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
   enable_extension "vector"
+
+  create_table "account_active_session_keys", primary_key: ["account_id", "session_id"], force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "last_use", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.string "session_id", null: false
+    t.index ["account_id"], name: "index_account_active_session_keys_on_account_id"
+  end
+
+  create_table "account_identities", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "provider", null: false
+    t.string "uid", null: false
+    t.index ["account_id"], name: "index_account_identities_on_account_id"
+    t.index ["provider", "uid"], name: "index_account_identities_on_provider_and_uid", unique: true
+  end
+
+  create_table "account_lockouts", force: :cascade do |t|
+    t.datetime "deadline", null: false
+    t.datetime "email_last_sent"
+    t.string "key", null: false
+  end
+
+  create_table "account_login_change_keys", force: :cascade do |t|
+    t.datetime "deadline", null: false
+    t.string "key", null: false
+    t.string "login", null: false
+  end
+
+  create_table "account_login_failures", force: :cascade do |t|
+    t.integer "number", default: 1, null: false
+  end
+
+  create_table "account_otp_keys", force: :cascade do |t|
+    t.string "key", null: false
+    t.datetime "last_use", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.integer "num_failures", default: 0, null: false
+  end
+
+  create_table "account_password_reset_keys", force: :cascade do |t|
+    t.datetime "deadline", null: false
+    t.datetime "email_last_sent", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.string "key", null: false
+  end
+
+  create_table "account_previous_password_hashes", force: :cascade do |t|
+    t.bigint "account_id"
+    t.string "password_hash", null: false
+    t.index ["account_id"], name: "index_account_previous_password_hashes_on_account_id"
+  end
+
+  create_table "account_recovery_codes", primary_key: ["id", "code"], force: :cascade do |t|
+    t.string "code", null: false
+    t.bigint "id", null: false
+  end
+
+  create_table "account_remember_keys", force: :cascade do |t|
+    t.datetime "deadline", null: false
+    t.string "key", null: false
+  end
+
+  create_table "account_verification_keys", force: :cascade do |t|
+    t.datetime "email_last_sent", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.string "key", null: false
+    t.datetime "requested_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+  end
 
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
@@ -91,12 +158,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_20_002000) do
     t.text "bio"
     t.datetime "created_at", null: false
     t.string "display_name", null: false
-    t.string "email_address", null: false
+    t.citext "email_address", null: false
     t.string "hedera_account_id"
     t.datetime "identity_verified_at"
     t.string "nft_collection_id"
-    t.string "password_digest", null: false
+    t.string "password_digest"
     t.datetime "payout_account_verified_at"
+    t.integer "status", default: 1, null: false
     t.datetime "updated_at", null: false
     t.boolean "verified", default: false, null: false
     t.string "verified_profile_url"
@@ -135,6 +203,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_20_002000) do
     t.index ["designer_id"], name: "index_ledger_entries_on_designer_id"
     t.index ["purchase_id", "entry_kind"], name: "index_ledger_entries_on_purchase_id_and_entry_kind", unique: true
     t.index ["purchase_id"], name: "index_ledger_entries_on_purchase_id"
+  end
+
+  create_table "library_accesses", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.citext "email_address", null: false
+    t.integer "token_version", default: 1, null: false
+    t.datetime "updated_at", null: false
+    t.index ["email_address"], name: "index_library_accesses_on_email_address", unique: true
   end
 
   create_table "library_memberships", force: :cascade do |t|
@@ -353,6 +429,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_20_002000) do
     t.index ["designer_id"], name: "index_webhook_endpoints_on_designer_id"
   end
 
+  add_foreign_key "account_active_session_keys", "designers", column: "account_id"
+  add_foreign_key "account_identities", "designers", column: "account_id", on_delete: :cascade
+  add_foreign_key "account_lockouts", "designers", column: "id"
+  add_foreign_key "account_login_change_keys", "designers", column: "id"
+  add_foreign_key "account_login_failures", "designers", column: "id"
+  add_foreign_key "account_otp_keys", "designers", column: "id"
+  add_foreign_key "account_password_reset_keys", "designers", column: "id"
+  add_foreign_key "account_previous_password_hashes", "designers", column: "account_id"
+  add_foreign_key "account_recovery_codes", "designers", column: "id"
+  add_foreign_key "account_remember_keys", "designers", column: "id"
+  add_foreign_key "account_verification_keys", "designers", column: "id"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "admin_audit_logs", "designers", column: "actor_designer_id", on_delete: :nullify

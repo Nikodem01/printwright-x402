@@ -8,8 +8,9 @@
       <%= link_to "Identity", designer_identity_path %>
       <%= link_to "Sales", designer_sales_path %>
       <%= link_to "Webhooks", designer_webhook_endpoints_path %>
+      <%= link_to "Account", designer_account_path %>
       <%= link_to "Operator", admin_root_path if Current.designer&.admin? %>
-      <%= button_to "Sign out", session_path, method: :delete, class: "linklike" %>
+      <%= button_to "Sign out", rodauth.logout_path, method: :post, class: "linklike" %>
     </nav>
     <section class="dash-content">
       <% if notice %><div class="flash flash-ok"><%= notice %></div><% end %>

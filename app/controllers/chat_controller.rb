@@ -2,8 +2,6 @@
 # conversation id; provider turns and purchase authorization state stay in a
 # dedicated, expiring database row.
 class ChatController < ApplicationController
-  allow_unauthenticated_access
-
   MAX_MESSAGE_BYTES = 4.kilobytes
 
   rate_limit to: 10, within: 1.minute, only: :create, store: RateLimitStore,

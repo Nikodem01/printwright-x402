@@ -6,7 +6,7 @@ class Designer::ImportsControllerTest < ActionDispatch::IntegrationTest
   include CatalogImportTestHelper
 
   setup do
-    post session_path, params: { email_address: designers(:one).email_address, password: "password" }
+    sign_in_as designers(:one)
     @previous_resolver = CatalogImports::RemoteFetcher.resolver
     CatalogImports::RemoteFetcher.resolver = ->(_host) { [ "93.184.216.34" ] }
   end

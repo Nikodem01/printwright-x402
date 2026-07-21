@@ -1,5 +1,4 @@
 class Api::V1::BaseController < ApplicationController
-  allow_unauthenticated_access
   skip_forgery_protection
 
   rescue_from ActiveRecord::RecordNotFound do

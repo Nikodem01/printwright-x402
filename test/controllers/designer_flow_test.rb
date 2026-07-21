@@ -6,6 +6,9 @@ class DesignerFlowTest < ActionDispatch::IntegrationTest
   include MeshTestHelper
 
   setup do
+    # Signup checks the password against Have I Been Pwned; keep the suite offline
+    # and deterministic by stubbing it "not breached".
+    stub_request(:get, %r{api\.pwnedpasswords\.com/range/}).to_return(status: 200, body: "")
     # Publish runs the payout-account mirror check; this designer's account
     # can receive USDC directly (unlimited auto-association).
     stub_request(:get, %r{testnet\.mirrornode\.hedera\.com/api/v1/accounts/0\.0\.42/tokens})
@@ -15,10 +18,10 @@ class DesignerFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "sign up -> upload -> publish makes the model live and API-buyable-shaped" do
-    post designers_path, params: { designer: {
-      display_name: "Flow Studio", email_address: "flow@example.com",
-      password: "s3curepass", hedera_account_id: "0.0.42"
-    } }
+    post "/create-account", params: {
+      display_name: "Flow Studio", email: "flow@example.com",
+      password: "verdigris-kettle-9-monsoon", hedera_account_id: "0.0.42"
+    }
     assert_redirected_to designer_models_path
 
     stl = fixture_file_upload(Rails.root.join("db/seed_assets/calibration-cube.stl"), "model/stl")
@@ -39,6 +42,9 @@ class DesignerFlowTest < ActionDispatch::IntegrationTest
 
     AnalyzeModelMeshJob.perform_now(model.id)
     assert_equal "passed", model.reload.mesh_analysis_status
+
+    # Publishing is gated on a verified email (S2); simulate clicking the link.
+    Designer.find_by!(email_address: "flow@example.com").account_verified!
 
     assert_enqueued_with(job: RenderModelJob, args: [ model.id ]) do
       post publish_designer_model_path(model), params: { warranty: "1" }
@@ -134,12 +140,6 @@ class DesignerFlowTest < ActionDispatch::IntegrationTest
 
   test "designer area requires authentication" do
     get designer_models_path
-    assert_redirected_to new_session_path
-  end
-
-  private
-
-  def sign_in_as(designer)
-    post session_path, params: { email_address: designer.email_address, password: "password" }
+    assert_redirected_to "/login"
   end
 end

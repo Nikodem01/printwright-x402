@@ -38,6 +38,10 @@ class Designer::ModelsController < Designer::BaseController
   # bytes, sorted by filename, so the certificate anchor is deterministic.
   def publish
     @model = find_model
+    unless current_designer.email_verified?
+      return redirect_to edit_designer_model_path(@model),
+        alert: "Verify your email before publishing — we sent a confirmation link when you signed up. Resend it from your inbox or the login page."
+    end
     if @model.published?
       return redirect_to edit_designer_model_path(@model),
         alert: "The certified bundle is frozen. Publish a version update instead."

@@ -6,6 +6,8 @@ require "webmock/minitest"
 class DesignerPublishTest < RackSystemTestCase
   setup do
     WebMock.disable_net_connect!(allow_localhost: true)
+    # Signup checks the password against Have I Been Pwned; keep it offline.
+    stub_request(:get, %r{api\.pwnedpasswords\.com/range/}).to_return(status: 200, body: "")
     # Publish runs the payout-account mirror check; this account can receive
     # USDC directly (unlimited auto-association), same stub as the API tests.
     stub_request(:get, %r{testnet\.mirrornode\.hedera\.com/api/v1/accounts/0\.0\.42/tokens})
@@ -15,12 +17,15 @@ class DesignerPublishTest < RackSystemTestCase
   end
 
   test "sign up, upload, hit the warranty gate, publish, land on the live page" do
-    visit new_designer_path
+    visit "/create-account"
     fill_in "Studio / display name", with: "Form Flow Studio"
     fill_in "Email address", with: "formflow@example.com"
-    fill_in "Password", with: "s3curepass"
+    fill_in "Password", with: "verdigris-kettle-9-monsoon"
     fill_in "Hedera account id (payout target)", with: "0.0.42"
-    click_button "Create account"
+    click_button "Create Account"
+
+    # Publishing is gated on a verified email (S2); simulate clicking the link.
+    Designer.find_by!(email_address: "formflow@example.com").account_verified!
 
     visit new_designer_model_path
     fill_in "Title", with: "Form Flow Clip"
