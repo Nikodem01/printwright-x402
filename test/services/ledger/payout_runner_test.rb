@@ -52,6 +52,20 @@ class Ledger::PayoutRunnerTest < ActiveSupport::TestCase
     assert_requested stub, times: 1
   end
 
+  test "purchase_ids scopes the run to one checkout and the memo carries the ref" do
+    stub = stub_request(:post, "#{SIDECAR}/payout")
+      .with(body: hash_including("memo" => "printwright payout batch-7"))
+      .to_return(body: { transactionId: "0.0.9067781@9.9" }.to_json,
+                 headers: { "content-type" => "application/json" })
+
+    Ledger::PayoutRunner.call(purchase_ids: [ @owed_a.id ], ref: "batch-7")
+
+    # only the scoped purchase was paid; the sibling owed share is untouched
+    assert_equal [ @owed_a.id ], LedgerEntry.where(entry_kind: "designer_payout").pluck(:purchase_id)
+    assert_includes LedgerEntry.owed.pluck(:purchase_id), @owed_b.id
+    assert_requested stub, times: 1
+  end
+
   test "direct-paid purchases are never owed" do
     direct = Purchase.create!(
       license_offer: @owed_a.license_offer, status: "verified",

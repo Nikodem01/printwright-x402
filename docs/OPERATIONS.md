@@ -153,6 +153,17 @@ above remains the stronger operational test.
 
 ## Designer payouts
 
+Every purchase settles to the treasury (destination-charge model): we are
+merchant-of-record and capture the platform fee atomically at settle. A
+designer's share is paid out **automatically, immediately after each checkout**
+by `DesignerPayoutJob`, which runs `Ledger::PayoutRunner` scoped to that
+checkout — one summed transfer per designer per asset, memo `printwright payout
+purchase-<id>` (single) or `printwright payout batch-<id>` (batch).
+
+The rake task / admin panel below is the **backstop**: it sweeps everything
+still owed — designers who weren't payout-verified at checkout (their share
+waits until they verify) and any immediate payout that failed.
+
 Panel: `/admin` → **Preview designer payouts** or **Run designer payouts**. The run button has
 an explicit confirmation and the same database advisory lock as the command.
 
@@ -163,10 +174,11 @@ bin/rails ledger:payout             # one batched tx per asset, HashScan links p
 
 - Only designers whose payout account passed the mirror check are paid; the
   rest stay owed (visible via `LedgerEntry.owed`).
-- Runs are serialized by a DB advisory lock; still, run it from one shell.
-- Crash between the on-chain transfer and the ledger write: the tx memo is
-  `printwright designer payout <date>` — check the treasury account on
-  HashScan for a payout tx with today's memo **before** re-running.
+- Runs are serialized by a DB advisory lock (shared with the immediate job); still, run it from one shell.
+- Crash between the on-chain transfer and the ledger write: the memo names the
+  run — `printwright payout <checkout-ref>` (immediate) or `printwright designer
+  payout <date>` (backstop) — check the treasury account on HashScan for that
+  memo **before** re-running.
 
 ## Refunds
 

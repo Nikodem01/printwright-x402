@@ -115,6 +115,7 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "0.0.9067781", purchase.buyer_hint
     assert_equal "0.0.0", purchase.asset
     assert_enqueued_with(job: WebhookFanoutJob, args: [ purchase.license.id, "sale.completed" ])
+    assert_enqueued_with(job: DesignerPayoutJob) # designer paid their share out of treasury custody
 
     settle = JSON.parse(Base64.strict_decode64(response.headers["PAYMENT-RESPONSE"]))
     assert settle["success"]
@@ -366,16 +367,15 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "250"
   end
 
-  test "verified designer payout account becomes the 402's payTo; unverified stays treasury" do
+  test "payTo is always the treasury, even for a verified designer (destination-charge model)" do
     get download_path
     assert(response.parsed_body["accepts"].all? { |a| a["payTo"] == "0.0.9584959" })
 
+    # A verified payout account no longer routes the settle to the designer:
+    # the treasury is merchant-of-record (fee captured atomically at settle) and
+    # the designer is paid their share out via DesignerPayoutJob.
     designers(:one).update!(hedera_account_id: "0.0.9604186")
     designers(:one).update!(payout_account_verified_at: Time.current)
-    get download_path
-    assert(response.parsed_body["accepts"].all? { |a| a["payTo"] == "0.0.9604186" })
-
-    designers(:one).update!(hedera_account_id: "0.0.7777777") # change resets verification
     get download_path
     assert(response.parsed_body["accepts"].all? { |a| a["payTo"] == "0.0.9584959" })
   end

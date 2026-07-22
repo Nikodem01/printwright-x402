@@ -83,6 +83,8 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal 6, LedgerEntry.count
     assert_equal 750_000, LedgerEntry.where(entry_kind: %w[designer_share platform_fee]).sum { |row| row.amount_base_units.to_i }
     assert_equal 3, enqueued_jobs.count { |entry| entry[:job] == WebhookFanoutJob }
+    assert_equal 1, enqueued_jobs.count { |entry| entry[:job] == DesignerPayoutJob },
+      "one payout per checkout, not one per model"
   end
 
   test "replay returns the original three licenses without double settlement" do
@@ -103,26 +105,26 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
     assert_requested :post, "#{FACILITATOR}/settle", times: 1
   end
 
-  test "capacity and payee incompatibility are rejected before payment" do
+  test "capacity is rejected before payment; a mixed-designer batch routes to one treasury payTo" do
     @offer.update!(max_units: 2)
     post api_v1_batches_path, params: { items: @items }, as: :json
     assert_response :gone
     assert_equal "sold_out", response.parsed_body["error"]
 
     @offer.update!(max_units: nil)
-    second_designer = designers(:two)
-    second_designer.update!(hedera_account_id: "0.0.9604186")
-    second_designer.update!(payout_account_verified_at: Time.current)
-    second_model = second_designer.models3d.create!(
+    second_model = designers(:two).models3d.create!(
       title: "Direct paid", slug: "direct-paid-#{SecureRandom.hex(4)}",
       status: "published", file_hash: "sha256:#{'b' * 64}"
     )
-    second_offer = second_model.license_offers.create!(kind: "commercial_unit", price_cents: 25)
+    second_offer = second_model.license_offers.create!(kind: "commercial_unit", price_cents: 25, currency: "USDC")
     mixed = [ @items.first, { model_id: second_model.id, license: second_offer.kind } ]
 
+    # Treasury-always payTo means two designers in one batch are no longer
+    # incompatible payees: the batch is quoted to one payTo, and each designer is
+    # paid their share out via DesignerPayoutJob after settlement.
     post api_v1_batches_path, params: { items: mixed }, as: :json
-    assert_response :unprocessable_entity
-    assert_equal "incompatible_payees", response.parsed_body["error"]
+    assert_response :payment_required
+    assert(response.parsed_body["accepts"].all? { |a| a["payTo"] == "0.0.9584959" })
     assert_equal 0, Purchase.count
   end
 
