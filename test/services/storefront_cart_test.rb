@@ -39,7 +39,7 @@ class StorefrontCartTest < ActiveSupport::TestCase
     assert_equal "A cart can contain at most 20 licenses.", error.message
   end
 
-  test "refuses items whose exact payment requirements have different payees" do
+  test "a cart may mix offers from different designers (all settle to the treasury)" do
     other = designers(:two)
     other.update!(hedera_account_id: "0.0.9604186")
     other.update!(payout_account_verified_at: Time.current)
@@ -47,11 +47,12 @@ class StorefrontCartTest < ActiveSupport::TestCase
     @designer.update!(hedera_account_id: "0.0.9584959")
     @designer.update!(payout_account_verified_at: Time.current)
 
+    # Treasury-always payTo: the two offers share one payment (to the treasury)
+    # and each designer is paid their share out, so the cart no longer refuses.
     @cart.add!(@personal, "1")
-    error = assert_raises(StorefrontCart::Invalid) { @cart.add!(direct, "1") }
+    @cart.add!(direct, "1")
 
-    assert_match(/cannot share one Hedera payment/, error.message)
-    assert_equal 1, @cart.count
+    assert_equal 2, @cart.count
   end
 
   private

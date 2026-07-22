@@ -225,6 +225,9 @@ class Api::V1::BatchesController < Api::V1::BaseController
     end
     licenses.each { |license| CertMintJob.perform_later(license.id) } unless batch.sandbox?
     licenses.each { |license| WebhookFanoutJob.perform_later(license.id, "sale.completed") } unless batch.sandbox?
+    unless batch.sandbox?
+      DesignerPayoutJob.perform_later(purchase_ids: batch.purchases.ids, ref: "batch-#{batch.id}")
+    end
     response.set_header("PAYMENT-RESPONSE", Base64.strict_encode64(JSON.generate(settlement)))
     response.set_header("X-PAYMENT-RESPONSE", response.get_header("PAYMENT-RESPONSE"))
     render json: delivery_payload(batch.reload), status: :ok

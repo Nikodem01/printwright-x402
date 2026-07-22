@@ -8,10 +8,12 @@ module X402
 
     def self.usdc_asset = Hedera::Network.usdc_asset
 
-    def self.pay_to_for(offer)
-      designer = offer.model3d.designer
-      return designer.hedera_account_id if designer.payout_account_verified?
-
+    # Every payment lands in the treasury (destination-charge model): we are
+    # merchant-of-record, capture the platform fee atomically at settle, and pay
+    # the designer their share out via DesignerPayoutJob. A single-recipient
+    # x402 rail can't split at source (V1 kill-test), so the split lives in the
+    # ledger, not on the settle transaction.
+    def self.pay_to_for(_offer)
       ENV.fetch("X402_PAY_TO")
     end
     USDC_BASE_UNITS_PER_CENT = 10_000 # 6 decimals: $0.01 = 10_000 units
