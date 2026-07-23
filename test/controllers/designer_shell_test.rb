@@ -32,7 +32,7 @@ class DesignerShellTest < ActionDispatch::IntegrationTest
     assert_select ".dash-nav-group-title", text: "Trust & protection", count: 2
     assert_select ".dash-nav a[href=?]", new_designer_model_path, text: "Add model", count: 2
     assert_select ".dash-nav a[href=?]", designer_imports_path, text: "Import catalog", count: 2
-    assert_select ".dash-nav a[href=?]", new_designer_takedown_packet_path, text: "Protection", count: 2
+    assert_select ".dash-nav a[href=?]", designer_protection_path, text: "Protection", count: 2
   end
 
   test "authenticated marketplace pages retain the buyer shell unchanged" do

@@ -35,6 +35,7 @@ Rails.application.routes.draw do
     resource :identity, only: %i[show create], controller: :identity do
       post :verify
     end
+    resource :protection, only: :show, controller: "protection"
     resource :takedown_packet, only: %i[new create]
     resources :sales, only: :index do
       get :export, on: :collection

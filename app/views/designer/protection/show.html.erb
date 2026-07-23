@@ -1,0 +1,70 @@
+<% content_for :title, "Protection — Printwright designer" %>
+<header class="page-heading-row">
+  <div>
+    <p class="card-taxonomy">Trust &amp; protection</p>
+    <h1>Protection</h1>
+    <p>Every published bundle is fingerprinted and certificate-anchored. This page is your evidence
+      locker: what protects each listing, how often it blocked a copy, and the certificate-bound
+      takedown packet for enforcing off-platform.</p>
+  </div>
+</header>
+
+<% if @models.any? %>
+  <section class="section-block" aria-labelledby="protection-fingerprints-title">
+    <h2 id="protection-fingerprints-title">Fingerprints and duplicate defense</h2>
+    <p class="t-small muted">New uploads from any studio are checked against these exact-bundle and
+      geometry fingerprints before they can publish. Blocked attempts are counted without revealing
+      who attempted them.</p>
+    <div class="table-scroll">
+      <table class="facts-table">
+        <thead><tr><th>Model</th><th>Bundle fingerprint</th><th>Geometry fingerprint</th><th>Blocked copies</th></tr></thead>
+        <tbody>
+          <% @models.each do |model| %>
+            <tr>
+              <th scope="row"><%= link_to model.title, edit_designer_model_path(model) %><br>
+                <span class="t-caption muted"><%= model.status.humanize %></span></th>
+              <td class="mono"><%= model.file_hash.presence&.truncate(30) || "—" %></td>
+              <td class="mono"><%= model.geometry_hash.presence&.truncate(30) || "—" %></td>
+              <td><%= @blocked_counts.fetch(model.id, 0) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section-block" aria-labelledby="protection-evidence-title">
+    <h2 id="protection-evidence-title">Certificate evidence and takedown packets</h2>
+    <p class="t-small muted">Each delivered license is anchored on Hedera and is court-ready
+      provenance: it proves what was certified, when, and by whom. Generate a takedown packet to
+      send to a host or marketplace where your work was re-uploaded without a license.</p>
+    <% any_licenses = @licenses_by_model.values.flatten.any? %>
+    <% if any_licenses %>
+      <div class="table-scroll">
+        <table class="facts-table">
+          <thead><tr><th>Model</th><th>Certificate</th><th>Anchored</th><th>Packet</th></tr></thead>
+          <tbody>
+            <% @models.each do |model| %>
+              <% Array(@licenses_by_model[model.id]).each do |license| %>
+                <tr>
+                  <th scope="row"><%= model.title %></th>
+                  <td class="mono"><%= license.cert_id %></td>
+                  <td><%= license.anchored? ? "On-chain" : "Pending" %></td>
+                  <td><%= link_to "Create takedown packet", new_designer_takedown_packet_path(cert_id: license.cert_id) %></td>
+                </tr>
+              <% end %>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="t-small muted">No delivered licenses yet. The first sale creates the first
+        certificate-bound evidence row here.</p>
+    <% end %>
+  </section>
+<% else %>
+  <div class="empty-state">
+    <p><strong>Nothing to protect yet.</strong> Publish a model and its bundle and geometry
+      fingerprints will guard it here; sold licenses add certificate-bound takedown evidence.</p>
+  </div>
+<% end %>

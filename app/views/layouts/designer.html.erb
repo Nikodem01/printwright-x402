@@ -27,8 +27,8 @@
        ] },
        { label: "Trust & protection", items: [
          { label: "Identity", path: designer_identity_path, current: controller_path == "designer/identity" },
-         { label: "Protection", path: new_designer_takedown_packet_path,
-           current: controller_path == "designer/takedown_packets" }
+         { label: "Protection", path: designer_protection_path,
+           current: controller_path.in?(%w[designer/protection designer/takedown_packets]) }
        ] },
        { label: "Integrations", items: [
          { label: "Webhooks", path: designer_webhook_endpoints_path,
