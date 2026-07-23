@@ -2,13 +2,26 @@
 <h1>Verify a public profile</h1>
 <p class="muted">Prove control without sharing a password: place a short-lived, Printwright-signed token in your public bio.</p>
 
+<section class="section-block" aria-labelledby="identity-how-title">
+  <h2 id="identity-how-title" class="t-small">What this does</h2>
+  <ul class="t-small muted">
+    <li>Adds the labeled <span class="badge badge-ok"><span aria-hidden="true">✓</span> Identity verified</span> mark to your public profile and to every model page byline.</li>
+    <li>Links buyers to the profile you proved, so your existing reputation carries over.</li>
+    <li>Works with a public profile on <strong>GitHub, Printables, MakerWorld, Thingiverse, or Cults3D</strong> (HTTPS). The proof token expires after 2 days and is only ever read from the public page.</li>
+  </ul>
+</section>
+
 <% if Current.designer.identity_verified? %>
   <div class="flash flash-ok">
-    Verified from <%= link_to Current.designer.verified_profile_url, verified_profile_designer_path(Current.designer),
+    <span class="badge badge-ok"><span aria-hidden="true">✓</span> Identity verified</span>
+    from <%= link_to Current.designer.verified_profile_url, verified_profile_designer_path(Current.designer),
           target: "_blank", rel: "noopener" %>.
+    <p class="t-small" style="margin: var(--s2) 0 0">Verifying a different profile below replaces the linked
+      profile only after the new proof succeeds; this verification stays active until then.</p>
   </div>
 <% end %>
 
+<h2 class="t-small" style="margin-top: var(--s5)"><%= Current.designer.identity_verified? ? "Verify a different profile" : "Start verification" %></h2>
 <%= form_with url: designer_identity_path do %>
   <div class="field">
     <%= label_tag :profile_url, "Public profile URL" %>
@@ -18,20 +31,49 @@
   <%= submit_tag "Create signed proof", class: "btn btn-primary" %>
 <% end %>
 
-<% if @verification&.pending? || @verification&.failed? %>
+<% if @verification && !@verification.verified? %>
   <h2>Current challenge</h2>
-  <% if @verification.failed? %>
+  <% if @verification.expired? || @verification.expires_at.past? %>
     <div class="notice-card" role="status">
-      <strong>The last check did not verify this profile.</strong>
-      <p><%= @verification.last_error.presence || "The proof could not be confirmed." %></p>
-      <p class="t-small">Update the public bio with the exact token below, then check again. Create a new proof above if the profile URL changed.</p>
+      <strong>This challenge expired.</strong>
+      <p class="t-small">Proof tokens last 2 days. Create a new signed proof above for
+        <span class="mono"><%= @verification.host %></span>, update the public bio, then check again.</p>
     </div>
+  <% else %>
+    <% if @verification.failed? %>
+      <div class="notice-card" role="status">
+        <strong>The last check did not verify this profile.</strong>
+        <p><%= @verification.last_error.presence || "The proof could not be confirmed." %></p>
+        <p class="t-small">Update the public bio with the exact token below, then check again. Create a new proof above if the profile URL changed.</p>
+      </div>
+    <% end %>
+    <ol>
+      <li>Copy this exact token into the public profile bio:</li>
+    </ol>
+    <div class="code-block" data-controller="clipboard">
+      <code class="mono" data-clipboard-target="source"><%= @verification.challenge_token %></code>
+      <button class="copy-btn" type="button" data-action="clipboard#copy" aria-label="Copy proof token">Copy</button>
+    </div>
+    <p class="t-small muted">Expires in <%= time_ago_in_words(@verification.expires_at) %>
+      (<%= @verification.expires_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>).</p>
+    <%= button_to @verification.failed? ? "Check public profile again" : "Check public profile", verify_designer_identity_path,
+          params: { verification_id: @verification.id }, class: "btn" %>
   <% end %>
-  <ol>
-    <li>Copy this exact token into the public profile bio:</li>
-  </ol>
-  <pre class="code-block"><code class="mono"><%= @verification.challenge_token %></code></pre>
-  <p class="t-small muted">Expires <%= time_ago_in_words(@verification.expires_at) %> from now.</p>
-  <%= button_to @verification.failed? ? "Check public profile again" : "Check public profile", verify_designer_identity_path,
-        params: { verification_id: @verification.id }, class: "btn" %>
+<% end %>
+
+<% if @history.any? %>
+  <section class="section-block" aria-labelledby="identity-history-title">
+    <h2 id="identity-history-title">Recent checks</h2>
+    <ul class="home-activity">
+      <% @history.each do |verification| %>
+        <li>
+          <span>
+            <small><%= verification.updated_at.utc.strftime("%Y-%m-%d %H:%M UTC") %></small>
+            <strong><%= verification.host %></strong>
+            <span><%= verification.status.humanize %><%= " — #{verification.last_error}" if verification.failed? && verification.last_error.present? %></span>
+          </span>
+        </li>
+      <% end %>
+    </ul>
+  </section>
 <% end %>

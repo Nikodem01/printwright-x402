@@ -2,7 +2,9 @@ class Designer::IdentityController < Designer::BaseController
   rate_limit to: 5, within: 1.minute, only: %i[create verify], store: RateLimitStore
 
   def show
-    @verification = current_designer.profile_verifications.order(created_at: :desc).first
+    recent = current_designer.profile_verifications.order(created_at: :desc).limit(6).to_a
+    @verification = recent.first
+    @history = recent.drop(1)
   end
 
   def create
