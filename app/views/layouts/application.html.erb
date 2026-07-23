@@ -140,10 +140,10 @@
 
     <main class="container<%= " designer-main" if designer_workspace %>">
       <% if notice %>
-        <div class="flash flash-ok"><%= render "shared/state_mark", state: "settled" %><span><%= notice %></span></div>
+        <div class="flash flash-ok" role="status"><%= render "shared/state_mark", state: "settled" %><span><%= notice %></span></div>
       <% end %>
       <% if alert %>
-        <div class="flash flash-bad"><%= render "shared/state_mark", state: "void" %><span><%= alert %></span></div>
+        <div class="flash flash-bad" role="alert"><%= render "shared/state_mark", state: "void" %><span><%= alert %></span></div>
       <% end %>
       <%= content_for?(:content) ? yield(:content) : yield %>
     </main>

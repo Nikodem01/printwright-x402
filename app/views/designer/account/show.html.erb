@@ -6,7 +6,7 @@
     <h2 class="t-title">Profile</h2>
     <%= form_with model: @designer, url: designer_account_path, method: :patch do |f| %>
       <% if @designer.errors.any? %>
-        <div class="flash flash-bad"><%= render "shared/state_mark", state: "void" %><span><%= @designer.errors.full_messages.to_sentence %></span></div>
+        <div class="flash flash-bad" role="alert"><%= render "shared/state_mark", state: "void" %><span><%= @designer.errors.full_messages.to_sentence %></span></div>
       <% end %>
       <div class="field"><%= f.label :display_name, "Studio / display name" %><%= f.text_field :display_name, required: true %></div>
       <div class="field"><%= f.label :bio, "Short bio" %><%= f.text_area :bio, rows: 3 %></div>

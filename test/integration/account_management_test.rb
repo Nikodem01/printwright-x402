@@ -31,12 +31,15 @@ class AccountManagementTest < ActionDispatch::IntegrationTest
       assert_equal "New bio", d.bio
       assert_nil d.hedera_account_id, "profile updates cannot bypass payout proof"
     end
+    follow_redirect!
+    assert_select ".flash-ok[role='status']" # success is announced politely
   end
 
   test "profile update rejects a blank display name" do
     sign_in_as designers(:two)
     patch designer_account_path, params: { designer: { display_name: "" } }
     assert_response :unprocessable_entity
+    assert_select ".flash-bad[role='alert']" # errors are announced assertively
     assert designers(:two).reload.display_name.present?
   end
 

@@ -44,7 +44,7 @@
                   data: { turbo: false, action: "submit->listing-editor#saving" } },
           url: model.persisted? ? designer_model_path(model) : designer_models_path do |f| %>
       <% if model.errors.any? %>
-        <div class="flash flash-bad"><%= model.errors.full_messages.to_sentence %></div>
+        <div class="flash flash-bad" role="alert"><%= model.errors.full_messages.to_sentence %></div>
       <% end %>
 
       <section id="details" class="editor-section">

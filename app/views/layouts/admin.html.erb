@@ -9,8 +9,8 @@
       <%= button_to "Sign out", rodauth.logout_path, method: :post, class: "linklike" %>
     </nav>
     <section class="dash-content">
-      <% if notice %><div class="flash flash-ok"><%= notice %></div><% end %>
-      <% if alert %><div class="flash flash-bad"><%= alert %></div><% end %>
+      <% if notice %><div class="flash flash-ok" role="status"><%= notice %></div><% end %>
+      <% if alert %><div class="flash flash-bad" role="alert"><%= alert %></div><% end %>
       <%= yield %>
     </section>
   </div>
