@@ -8,13 +8,17 @@
       <% if @designer.errors.any? %>
         <div class="flash flash-bad" role="alert"><%= render "shared/state_mark", state: "void" %><span><%= @designer.errors.full_messages.to_sentence %></span></div>
       <% end %>
-      <div class="field"><%= f.label :display_name, "Studio / display name" %><%= f.text_field :display_name, required: true %></div>
+      <% name_error = field_error(@designer, :display_name) %>
+      <div class="field"><%= f.label :display_name, "Studio / display name" %><%= f.text_field :display_name, required: true, aria: name_error.aria %><%= name_error.paragraph %></div>
       <div class="field"><%= f.label :bio, "Short bio" %><%= f.text_area :bio, rows: 3 %></div>
+      <% specialty_error = field_error(@designer, :specialty) %>
       <div class="field"><%= f.label :specialty, "Specialty (optional)" %><%= f.text_field :specialty,
-            placeholder: "Print-in-place mechanisms, tabletop terrain, …" %></div>
+            placeholder: "Print-in-place mechanisms, tabletop terrain, …", aria: specialty_error.aria %><%= specialty_error.paragraph %></div>
+      <% location_error = field_error(@designer, :location) %>
       <div class="field"><%= f.label :location, "Location (optional)" %><%= f.text_field :location,
-            placeholder: "City, country — shown publicly only if you fill it in" %></div>
-      <div class="field"><%= f.label :profile_links_text, "Public links (optional, up to 3 — one HTTPS URL per line)" %><%= f.text_area :profile_links_text, rows: 3 %></div>
+            placeholder: "City, country — shown publicly only if you fill it in", aria: location_error.aria %><%= location_error.paragraph %></div>
+      <% links_error = field_error(@designer, :profile_links) %>
+      <div class="field"><%= f.label :profile_links_text, "Public links (optional, up to 3 — one HTTPS URL per line)" %><%= f.text_area :profile_links_text, rows: 3, aria: links_error.aria %><%= links_error.paragraph %></div>
       <div class="field">
         <%= f.label :featured_model_id, "Featured model (optional)" %>
         <%= f.collection_select :featured_model_id, current_designer.models3d.published.order(:title),

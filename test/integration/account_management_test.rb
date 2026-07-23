@@ -40,6 +40,9 @@ class AccountManagementTest < ActionDispatch::IntegrationTest
     patch designer_account_path, params: { designer: { display_name: "" } }
     assert_response :unprocessable_entity
     assert_select ".flash-bad[role='alert']" # errors are announced assertively
+    # The message is also tied to its own field for assistive tech.
+    assert_select "input#designer_display_name[aria-invalid='true'][aria-describedby='designer_display_name_error']"
+    assert_select "p#designer_display_name_error.field-error"
     assert designers(:two).reload.display_name.present?
   end
 

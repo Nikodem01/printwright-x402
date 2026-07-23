@@ -1194,6 +1194,7 @@ fieldset.field textarea, fieldset.field select { background: var(--bg-card); }
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
+.field-error { margin: var(--s1) 0 0; color: var(--state-void); font-size: var(--t-small); }
 
 /* ═══ catalog manager · seller model list ═════════════════════════════ */
 .catalog-tabs { display: flex; flex-wrap: wrap; gap: var(--s3); margin: var(--s4) 0; }
