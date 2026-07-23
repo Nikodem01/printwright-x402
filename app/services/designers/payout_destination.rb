@@ -42,6 +42,8 @@ module Designers
         )
       end
       PayoutDestinationMailer.change_requested(designer, account_id).deliver_later
+      Designers::Notifier.record_later(designer: designer, kind: "payout_destination_staged",
+        payload: { hedera_account_id: account_id })
       challenge
     end
 
@@ -86,8 +88,12 @@ module Designers
 
       if activated
         PayoutDestinationMailer.activated(designer, account_id).deliver_later
+        Designers::Notifier.record_later(designer: designer, kind: "payout_destination_activated",
+          payload: { hedera_account_id: account_id })
       else
         PayoutDestinationMailer.safety_hold(designer, account_id, hold_until).deliver_later
+        Designers::Notifier.record_later(designer: designer, kind: "payout_destination_hold",
+          payload: { hedera_account_id: account_id, hold_until: hold_until&.iso8601 })
       end
       activated ? :activated : :safety_hold
     rescue SidecarClient::Unavailable
@@ -108,6 +114,8 @@ module Designers
         activate_locked!(designer, account_id)
       end
       PayoutDestinationMailer.activated(designer, account_id).deliver_later
+      Designers::Notifier.record_later(designer: designer, kind: "payout_destination_activated",
+        payload: { hedera_account_id: account_id })
       account_id
     end
 
@@ -122,6 +130,8 @@ module Designers
         clear_pending!(designer)
       end
       PayoutDestinationMailer.cancelled(designer, account_id).deliver_later
+      Designers::Notifier.record_later(designer: designer, kind: "payout_destination_cancelled",
+        payload: { hedera_account_id: account_id })
       account_id
     end
 

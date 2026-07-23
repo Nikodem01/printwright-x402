@@ -1,0 +1,45 @@
+<% content_for :title, "Notifications — Printwright designer" %>
+
+<header class="page-heading-row">
+  <div>
+    <p class="card-taxonomy">Workspace</p>
+    <h1>Notifications</h1>
+    <p>Sales, certificates, payouts, payout destination changes, webhook health, mesh analysis, and identity
+      checks — never buyer identity, wallet signatures, or receipt/download capabilities.</p>
+  </div>
+  <% if @notifications.any?(&:unread?) %>
+    <%= button_to "Mark all read", mark_all_read_designer_notifications_path, method: :patch, class: "btn" %>
+  <% end %>
+</header>
+
+<% if @notifications.any? %>
+  <ol class="home-activity">
+    <% @notifications.each do |notification| %>
+      <li>
+        <span>
+          <small>
+            <% if notification.unread? %><span class="badge badge-pending">Unread</span><% end %>
+            <time datetime="<%= notification.created_at.utc.iso8601 %>">
+              <%= time_ago_in_words(notification.created_at) %> ago · <%= notification.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %>
+            </time>
+          </small>
+          <% link = notification_link(notification) %>
+          <% if link %>
+            <%= link_to notification_title(notification), link.last %>
+          <% else %>
+            <strong><%= notification_title(notification) %></strong>
+          <% end %>
+          <span><%= notification_detail(notification) %></span>
+        </span>
+      </li>
+    <% end %>
+  </ol>
+  <% if @notifications.size == Designer::NotificationsController::RECENT_LIMIT %>
+    <p class="t-small muted">Showing the most recent <%= Designer::NotificationsController::RECENT_LIMIT %>.</p>
+  <% end %>
+<% else %>
+  <div class="empty-state">
+    <p><strong>No notifications yet.</strong> Sales, certificates, payouts, webhook health, mesh analysis, and
+      identity checks will appear here as they happen.</p>
+  </div>
+<% end %>

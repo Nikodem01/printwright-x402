@@ -29,6 +29,7 @@ module ProfileVerifications
         body = fetch(validate_uri!(profile_verification.profile_url))
         unless body.include?(profile_verification.challenge_token)
           profile_verification.update!(status: "failed", last_error: "proof token is not visible in the public profile")
+          notify(profile_verification, "identity_verification_failed")
           raise Error, profile_verification.last_error
         end
         verify_signature!(profile_verification)
@@ -39,6 +40,7 @@ module ProfileVerifications
             verified_profile_url: profile_verification.profile_url
           )
         end
+        notify(profile_verification, "identity_verification_passed")
         true
       rescue ActiveSupport::MessageVerifier::InvalidSignature
         raise Error, "proof token signature is invalid or expired"
@@ -57,6 +59,14 @@ module ProfileVerifications
       end
 
       private
+
+      def notify(verification, kind)
+        Designers::Notifier.record_later(
+          designer: verification.designer, kind: kind,
+          payload: { profile_url: verification.profile_url, host: verification.host,
+                     reason: verification.last_error }
+        )
+      end
 
       def fetch(uri, redirects = 0)
         raise Error, "too many profile redirects" if redirects > 2

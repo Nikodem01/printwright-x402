@@ -4,7 +4,9 @@
     <section class="dash-nav-group" aria-labelledby="<%= "#{navigation_class}-#{group[:label].parameterize}" %>">
       <h2 id="<%= "#{navigation_class}-#{group[:label].parameterize}" %>" class="dash-nav-group-title"><%= group[:label] %></h2>
       <% group[:items].each do |item| %>
-        <%= link_to item[:label], item[:path], aria: { current: item[:current] ? "page" : nil } %>
+        <%= link_to item[:path], aria: { current: item[:current] ? "page" : nil } do %>
+          <%= item[:label] %><% if item[:badge].to_i.positive? %> <span class="badge badge-pending"><%= item[:badge] %></span><% end %>
+        <% end %>
       <% end %>
     </section>
   <% end %>

@@ -4,7 +4,10 @@
        !(controller_path == "designer/models" && action_name.in?(%w[new create])) %>
   <% designer_navigation = [
        { label: "Workspace", items: [
-         { label: "Overview", path: designer_root_path, current: controller_path == "designer/home" }
+         { label: "Overview", path: designer_root_path, current: controller_path == "designer/home" },
+         { label: "Notifications", path: designer_notifications_path,
+           current: controller_path == "designer/notifications",
+           badge: current_designer.seller_notifications.unread.count }
        ] },
        { label: "Catalog", items: [
          { label: "Models", path: designer_models_path, current: model_section },

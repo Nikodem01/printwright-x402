@@ -85,6 +85,45 @@ class WebhookDeliveryJobTest < ActiveJob::TestCase
     assert_not_requested :post, %r{hooks\.example}
   end
 
+  test "exhausting retries notifies the designer once, with the same safe error already recorded" do
+    Webhooks::Events.sale_completed(@license)
+    delivery = WebhookDelivery.sole
+    stub_request(:post, @endpoint.url).to_return(status: 503, body: "down")
+
+    job = WebhookDeliveryJob.new(delivery.id)
+    8.times { job.perform_now }
+
+    delivery.reload
+    assert_equal "failed", delivery.status
+    notification = @endpoint.designer.seller_notifications.sole
+    assert_equal "webhook_delivery_failed", notification.kind
+    assert_equal(
+      { "url" => @endpoint.url, "event_type" => "sale.completed", "last_error" => delivery.last_error },
+      notification.payload
+    )
+  end
+
+  test "a buyer-targeted certificate delivery has no endpoint and never notifies a designer" do
+    batch = PurchaseBatch.create!(
+      status: "delivered", replay_key: SecureRandom.hex(32), payment_tx_id: "0.0.7@2.3",
+      webhook_url: "https://buyer.example/certificates",
+      webhook_secret_ciphertext: Webhooks::SecretBox.encrypt("buyer_#{SecureRandom.hex(32)}")
+    )
+    @purchase.update!(purchase_batch: batch, batch_position: 0, payment_tx_id: batch.payment_tx_id)
+    @license.update!(cert_json: Certificates::Builder.call(@license),
+      hcs_topic_id: "0.0.9585069", hcs_sequence_number: 61)
+    Webhooks::Events.certificate_anchored(@license)
+    delivery = WebhookDelivery.sole
+    assert_nil delivery.webhook_endpoint
+    stub_request(:post, batch.webhook_url).to_return(status: 503, body: "down")
+
+    job = WebhookDeliveryJob.new(delivery.id)
+    8.times { job.perform_now }
+
+    assert_equal "failed", delivery.reload.status
+    assert_empty SellerNotification.all
+  end
+
   test "buyer certificate event requires a paid batch callback and an HCS anchor" do
     batch_secret = "buyer_#{SecureRandom.hex(32)}"
     batch = PurchaseBatch.create!(

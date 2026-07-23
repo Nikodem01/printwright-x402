@@ -37,6 +37,9 @@ class Designers::PayoutDestinationTest < ActiveSupport::TestCase
     assert_includes challenge, "Account: 0.0.7007"
     assert_equal Digest::SHA256.hexdigest(challenge), @designer.payout_challenge_digest
     assert_equal 1, enqueued_jobs.count { |job| job[:job] == ActionMailer::MailDeliveryJob }
+    notification = @designer.seller_notifications.sole
+    assert_equal "payout_destination_staged", notification.kind
+    assert_equal "0.0.7007", notification.payload["hedera_account_id"]
   end
 
   test "first destination activates only after wallet control and receipt checks pass" do
@@ -56,6 +59,8 @@ class Designers::PayoutDestinationTest < ActiveSupport::TestCase
     assert_equal :active, @designer.payout_destination_state
     assert_not @designer.payout_destination_change_pending?
     assert_equal "0.0.7007", client.calls.sole.fetch(:account_id)
+    activated_notification = @designer.seller_notifications.find_by!(kind: "payout_destination_activated")
+    assert_equal "0.0.7007", activated_notification.payload["hedera_account_id"]
   end
 
   test "replacement keeps the old destination active through a cancellable 24-hour hold" do
@@ -75,17 +80,23 @@ class Designers::PayoutDestinationTest < ActiveSupport::TestCase
     assert @designer.payout_account_verified?
     assert_equal :safety_hold, @designer.payout_destination_state
     assert_in_delta 24.hours.from_now, @designer.payout_hold_until, 2.seconds
+    hold_notification = @designer.seller_notifications.find_by!(kind: "payout_destination_hold")
+    assert_equal "0.0.7007", hold_notification.payload["hedera_account_id"]
+    assert hold_notification.payload["hold_until"].present?
 
     error = assert_raises(Designers::PayoutDestination::Error) do
       Designers::PayoutDestination.activate!(designer: @designer)
     end
     assert_equal :hold_active, error.code
+    assert_not @designer.seller_notifications.exists?(kind: "payout_destination_activated")
 
     travel 24.hours + 1.second do
       assert_equal "0.0.7007", Designers::PayoutDestination.activate!(designer: @designer)
     end
     assert_equal "0.0.7007", @designer.reload.hedera_account_id
     assert @designer.payout_account_verified?
+    activated_notification = @designer.seller_notifications.find_by!(kind: "payout_destination_activated")
+    assert_equal "0.0.7007", activated_notification.payload["hedera_account_id"]
   end
 
   test "tampered, expired, invalid-signature, and non-receivable proofs fail closed" do
@@ -137,6 +148,8 @@ class Designers::PayoutDestinationTest < ActiveSupport::TestCase
     assert_equal "0.0.6006", @designer.hedera_account_id
     assert @designer.payout_account_verified?
     assert_not @designer.payout_destination_change_pending?
+    cancelled_notification = @designer.seller_notifications.find_by!(kind: "payout_destination_cancelled")
+    assert_equal "0.0.7007", cancelled_notification.payload["hedera_account_id"]
   end
 
   test "legacy active destination can gain control proof without a replacement hold" do

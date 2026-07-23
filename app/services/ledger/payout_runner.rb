@@ -61,26 +61,39 @@ module Ledger
             end
             PayoutAttempt.succeed!(entries: entries, tx_id: tx_id)
           end
+          notify_payout_state(entries, kind: "payout_completed", asset: asset, tx_id: tx_id, ref: attempt_ref)
         rescue SidecarClient::Unavailable
           status = automatic_retry ? "retrying" : "failed"
           PayoutAttempt.fail_remaining!(ref: attempt_ref, status: status,
             error_code: "service_unavailable")
+          if status == "failed"
+            notify_payout_state(entries, kind: "payout_failed", asset: asset,
+              error_code: "service_unavailable", ref: attempt_ref)
+          end
           raise
         rescue SidecarClient::Ambiguous
           PayoutAttempt.fail_entries!(entries: entries, status: "reconciliation_required",
             error_code: "ambiguous_result", tx_id: tx_id)
           PayoutAttempt.fail_remaining!(ref: attempt_ref, status: "failed",
             error_code: "not_submitted")
+          notify_payout_state(entries, kind: "payout_reconciliation_required", asset: asset,
+            tx_id: tx_id, error_code: "ambiguous_result", ref: attempt_ref)
           raise
         rescue SidecarClient::Rejected
           PayoutAttempt.fail_entries!(entries: entries, status: "failed",
             error_code: "transfer_rejected")
           PayoutAttempt.fail_remaining!(ref: attempt_ref, status: "failed",
             error_code: "not_submitted")
+          notify_payout_state(entries, kind: "payout_failed", asset: asset,
+            error_code: "transfer_rejected", ref: attempt_ref)
           raise
         rescue StandardError
-          PayoutAttempt.fail_entries!(entries: entries, status: "reconciliation_required",
-            error_code: "ledger_recording_failed", tx_id: tx_id) if tx_id
+          if tx_id
+            PayoutAttempt.fail_entries!(entries: entries, status: "reconciliation_required",
+              error_code: "ledger_recording_failed", tx_id: tx_id)
+            notify_payout_state(entries, kind: "payout_reconciliation_required", asset: asset,
+              tx_id: tx_id, error_code: "ledger_recording_failed", ref: attempt_ref)
+          end
           raise
         end
         Payout.new(asset: asset, tx_id: tx_id, transfers: transfers)
@@ -103,6 +116,22 @@ module Ledger
       return "printwright payout #{ref}" if ref
       "printwright designer payout #{Time.current.strftime('%Y-%m-%d')}"
     end
-    private_class_method :with_advisory_lock
+
+    # One notification per designer per state change, never per ledger row —
+    # always called after its money transaction/attempt write already
+    # committed, so a notification failure (swallowed by record_later) can
+    # never touch the payout itself.
+    def self.notify_payout_state(entries, kind:, asset:, tx_id: nil, error_code: nil, ref: nil)
+      entries.group_by(&:designer).each do |designer, owed|
+        Designers::Notifier.record_later(
+          designer: designer, kind: kind,
+          payload: {
+            asset: asset, amount_base_units: owed.sum { |e| Integer(e.amount_base_units) }.to_s,
+            tx_id: tx_id, ref: ref, error_code: error_code
+          }.compact
+        )
+      end
+    end
+    private_class_method :with_advisory_lock, :notify_payout_state
   end
 end

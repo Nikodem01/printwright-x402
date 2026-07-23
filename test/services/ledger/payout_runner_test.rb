@@ -138,6 +138,66 @@ class Ledger::PayoutRunnerTest < ActiveSupport::TestCase
     assert_includes LedgerEntry.owed.pluck(:purchase_id), ambiguous.id
   end
 
+  test "a completed run notifies the designer once with a safe payload, not per ledger row" do
+    stub_request(:post, "#{SIDECAR}/payout")
+      .to_return(body: { transactionId: "0.0.9067781@777.888" }.to_json,
+                 headers: { "content-type" => "application/json" })
+
+    Ledger::PayoutRunner.call(ref: "checkout-ref")
+
+    notification = @paid_designer.seller_notifications.sole
+    assert_equal "payout_completed", notification.kind
+    assert_equal(
+      { "asset" => "0.0.429274", "amount_base_units" => "306000",
+        "tx_id" => "0.0.9067781@777.888", "ref" => "checkout-ref" },
+      notification.payload
+    )
+  end
+
+  test "a pre-submit outage on an operator run notifies the designer that the payout failed" do
+    stub_request(:post, "#{SIDECAR}/payout")
+      .to_return(status: 503, body: { error: "treasury_not_configured" }.to_json,
+                 headers: { "content-type" => "application/json" })
+
+    assert_raises(SidecarClient::Unavailable) do
+      Ledger::PayoutRunner.call(ref: "operator-safe-failure")
+    end
+
+    notification = @paid_designer.seller_notifications.sole
+    assert_equal "payout_failed", notification.kind
+    assert_equal "service_unavailable", notification.payload["error_code"]
+  end
+
+  test "a retrying (non-terminal) outage does not yet notify the designer" do
+    stub_request(:post, "#{SIDECAR}/payout")
+      .to_return(status: 503, body: { error: "treasury_not_configured" }.to_json,
+                 headers: { "content-type" => "application/json" })
+
+    assert_raises(SidecarClient::Unavailable) do
+      Ledger::PayoutRunner.call(ref: "auto-retry", automatic_retry: true)
+    end
+
+    assert_empty @paid_designer.seller_notifications
+  end
+
+  test "the payout itself succeeds even when notification creation raises" do
+    stub_request(:post, "#{SIDECAR}/payout")
+      .to_return(body: { transactionId: "0.0.9067781@777.888" }.to_json,
+                 headers: { "content-type" => "application/json" })
+    singleton = SellerNotification.singleton_class
+    original = SellerNotification.method(:record!)
+    singleton.define_method(:record!) { |**| raise "boom" }
+
+    results = Ledger::PayoutRunner.call
+
+    assert_equal "0.0.9067781@777.888", results.first.tx_id
+    assert_equal %w[succeeded succeeded],
+      PayoutAttempt.where(purchase: [ @owed_a, @owed_b ]).order(:purchase_id).pluck(:status)
+    assert_empty SellerNotification.all
+  ensure
+    singleton&.define_method(:record!, original) if original
+  end
+
   private
 
   def owed_purchase(designer, amount, asset: "0.0.429274")

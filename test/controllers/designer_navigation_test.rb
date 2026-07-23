@@ -11,6 +11,7 @@ class DesignerNavigationTest < ActionDispatch::IntegrationTest
   test "every seller destination names the current section in both navigation variants" do
     destinations = [
       [ designer_root_path, "Overview", designer_root_path ],
+      [ designer_notifications_path, "Notifications", designer_notifications_path ],
       [ designer_models_path, "Models", designer_models_path ],
       [ edit_designer_model_path(@model), "Models", designer_models_path ],
       [ new_designer_model_path, "Add model", new_designer_model_path ],

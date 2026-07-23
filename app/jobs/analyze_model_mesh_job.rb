@@ -21,9 +21,16 @@ class AnalyzeModelMeshJob < ApplicationJob
       },
       updated_at: Time.current
     )
+    notify_result(model, errors)
   end
 
   private
+
+  def notify_result(model, errors)
+    kind = errors.empty? ? "mesh_analysis_passed" : "mesh_analysis_failed"
+    payload = errors.empty? ? {} : { errors: errors }
+    Designers::Notifier.record_later(designer: model.designer, kind: kind, model3d: model, payload: payload)
+  end
 
   def duplicate_for(model, result)
     scope = Model3d.published.where.not(id: model.id)

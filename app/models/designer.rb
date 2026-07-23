@@ -10,6 +10,7 @@ class Designer < ApplicationRecord
   has_many :profile_verifications, dependent: :destroy
   has_many :webhook_endpoints, dependent: :destroy
   has_many :payout_attempts, dependent: :destroy
+  has_many :seller_notifications, dependent: :destroy
   has_many :admin_audit_logs, foreign_key: :actor_designer_id
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }

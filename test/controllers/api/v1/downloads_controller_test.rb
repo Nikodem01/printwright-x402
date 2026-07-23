@@ -218,6 +218,24 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a seller-notification failure during webhook fanout never touches the buyer's delivery response" do
+    stub_verify_ok
+    stub_settle(body: fixture("settle_ok.json"))
+    singleton = SellerNotification.singleton_class
+    original = SellerNotification.method(:record!)
+    singleton.define_method(:record!) { |**| raise "boom" }
+
+    perform_enqueued_jobs(only: WebhookFanoutJob) do
+      get download_path, headers: payment_headers(@payload)
+    end
+
+    assert_response :success
+    assert Purchase.sole.delivered?
+    assert_empty SellerNotification.all
+  ensure
+    singleton&.define_method(:record!, original) if original
+  end
+
   test "v1 X-PAYMENT header name is accepted too" do
     stub_verify_ok
     stub_settle(body: fixture("settle_ok.json"))

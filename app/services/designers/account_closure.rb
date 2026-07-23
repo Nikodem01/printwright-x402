@@ -45,6 +45,7 @@ module Designers
       designer.catalog_imports.destroy_all
       designer.profile_verifications.destroy_all
       designer.payout_attempts.destroy_all
+      designer.seller_notifications.destroy_all
     end
 
     def self.remove_private_integrations!(designer)

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_23_201000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_23_210000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -431,6 +431,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_201000) do
     t.index ["status"], name: "index_purchases_on_status"
   end
 
+  create_table "seller_notifications", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "designer_id", null: false
+    t.string "kind", null: false
+    t.bigint "model3d_id"
+    t.jsonb "payload", default: {}, null: false
+    t.datetime "read_at"
+    t.datetime "updated_at", null: false
+    t.index ["designer_id", "created_at"], name: "index_seller_notifications_on_designer_id_and_created_at"
+    t.index ["designer_id"], name: "index_seller_notifications_on_designer_id"
+    t.index ["model3d_id"], name: "index_seller_notifications_on_model3d_id"
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "designer_id", null: false
@@ -508,6 +521,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_201000) do
   add_foreign_key "profile_verifications", "designers"
   add_foreign_key "purchases", "license_offers"
   add_foreign_key "purchases", "purchase_batches"
+  add_foreign_key "seller_notifications", "designers"
+  add_foreign_key "seller_notifications", "models3d"
   add_foreign_key "sessions", "designers"
   add_foreign_key "webhook_deliveries", "licenses"
   add_foreign_key "webhook_deliveries", "webhook_endpoints"

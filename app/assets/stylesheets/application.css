@@ -1151,6 +1151,9 @@ fieldset.field textarea, fieldset.field select { background: var(--bg-card); }
 .home-activity li { padding-bottom: var(--s3); border-bottom: 1px solid var(--hairline); }
 .home-activity li:last-child { padding-bottom: 0; border-bottom: 0; }
 .home-activity a { display: block; margin: var(--s1) 0; font-weight: 600; }
+/* The generic span-span rule above makes descendants block; a status badge
+   stays an inline pill beside its timestamp (notifications stream). */
+.home-activity .badge { display: inline-block; }
 .home-sample-grid { display: grid; grid-template-columns: minmax(180px, 1fr) 2fr; gap: var(--s5); margin-top: var(--s4); }
 .home-sample-image {
   display: grid; place-items: center; min-height: 160px; border-radius: var(--r-md);

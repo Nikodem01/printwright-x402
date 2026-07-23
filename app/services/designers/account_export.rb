@@ -14,7 +14,8 @@ module Designers
         identity_verifications: verifications_data,
         webhook_endpoints: webhooks_data,
         payout_attempts: payout_attempts_data,
-        model_metrics: model_metrics_data
+        model_metrics: model_metrics_data,
+        notifications: notifications_data
       }.to_json
     end
 
@@ -68,6 +69,15 @@ module Designers
           attempt_count: attempt.attempt_count, last_error_code: attempt.last_error_code,
           tx_id: attempt.tx_id, last_attempted_at: attempt.last_attempted_at&.iso8601,
           completed_at: attempt.completed_at&.iso8601
+        }
+      end
+    end
+
+    def notifications_data
+      designer.seller_notifications.recent.map do |notification|
+        {
+          kind: notification.kind, payload: notification.payload,
+          created_at: notification.created_at&.iso8601, read_at: notification.read_at&.iso8601
         }
       end
     end

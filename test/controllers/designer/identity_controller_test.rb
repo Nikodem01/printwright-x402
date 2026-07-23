@@ -26,6 +26,9 @@ class Designer::IdentityControllerTest < ActionDispatch::IntegrationTest
     assert_predicate verification.reload, :verified?
     assert_predicate designers(:one).reload, :identity_verified?
     assert_equal profile_url, designers(:one).verified_profile_url
+    notification = designers(:one).seller_notifications.sole
+    assert_equal "identity_verification_passed", notification.kind
+    assert_equal({ "profile_url" => profile_url, "host" => "github.com" }, notification.payload)
   end
 
   test "refuses a proof token missing from the profile" do
@@ -38,6 +41,13 @@ class Designer::IdentityControllerTest < ActionDispatch::IntegrationTest
 
     assert_predicate verification.reload, :failed?
     assert_not designers(:one).reload.identity_verified?
+    notification = designers(:one).seller_notifications.sole
+    assert_equal "identity_verification_failed", notification.kind
+    assert_equal(
+      { "profile_url" => profile_url, "host" => "www.printables.com",
+        "reason" => "proof token is not visible in the public profile" },
+      notification.payload
+    )
 
     get designer_identity_path
     assert_select "[role='status']", text: /last check did not verify.*proof token is not visible/i

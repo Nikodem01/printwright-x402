@@ -7,6 +7,9 @@ Rails.application.routes.draw do
 
   namespace :designer do
     root "home#show"
+    resource :notifications, only: :show do
+      patch :mark_all_read
+    end
     resources :models, except: %i[destroy show] do
       member do
         match :review, via: %i[post patch]

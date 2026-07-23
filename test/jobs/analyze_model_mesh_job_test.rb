@@ -13,6 +13,10 @@ class AnalyzeModelMeshJobTest < ActiveJob::TestCase
     assert_equal "passed", model.reload.mesh_analysis_status
     assert_empty model.mesh_analysis_errors
     assert_match(/\Asha256:/, model.geometry_hash)
+    notification = model.designer.seller_notifications.sole
+    assert_equal "mesh_analysis_passed", notification.kind
+    assert_equal model, notification.model3d
+    assert_empty notification.payload
   end
 
   test "marks a changed-byte copy of published geometry as a duplicate" do
@@ -33,5 +37,9 @@ class AnalyzeModelMeshJobTest < ActiveJob::TestCase
     assert_equal existing.geometry_hash, copy.geometry_hash
     assert_equal "failed", copy.mesh_analysis_status
     assert_includes copy.mesh_analysis_errors.join(" "), "matches existing published model “Original box”"
+    notification = copy.designer.seller_notifications.sole
+    assert_equal "mesh_analysis_failed", notification.kind
+    assert_equal copy, notification.model3d
+    assert_equal copy.mesh_analysis_errors, notification.payload["errors"]
   end
 end

@@ -48,6 +48,9 @@ class Designers::AccountClosureTest < ActiveSupport::TestCase
     payout_attempt = PayoutAttempt.create!(designer: @designer, purchase: purchase,
       ref: "purchase-#{purchase.id}", asset: "0.0.429274", status: "succeeded",
       attempt_count: 1, tx_id: "0.0.7@8.9", completed_at: Time.current)
+    notification = SellerNotification.record!(designer: @designer, kind: "sale_delivered",
+      model3d: historical, payload: { license_type: "personal", asset: "0.0.429274",
+                                       amount_base_units: "225000", serial: 1 })
 
     Designers::AccountClosure.prepare!(@designer)
 
@@ -62,6 +65,7 @@ class Designers::AccountClosureTest < ActiveSupport::TestCase
     assert_not WebhookEndpoint.exists?(endpoint.id)
     assert_not WebhookDelivery.exists?(delivery.id)
     assert_not PayoutAttempt.exists?(payout_attempt.id)
+    assert_not SellerNotification.exists?(notification.id)
   end
 
   test "refuses before mutation while designer earnings are owed" do
