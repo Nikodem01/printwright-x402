@@ -4,7 +4,8 @@
 
   <section class="account-section">
     <h2 class="t-title">Profile</h2>
-    <%= form_with model: @designer, url: designer_account_path, method: :patch do |f| %>
+    <%= form_with model: @designer, url: designer_account_path, method: :patch,
+          html: { data: { controller: "form-errors" } } do |f| %>
       <% if @designer.errors.any? %>
         <div class="flash flash-bad" role="alert"><%= render "shared/state_mark", state: "void" %><span><%= @designer.errors.full_messages.to_sentence %></span></div>
       <% end %>

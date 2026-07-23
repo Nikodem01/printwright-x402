@@ -2,13 +2,15 @@
 <h1>Add webhook endpoint</h1>
 <p class="muted">The destination must be public HTTPS. Its signing secret is shown once after creation.</p>
 
-<%= form_with model: @endpoint, url: designer_webhook_endpoints_path do |form| %>
+<%= form_with model: @endpoint, url: designer_webhook_endpoints_path, html: { data: { controller: "form-errors" } } do |form| %>
   <% if @endpoint.errors.any? %>
     <div class="flash flash-bad" role="alert"><%= @endpoint.errors.full_messages.to_sentence %></div>
   <% end %>
+  <% url_error = field_error(@endpoint, :url) %>
   <div class="field">
     <%= form.label :url, "Callback URL" %>
-    <%= form.url_field :url, required: true, placeholder: "https://hooks.example/printwright" %>
+    <%= form.url_field :url, required: true, placeholder: "https://hooks.example/printwright", aria: url_error.aria %>
+    <%= url_error.paragraph %>
   </div>
   <%= form.submit "Create webhook" %>
 <% end %>
