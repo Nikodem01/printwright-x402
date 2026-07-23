@@ -1,44 +1,72 @@
 <% content_for :title, "Webhooks — Printwright designer" %>
-<h1>Webhooks</h1>
-<p class="muted">Receive a signed <code class="mono">sale.completed</code> event after an x402 payment delivers a license.</p>
-<p><%= link_to "Add endpoint", new_designer_webhook_endpoint_path, class: "btn btn-primary" %></p>
+<header class="page-heading-row">
+  <div>
+    <p class="card-taxonomy">Integrations</p>
+    <h1>Webhooks</h1>
+    <p>Receive a signed <code class="mono">sale.completed</code> event after an x402 payment delivers a license.</p>
+  </div>
+  <%= link_to "Add endpoint", new_designer_webhook_endpoint_path, class: "btn btn-primary" %>
+</header>
 
 <% if @endpoints.any? %>
-  <div class="table-scroll"><table class="facts-table">
-    <tr><th>endpoint</th><th>events</th><th>status</th><th></th></tr>
+  <ul class="catalog-list">
     <% @endpoints.each do |endpoint| %>
-      <tr>
-        <td class="mono"><%= endpoint.url %></td>
-        <td><%= endpoint.events.join(", ") %></td>
-        <td><%= endpoint.active? ? "active" : "paused" %></td>
-        <td><%= button_to "Remove", designer_webhook_endpoint_path(endpoint), method: :delete, class: "linklike" %></td>
-      </tr>
+      <li class="catalog-row webhook-row">
+        <div class="catalog-main">
+          <span class="mono catalog-title"><%= endpoint.url %></span>
+          <p class="t-small muted catalog-meta">
+            <%= render "shared/state", state: endpoint.active? ? "settled" : "pending",
+                  label: endpoint.active? ? "Active" : "Paused" %>
+            · <%= endpoint.events.join(", ") %>
+            <% if (delivered = @last_delivered[endpoint.id]) %>
+              · Last delivered <%= time_ago_in_words(delivered) %> ago
+            <% end %>
+            <% if (failed = @last_failed[endpoint.id]) %>
+              · Last failure <%= time_ago_in_words(failed) %> ago
+            <% end %>
+          </p>
+        </div>
+        <div class="catalog-actions webhook-actions">
+          <% if endpoint.active? %>
+            <%= button_to "Pause", pause_designer_webhook_endpoint_path(endpoint), method: :patch, class: "linklike" %>
+          <% else %>
+            <%= button_to "Resume", resume_designer_webhook_endpoint_path(endpoint), method: :patch, class: "linklike" %>
+          <% end %>
+          <%= button_to "Send test", test_designer_webhook_endpoint_path(endpoint), class: "linklike" %>
+          <%= button_to "Rotate secret", rotate_secret_designer_webhook_endpoint_path(endpoint), method: :patch,
+                class: "linklike", form: { data: { turbo_confirm: "Rotate the signing secret? The current secret stops working immediately." } } %>
+          <%= button_to "Remove", designer_webhook_endpoint_path(endpoint), method: :delete, class: "linklike",
+                form: { data: { turbo_confirm: "Remove this endpoint? It will stop receiving events. Existing delivery history is kept." } } %>
+        </div>
+      </li>
     <% end %>
-  </table></div>
+  </ul>
 <% else %>
   <p class="muted">No webhook endpoints configured.</p>
 <% end %>
 
-<section id="delivery-health" class="section-stack">
+<section id="delivery-health" class="section-block">
   <h2>Recent delivery health</h2>
   <p class="t-small muted">Seller callbacks run after durable buyer delivery. Retrying here never repeats payment, license issuance, or file delivery, and no buyer email, wallet id, or bearer download URL is shown.</p>
   <% if @deliveries.any? %>
     <div class="table-scroll"><table class="facts-table">
-      <tr><th>event</th><th>created</th><th>status</th><th>attempts</th><th>result</th><th></th></tr>
-      <% @deliveries.each do |delivery| %>
-        <tr>
-          <td><%= delivery.event_type %></td>
-          <td class="t-small"><%= time_ago_in_words(delivery.created_at) %> ago</td>
-          <td><%= render "shared/state", state: delivery.delivered? ? "settled" : (delivery.failed? ? "void" : "pending"), label: delivery.status.humanize %></td>
-          <td><%= delivery.attempts %></td>
-          <td class="t-small"><%= delivery.last_error.to_s.truncate(120).presence || (delivery.response_code ? "HTTP #{delivery.response_code}" : "Awaiting delivery") %></td>
-          <td>
-            <% if delivery.failed? %>
-              <%= button_to "Retry", retry_designer_webhook_endpoint_delivery_path(delivery.webhook_endpoint_id, delivery), class: "btn" %>
-            <% end %>
-          </td>
-        </tr>
-      <% end %>
+      <thead><tr><th>Event</th><th>Created</th><th>Status</th><th>Attempts</th><th>Result</th><th></th></tr></thead>
+      <tbody>
+        <% @deliveries.each do |delivery| %>
+          <tr>
+            <td><%= delivery.event_type %></td>
+            <td class="t-small"><%= time_ago_in_words(delivery.created_at) %> ago</td>
+            <td><%= render "shared/state", state: delivery.delivered? ? "settled" : (delivery.failed? ? "void" : "pending"), label: delivery.status.humanize %></td>
+            <td><%= delivery.attempts %></td>
+            <td class="t-small"><%= delivery.last_error.to_s.truncate(120).presence || (delivery.response_code ? "HTTP #{delivery.response_code}" : "Awaiting delivery") %></td>
+            <td>
+              <% if delivery.failed? %>
+                <%= button_to "Retry", retry_designer_webhook_endpoint_delivery_path(delivery.webhook_endpoint_id, delivery), class: "btn" %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
     </table></div>
   <% else %>
     <p class="muted">No seller webhook deliveries yet.</p>

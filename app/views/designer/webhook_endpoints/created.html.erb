@@ -1,8 +1,12 @@
 <% content_for :title, "Webhook secret — Printwright designer" %>
-<h1>Webhook created</h1>
-<div class="flash flash-ok">Endpoint <span class="mono"><%= @endpoint.url %></span> is active.</div>
+<h1><%= @rotated ? "Signing secret rotated" : "Webhook created" %></h1>
+<div class="flash flash-ok">Endpoint <span class="mono"><%= @endpoint.url %></span>
+  <%= @rotated ? "has a new signing secret. The previous secret stops working now." : "is active." %></div>
 <p><strong>Copy this signing secret now. It will not be shown again.</strong></p>
-<pre class="mono"><%= @signing_secret %></pre>
+<div class="code-block" data-controller="clipboard">
+  <code class="mono" data-clipboard-target="source"><%= @signing_secret %></code>
+  <button class="copy-btn" type="button" data-action="clipboard#copy" aria-label="Copy signing secret">Copy</button>
+</div>
 <p class="t-small muted">Verify <code class="mono">Webhook-Signature</code> over
   <code class="mono">Webhook-Id.Webhook-Timestamp.raw_body</code> using HMAC-SHA256.</p>
 <p><%= link_to "Back to webhooks", designer_webhook_endpoints_path %></p>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_24_110000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_24_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -467,7 +467,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_110000) do
     t.string "event_key", null: false
     t.string "event_type", null: false
     t.text "last_error"
-    t.bigint "license_id", null: false
+    t.bigint "license_id"
     t.jsonb "payload", default: {}, null: false
     t.integer "response_code"
     t.text "secret_ciphertext", null: false

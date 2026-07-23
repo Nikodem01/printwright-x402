@@ -1,10 +1,11 @@
 class WebhookDelivery < ApplicationRecord
   STATUSES = %w[pending delivered failed].freeze
   TARGET_KINDS = %w[designer buyer].freeze
-  EVENT_TYPES = %w[sale.completed certificate.anchored].freeze
+  EVENT_TYPES = %w[sale.completed certificate.anchored webhook.test].freeze
 
   belongs_to :webhook_endpoint, optional: true
-  belongs_to :license
+  # Optional only for webhook.test pings; every real event delivery sets one.
+  belongs_to :license, optional: true
 
   enum :status, STATUSES.index_by(&:itself), default: "pending"
 

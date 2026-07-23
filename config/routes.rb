@@ -50,6 +50,12 @@ Rails.application.routes.draw do
       patch :activate
     end
     resources :webhook_endpoints, only: %i[index new create destroy] do
+      member do
+        patch :pause
+        patch :resume
+        patch :rotate_secret
+        post :test
+      end
       resources :deliveries, only: [], controller: :webhook_deliveries do
         post :retry, on: :member
       end

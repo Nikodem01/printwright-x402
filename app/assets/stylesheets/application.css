@@ -1221,6 +1221,9 @@ fieldset.field textarea, fieldset.field select { background: var(--bg-card); }
 .catalog-side { text-align: right; display: flex; flex-direction: column; gap: var(--s1); align-items: end; }
 .catalog-sales strong { font-size: var(--t-body); }
 .catalog-actions { display: flex; gap: var(--s3); }
+.webhook-row { grid-template-columns: minmax(0, 1fr) auto; }
+.webhook-actions { flex-wrap: wrap; justify-content: end; }
+.webhook-actions form { margin: 0; }
 @media (max-width: 560px) {
   .catalog-row { grid-template-columns: 48px minmax(0, 1fr); }
   .catalog-thumb { width: 48px; height: 48px; }

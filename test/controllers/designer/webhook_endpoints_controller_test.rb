@@ -83,7 +83,86 @@ class Designer::WebhookEndpointsControllerTest < ActionDispatch::IntegrationTest
     assert_predicate delivery.reload, :failed?
   end
 
+  test "pausing stops future events and resuming restores them" do
+    endpoint = own_endpoint
+
+    patch pause_designer_webhook_endpoint_path(endpoint)
+    assert_redirected_to designer_webhook_endpoints_path
+    assert_not endpoint.reload.active?
+
+    patch resume_designer_webhook_endpoint_path(endpoint)
+    assert endpoint.reload.active?
+  end
+
+  test "rotating the secret replaces it, shows it once, and invalidates the old one" do
+    endpoint = own_endpoint
+    old_secret = Webhooks::SecretBox.decrypt(endpoint.secret_ciphertext)
+
+    patch rotate_secret_designer_webhook_endpoint_path(endpoint)
+
+    assert_response :success
+    new_secret = response.body.match(/whsec_[0-9a-f]{64}/)&.to_s
+    assert new_secret
+    assert_not_equal old_secret, new_secret
+    assert_equal new_secret, Webhooks::SecretBox.decrypt(endpoint.reload.secret_ciphertext)
+    assert_select "[data-controller='clipboard'] button[aria-label='Copy signing secret']"
+  end
+
+  test "send test queues one license-less test delivery with no buyer or purchase data" do
+    endpoint = own_endpoint
+
+    assert_difference("WebhookDelivery.count", 1) do
+      assert_enqueued_jobs 1, only: WebhookDeliveryJob do
+        post test_designer_webhook_endpoint_path(endpoint)
+      end
+    end
+
+    assert_redirected_to designer_webhook_endpoints_path(anchor: "delivery-health")
+    delivery = endpoint.webhook_deliveries.sole
+    assert_equal "webhook.test", delivery.event_type
+    assert_nil delivery.license_id
+    assert_equal endpoint.url, delivery.url
+    assert_equal "Test event from Printwright. No purchase, license, or buyer is involved.",
+      delivery.payload.dig("data", "message")
+    assert_equal %w[endpoint_id message], delivery.payload.fetch("data").keys.sort
+  end
+
+  test "another studio cannot pause, rotate, or test an endpoint" do
+    endpoint = designers(:two).webhook_endpoints.create!(
+      url: "https://hooks.example/two", secret_ciphertext: Webhooks::SecretBox.encrypt("whsec_#{SecureRandom.hex(32)}")
+    )
+
+    patch pause_designer_webhook_endpoint_path(endpoint)
+    assert_response :not_found
+    patch rotate_secret_designer_webhook_endpoint_path(endpoint)
+    assert_response :not_found
+    assert_no_enqueued_jobs(only: WebhookDeliveryJob) { post test_designer_webhook_endpoint_path(endpoint) }
+    assert_response :not_found
+    assert endpoint.reload.active?
+  end
+
+  test "the endpoint list shows per-endpoint health and status controls" do
+    endpoint, delivery = failed_delivery_for(designers(:one))
+    delivery.update!(status: "delivered", delivered_at: 1.hour.ago)
+    endpoint.update!(active: false)
+
+    get designer_webhook_endpoints_path
+
+    assert_response :success
+    assert_select ".catalog-meta", text: /Paused/
+    assert_select ".catalog-meta", text: /Last delivered/
+    assert_select "form[action=?]", resume_designer_webhook_endpoint_path(endpoint)
+    assert_select "form[action=?]", test_designer_webhook_endpoint_path(endpoint)
+  end
+
   private
+
+  def own_endpoint
+    designers(:one).webhook_endpoints.create!(
+      url: "https://hooks-#{SecureRandom.hex(3)}.example/own",
+      secret_ciphertext: Webhooks::SecretBox.encrypt("whsec_#{SecureRandom.hex(32)}")
+    )
+  end
 
   def failed_delivery_for(designer)
     model = designer.models3d.create!(
