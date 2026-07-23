@@ -135,6 +135,52 @@ class AccountManagementTest < ActionDispatch::IntegrationTest
     refute designer.active_session_keys.exists?(session_id: "another-device")
   end
 
+  test "the account marks the current session and offers per-device sign out" do
+    designer = designers(:two)
+    designer.active_session_keys.create!(session_id: "other-device")
+    sign_in_as designer
+
+    get designer_account_path
+    assert_response :success
+    assert_select "table.account-sessions .badge", text: "This session"
+    assert_select "form[action=?]", revoke_session_designer_account_path(session_id: "other-device")
+    assert_includes response.body, "no IP address, device, or location"
+  end
+
+  test "signing out one device drops only that session and keeps the current one" do
+    designer = designers(:two)
+    designer.active_session_keys.create!(session_id: "other-device")
+    sign_in_as designer
+
+    post revoke_session_designer_account_path(session_id: "other-device")
+
+    assert_redirected_to designer_account_path
+    refute designer.active_session_keys.exists?(session_id: "other-device")
+    assert_operator designer.reload.active_session_keys.count, :>=, 1
+  end
+
+  test "a designer cannot sign out their own current session from the list" do
+    designer = designers(:two)
+    sign_in_as designer
+    current_id = designer.active_session_keys.order(:created_at).last.session_id
+
+    post revoke_session_designer_account_path(session_id: current_id)
+
+    follow_redirect!
+    assert_select ".flash-bad", text: /current session/
+    assert designer.active_session_keys.exists?(session_id: current_id)
+  end
+
+  test "revoke_session cannot touch another studio's session" do
+    victim = designers(:one)
+    victim.active_session_keys.create!(session_id: "victim-device")
+    sign_in_as designers(:two)
+
+    post revoke_session_designer_account_path(session_id: "victim-device")
+
+    assert victim.active_session_keys.exists?(session_id: "victim-device")
+  end
+
   test "closure is explicit, retires purchase history, removes private work, and preserves buyer rights" do
     designer = designers(:two)
     designer.update!(

@@ -53,16 +53,26 @@
     <h2 class="t-title">Active sessions</h2>
     <p class="t-caption muted"><%= pluralize(@sessions.size, "active session") %> across your devices.</p>
     <table class="account-sessions">
-      <thead><tr><th>Signed in</th><th>Last used</th></tr></thead>
+      <thead><tr><th scope="col">Signed in</th><th scope="col">Last used</th><th scope="col">Session</th></tr></thead>
       <tbody>
         <% @sessions.each do |sk| %>
+          <% current = @current_session_ids.include?(sk.session_id) %>
           <tr>
             <td><%= sk.created_at.to_fs(:short) %></td>
             <td><%= sk.last_use.to_fs(:short) %></td>
+            <td>
+              <% if current %>
+                <span class="badge badge-ok">This session</span>
+              <% else %>
+                <%= button_to "Sign out", revoke_session_designer_account_path(session_id: sk.session_id),
+                      method: :post, class: "linklike" %>
+              <% end %>
+            </td>
           </tr>
         <% end %>
       </tbody>
     </table>
+    <p class="t-caption muted">We record only sign-in and last-used times — no IP address, device, or location.</p>
     <% if @sessions.size > 1 %>
       <%= button_to "Sign out other devices", revoke_other_sessions_designer_account_path,
             method: :post, class: "btn" %>

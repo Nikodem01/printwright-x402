@@ -62,6 +62,7 @@ Rails.application.routes.draw do
     end
     resource :account, only: %i[show update], controller: :account do
       post :revoke_other_sessions
+      post :revoke_session
       get :export
     end
   end
