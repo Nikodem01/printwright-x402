@@ -16,6 +16,9 @@ gem "turbo-rails"
 gem "stimulus-rails"
 # Build JSON APIs with ease [https://github.com/rails/jbuilder]
 gem "jbuilder"
+# Designer sales exports use CSV directly; declare it before Ruby removes it
+# from the default gems in 3.4.
+gem "csv"
 
 # Authentication: Rodauth (MFA, lockout, verify/close account, sessions) over the existing designers table.
 # bcrypt is retained so legacy has_secure_password digests verify unchanged (account_password_hash_column).

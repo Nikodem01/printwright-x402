@@ -17,19 +17,24 @@ module Ledger
     # payout); nil sweeps everything owed (the admin/scheduled backstop). ref
     # names the run in the on-chain memo so an immediate payout reconciles to
     # its checkout.
-    def self.call(dry_run: false, purchase_ids: nil, ref: nil)
+    def self.call(dry_run: false, purchase_ids: nil, ref: nil, automatic_retry: false)
       return run(dry_run: true, purchase_ids: purchase_ids, ref: ref) if dry_run
 
-      LedgerEntry.transaction do
-        LedgerEntry.connection.execute("SELECT pg_advisory_xact_lock(#{ADVISORY_LOCK_KEY})")
-        run(dry_run: false, purchase_ids: purchase_ids, ref: ref)
+      with_advisory_lock do
+        attempt_ref = ref.presence || "sweep-#{SecureRandom.uuid}"
+        run(dry_run: false, purchase_ids: purchase_ids, ref: ref,
+          attempt_ref: attempt_ref, automatic_retry: automatic_retry)
       end
     end
 
-    def self.run(dry_run:, purchase_ids: nil, ref: nil)
+    def self.run(dry_run:, purchase_ids: nil, ref: nil, attempt_ref: nil, automatic_retry: false)
       scope = LedgerEntry.owed.includes(:designer, :purchase)
       scope = scope.where(purchase_id: purchase_ids) if purchase_ids
+      scope = scope.where.not(
+        purchase_id: PayoutAttempt.where(status: "reconciliation_required").select(:purchase_id)
+      )
       eligible = scope.select { |e| e.designer&.payout_account_verified? }
+      PayoutAttempt.start!(entries: eligible, ref: attempt_ref) unless dry_run
 
       eligible.group_by(&:asset).filter_map do |asset, entries|
         transfers = entries.group_by(&:designer).map do |designer, owed|
@@ -38,23 +43,58 @@ module Ledger
         end
         next Payout.new(asset: asset, tx_id: nil, transfers: transfers) if dry_run
 
-        response = SidecarClient.new.payout(
-          token_id: asset, transfers: transfers,
-          memo: payout_memo(ref)
-        )
-        tx_id = response.fetch("transactionId")
-        LedgerEntry.transaction do
-          entries.each do |entry|
-            LedgerEntry.create!(
-              purchase: entry.purchase, designer: entry.designer,
-              entry_kind: "designer_payout", asset: asset,
-              amount_base_units: entry.amount_base_units,
-              held_by: "designer", tx_id: tx_id
-            )
+        tx_id = nil
+        begin
+          response = SidecarClient.new.payout(
+            token_id: asset, transfers: transfers,
+            memo: payout_memo(ref)
+          )
+          tx_id = response.fetch("transactionId")
+          LedgerEntry.transaction do
+            entries.each do |entry|
+              LedgerEntry.create!(
+                purchase: entry.purchase, designer: entry.designer,
+                entry_kind: "designer_payout", asset: asset,
+                amount_base_units: entry.amount_base_units,
+                held_by: "designer", tx_id: tx_id
+              )
+            end
+            PayoutAttempt.succeed!(entries: entries, tx_id: tx_id)
           end
+        rescue SidecarClient::Unavailable
+          status = automatic_retry ? "retrying" : "failed"
+          PayoutAttempt.fail_remaining!(ref: attempt_ref, status: status,
+            error_code: "service_unavailable")
+          raise
+        rescue SidecarClient::Ambiguous
+          PayoutAttempt.fail_entries!(entries: entries, status: "reconciliation_required",
+            error_code: "ambiguous_result", tx_id: tx_id)
+          PayoutAttempt.fail_remaining!(ref: attempt_ref, status: "failed",
+            error_code: "not_submitted")
+          raise
+        rescue SidecarClient::Rejected
+          PayoutAttempt.fail_entries!(entries: entries, status: "failed",
+            error_code: "transfer_rejected")
+          PayoutAttempt.fail_remaining!(ref: attempt_ref, status: "failed",
+            error_code: "not_submitted")
+          raise
+        rescue StandardError
+          PayoutAttempt.fail_entries!(entries: entries, status: "reconciliation_required",
+            error_code: "ledger_recording_failed", tx_id: tx_id) if tx_id
+          raise
         end
         Payout.new(asset: asset, tx_id: tx_id, transfers: transfers)
-      end
+      end.tap { PayoutAttempt.reconcile_ref!(ref: attempt_ref) unless dry_run }
+    end
+
+    def self.with_advisory_lock
+      connection = LedgerEntry.connection
+      locked = false
+      connection.execute("SELECT pg_advisory_lock(#{ADVISORY_LOCK_KEY})")
+      locked = true
+      yield
+    ensure
+      connection&.execute("SELECT pg_advisory_unlock(#{ADVISORY_LOCK_KEY})") if locked
     end
 
     # Immediate per-checkout payouts carry their checkout ref (reconcilable to a
@@ -63,5 +103,6 @@ module Ledger
       return "printwright payout #{ref}" if ref
       "printwright designer payout #{Time.current.strftime('%Y-%m-%d')}"
     end
+    private_class_method :with_advisory_lock
   end
 end

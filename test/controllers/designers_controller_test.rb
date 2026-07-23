@@ -35,6 +35,17 @@ class DesignersControllerTest < ActionDispatch::IntegrationTest
     refute_match @designer.password_digest, response.body
   end
 
+  test "public profile enqueues only aggregate impressions for published models" do
+    clear_enqueued_jobs
+
+    perform_enqueued_jobs(only: RecordModelMetricsJob) { get designer_path(@designer) }
+
+    assert_response :success
+    metric = @published.model_metrics.find_by!(channel: "human", source: "profile")
+    assert_equal 1, metric.impressions
+    assert_equal 0, Model3d.find_by!(slug: "draft-widget").model_metrics.count
+  end
+
   test "unverified designer gets no checkmark" do
     @designer.update!(verified: false, identity_verified_at: nil, verified_profile_url: nil)
     get designer_path(@designer)

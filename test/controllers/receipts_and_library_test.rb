@@ -14,14 +14,49 @@ class ReceiptsAndLibraryTest < ActionDispatch::IntegrationTest
       io: StringIO.new("solid library\nendsolid library\n"),
       filename: "library.stl", content_type: "model/stl"
     )
-    offer = @model.license_offers.create!(kind: "personal", price_cents: 250)
+    @offer = @model.license_offers.create!(kind: "personal", price_cents: 250)
     purchase = Purchase.create!(
-      license_offer: offer, status: "delivered", replay_key: SecureRandom.hex(32),
+      license_offer: @offer, status: "delivered", replay_key: SecureRandom.hex(32),
       buyer_hint: "0.0.9067781", payment_tx_id: "0.0.7162784@111.222"
     )
     @license = License.allocate!(purchase)
     @license.update!(cert_json: Certificates::Builder.call(@license))
     @token = @license.signed_id(purpose: "purchase-receipt")
+  end
+
+  test "receipt, certificate, and download keep the purchased offer after a future revision" do
+    original_hash = @license.cert_json.fetch("terms_hash")
+    current = LicenseOffers::Reviser.call(model: @model,
+      attributes: { id: @offer.id, kind: "commercial_unit", price_cents: 500 })
+    @model.update!(status: "retired")
+
+    get purchase_receipt_path(@license.cert_id), params: { token: @token }
+    assert_response :success
+    assert_select "dd", text: /Personal/
+    assert_equal @offer, @license.purchase.reload.license_offer
+    assert_equal original_hash, @license.reload.cert_json.fetch("terms_hash")
+    assert_equal "commercial_unit", current.kind
+
+    assert_difference -> { DownloadGrant.count }, 1 do
+      get purchase_receipt_download_path(@license.cert_id), params: { token: @token }
+    end
+    grant = DownloadGrant.order(:id).last
+    assert_redirected_to api_v1_file_path(grant.token)
+    get api_v1_file_path(grant.token)
+    assert_response :redirect
+
+    get verify_path(@license.verify_slug)
+    assert_response :success
+    assert_select ".cert-eyebrow", text: "License certificate"
+
+    updates_token = @license.signed_id(purpose: "model-updates")
+    get api_v1_license_latest_version_path(@license.cert_id),
+      headers: { "Authorization" => "Bearer #{updates_token}" }
+    assert_response :success
+    assert_equal @model.file_hash, response.parsed_body["file_hash"]
+    get api_v1_license_latest_version_file_path(@license.cert_id),
+      headers: { "Authorization" => "Bearer #{updates_token}" }
+    assert_response :redirect
   end
 
   test "paid receipt capability renders no-store facts and reissues a download grant" do

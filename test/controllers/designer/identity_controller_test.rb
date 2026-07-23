@@ -38,6 +38,12 @@ class Designer::IdentityControllerTest < ActionDispatch::IntegrationTest
 
     assert_predicate verification.reload, :failed?
     assert_not designers(:one).reload.identity_verified?
+
+    get designer_identity_path
+    assert_select "[role='status']", text: /last check did not verify.*proof token is not visible/i
+    assert_select "form[action=?]", verify_designer_identity_path do
+      assert_select "button", text: "Check public profile again"
+    end
   end
 
   test "pins verification to public DNS" do

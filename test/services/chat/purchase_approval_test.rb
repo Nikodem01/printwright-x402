@@ -33,6 +33,8 @@ class Chat::PurchaseApprovalTest < ActiveSupport::TestCase
     assert_equal "900000", stored["approved_amount"]
     assert_equal 90, @conversation.approved_spend_cents
     refute_match(/payment_required|payment-signature|download_grant|files/, JSON.generate(stored))
+    assert_requested :get, "#{BASE_URL}#{PURCHASE_PATH}",
+      headers: { "X-Printwright-Channel" => "human" }
   end
 
   test "repeating approval before submission does not reserve the budget twice" do
@@ -87,6 +89,23 @@ class Chat::PurchaseApprovalTest < ActiveSupport::TestCase
       Chat::PurchaseApproval.call(conversation: @conversation, base_url: BASE_URL)
     end
     assert_equal "daily_spend_cap_exceeded", error.code
+  end
+
+  test "seller availability errors stop chat approval without reserving budget" do
+    { "sales_paused" => 409, "listing_retired" => 410 }.each do |code, status|
+      @conversation.update!(purchase_proposal: proposal, approved_spend_cents: 0)
+      stub_request(:get, "#{BASE_URL}#{PURCHASE_PATH}").to_return(
+        status: status, body: { error: code,
+                               listing_status: code == "sales_paused" ? "paused" : "retired" }.to_json,
+        headers: { "content-type" => "application/json" }
+      )
+
+      error = assert_raises(Chat::PurchaseApproval::Failure) do
+        Chat::PurchaseApproval.call(conversation: @conversation, base_url: BASE_URL)
+      end
+      assert_equal code, error.code
+      assert_equal 0, @conversation.reload.approved_spend_cents
+    end
   end
 
   private

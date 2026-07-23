@@ -29,6 +29,32 @@
         form: { data: { turbo_confirm: "This sends treasury funds on Hedera. Continue?" } } %>
 </div>
 
+<h2>Payout attention</h2>
+<% if @payout_issues.any? %>
+  <p class="t-small muted">Reconciliation-required rows are excluded from payout runs. Verify the
+    known transaction or memo against the treasury account before any retry.</p>
+  <div class="table-scroll">
+    <table class="facts-table">
+      <thead><tr><th>designer</th><th>reference</th><th>amount</th><th>state</th><th>attempted</th><th>proof</th></tr></thead>
+      <tbody>
+        <% @payout_issues.each do |attempt| %>
+          <% share = @payout_issue_amounts[attempt.purchase_id] %>
+          <tr>
+            <td><%= attempt.designer.display_name %></td>
+            <td class="mono"><%= attempt.ref %></td>
+            <td><%= format_base_units(share&.amount_base_units.to_i, attempt.asset) %></td>
+            <td><%= attempt.status.humanize %><br><span class="t-caption mono"><%= attempt.last_error_code %></span></td>
+            <td><%= attempt.last_attempted_at&.utc&.strftime("%Y-%m-%d %H:%M UTC") || "Not recorded" %></td>
+            <td><%= attempt.tx_id ? hashscan_tx_link(attempt.tx_id) : "Check memo" %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% else %>
+  <p class="t-small muted">No payout retry or reconciliation state needs attention.</p>
+<% end %>
+
 <h2>Ledger totals</h2>
 <div class="table-scroll">
   <table class="facts-table">
@@ -105,15 +131,15 @@
         <tr>
           <td><%= designer.display_name %><br><span class="t-caption muted"><%= designer.email_address %></span></td>
           <td><span class="badge <%= designer.identity_verified? ? "badge-ok" : "badge-pending" %>"><%= designer.identity_verified? ? "profile verified" : "unverified" %></span></td>
-          <td><span class="mono"><%= designer.hedera_account_id.presence || "none" %></span><br><span class="t-caption"><%= designer.payout_account_verified? ? "mirror-ready" : "not verified" %></span></td>
+          <td><span class="mono"><%= designer.hedera_account_id.presence || "none" %></span><br><span class="t-caption"><%= designer.payout_account_verified? ? "active and receivable" : "not verified" %></span></td>
           <td>
             <% if designer.identity_verified? %>
               <%= button_to "Revoke identity badge", toggle_verification_admin_designer_path(designer), class: "linklike" %>
             <% else %>
               <span class="t-caption muted">self-service proof required</span>
             <% end %>
-            <% if designer.hedera_account_id.present? %>
-              <%= button_to "Recheck payout", verify_payout_admin_designer_path(designer), class: "linklike" %>
+            <% if designer.payout_account_verified? %>
+              <%= button_to "Recheck payout receipt", verify_payout_admin_designer_path(designer), class: "linklike" %>
             <% end %>
           </td>
         </tr>

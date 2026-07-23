@@ -65,10 +65,14 @@ module Chat
       response = Net::HTTP.start(
         uri.host, uri.port, use_ssl: uri.scheme == "https",
         open_timeout: TIMEOUT_SECONDS, read_timeout: TIMEOUT_SECONDS
-      ) { |http| http.get(uri.request_uri, "accept" => "application/json") }
+      ) do |http|
+        http.get(uri.request_uri,
+          "accept" => "application/json", "X-Printwright-Channel" => "human")
+      end
 
       unless response.code.to_i == 402
-        code = response.code.to_i == 410 ? "sold_out" : "stale_proposal"
+        error = JSON.parse(response.body)["error"] rescue nil
+        code = %w[sold_out sales_paused listing_retired].include?(error) ? error : "stale_proposal"
         fail_with(code, status: response.code.to_i == 410 ? :gone : :conflict)
       end
       JSON.parse(response.body)

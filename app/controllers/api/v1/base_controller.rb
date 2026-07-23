@@ -7,6 +7,16 @@ class Api::V1::BaseController < ApplicationController
 
   private
 
+  def render_listing_unavailable(model)
+    if model.paused?
+      render json: { error: "sales_paused", listing_status: model.status }, status: :conflict
+    elsif model.retired?
+      render json: { error: "listing_retired", listing_status: model.status }, status: :gone
+    else
+      render json: { error: "listing_availability_changed" }, status: :conflict
+    end
+  end
+
   # Machine clients get a machine-readable 429 with a concrete Retry-After —
   # the error contract agents can code against.
   def api_rate_limited

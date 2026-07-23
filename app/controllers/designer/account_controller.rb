@@ -33,6 +33,6 @@ class Designer::AccountController < Designer::BaseController
   end
 
   def profile_params
-    params.require(:designer).permit(:display_name, :bio, :hedera_account_id)
+    params.require(:designer).permit(:display_name, :bio)
   end
 end

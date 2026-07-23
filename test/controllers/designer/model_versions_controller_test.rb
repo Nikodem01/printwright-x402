@@ -15,6 +15,7 @@ class Designer::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
     license = License.allocate!(purchase)
     original_certificate = Certificates::Builder.call(license)
     file = fixture_file_upload(Rails.root.join("db/seed_assets/calibration-cube.stl"), "model/stl")
+    @model.update!(status: "paused")
 
     assert_enqueued_with(job: ModelVersionAnchorJob) do
       post designer_model_versions_path(@model), params: {
@@ -29,6 +30,7 @@ class Designer::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/\Asha256:[0-9a-f]{64}\z/, version.file_hash)
     assert_predicate version.file, :attached?
     assert_equal original_hash, @model.reload.file_hash
+    assert_predicate @model, :paused?
     assert_equal original_hash, original_certificate["model_hash"]
     assert_equal original_hash, Certificates::Builder.call(license)["model_hash"]
   end

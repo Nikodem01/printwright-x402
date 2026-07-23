@@ -1,0 +1,13 @@
+<nav class="dash-nav <%= navigation_class %>" aria-label="Designer">
+  <% if show_designer %><div class="dash-who"><%= Current.designer&.display_name %></div><% end %>
+  <% groups.each do |group| %>
+    <section class="dash-nav-group" aria-labelledby="<%= "#{navigation_class}-#{group[:label].parameterize}" %>">
+      <h2 id="<%= "#{navigation_class}-#{group[:label].parameterize}" %>" class="dash-nav-group-title"><%= group[:label] %></h2>
+      <% group[:items].each do |item| %>
+        <%= link_to item[:label], item[:path], aria: { current: item[:current] ? "page" : nil } %>
+      <% end %>
+    </section>
+  <% end %>
+  <%= link_to "Operator", admin_root_path if Current.designer&.admin? %>
+  <%= button_to "Sign out", rodauth.logout_path, method: :post, class: "linklike" %>
+</nav>

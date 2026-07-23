@@ -1,13 +1,74 @@
-<%= form_with url: rodauth.close_account_path, method: :post, data: { turbo: false } do |form| %>
-  <% if rodauth.close_account_requires_password? %>
-    <div class="form-group mb-3">
-      <%= form.label "password", rodauth.password_label, class: "form-label" %>
-      <%= form.password_field rodauth.password_param, value: "", id: "password", autocomplete: rodauth.password_field_autocomplete_value, required: true, class: "form-control #{"is-invalid" if rodauth.field_error(rodauth.password_param)}", aria: ({ invalid: true, describedby: "password_error_message" } if rodauth.field_error(rodauth.password_param)) %>
-      <%= content_tag(:span, rodauth.field_error(rodauth.password_param), class: "invalid-feedback", id: "password_error_message") if rodauth.field_error(rodauth.password_param) %>
+<div class="form-page">
+  <h1>Close account</h1>
+  <p><strong>This is permanent.</strong> You will be signed out and cannot reopen this account.</p>
+
+  <% owed = LedgerEntry.owed.where(designer: Current.designer).group(:asset).sum(:amount_base_units) %>
+  <% in_flight = Purchase.joins(license_offer: :model3d)
+       .where(models3d: { designer_id: Current.designer.id }, sandbox: false,
+              status: Designers::AccountClosure::IN_FLIGHT_PURCHASE_STATES).count %>
+  <% purchase_model_ids = Purchase.joins(license_offer: :model3d)
+       .where(models3d: { designer_id: Current.designer.id }).distinct
+       .pluck("license_offers.model3d_id") %>
+  <% retained_count = Current.designer.models3d.where(id: purchase_model_ids).count %>
+  <% removed_count = Current.designer.models3d.where.not(id: purchase_model_ids).count %>
+
+  <h2 class="t-title">What closure does</h2>
+  <ul>
+    <li>Removes your email, bio, payout destination, identity link, pending payout change,
+      imports, and webhook integrations. Your studio/display name remains as the minimum
+      historical attribution.</li>
+    <li>Deletes <%= pluralize(removed_count, "listing") %> with no purchase history and its
+      private files.</li>
+    <li>Retires <%= pluralize(retained_count, "purchase-backed listing") %>. They leave search,
+      catalog, cart, chat, and new human/API/agent checkout, but their public status and
+      transaction-time evidence remain.</li>
+    <li>Requires every owed earning and real-money purchase to be resolved first. Historical
+      ledger rows remain immutable; the payout destination is removed, so no later payout can be sent.</li>
+    <li>Preserves existing buyers' license terms, certified bundle, receipts, certificates,
+      downloads, and entitled model versions.</li>
+    <li>Cancels no completed purchase and changes no historical ledger or on-chain certificate.</li>
+  </ul>
+
+  <% if owed.any? || in_flight.positive? %>
+    <div class="flash flash-bad" role="alert">
+      <span>
+        Closure is currently blocked.
+        <% if owed.any? %>
+          Resolve owed earnings in <%= link_to "Payouts", designer_payouts_path(anchor: "payout-destination") %>:
+          <%= owed.map { |asset, amount| format_base_units(amount, asset) }.join(", ") %>.
+        <% end %>
+        <% if in_flight.positive? %>
+          <%= pluralize(in_flight, "real-money purchase") %> still in progress; wait for completion
+          or operational resolution.
+        <% end %>
+      </span>
     </div>
   <% end %>
 
-  <div class="form-group mb-3">
-    <%= form.submit rodauth.close_account_button, class: "btn btn-danger" %>
-  </div>
-<% end %>
+  <%= form_with url: rodauth.close_account_path, method: :post, data: { turbo: false } do |form| %>
+    <div class="form-group mb-3">
+      <%= form.check_box "understand", { required: true }, "1", "0" %>
+      <%= form.label "understand", "I understand that closure is permanent and preserves existing buyer rights." %>
+      <% if (error = rodauth.field_error("closure")) %>
+        <span class="invalid-feedback" id="closure_error_message"><%= error %></span>
+      <% end %>
+    </div>
+
+    <% if rodauth.close_account_requires_password? %>
+      <div class="form-group mb-3">
+        <%= form.label "password", rodauth.password_label, class: "form-label" %>
+        <%= form.password_field rodauth.password_param, value: "", id: "password",
+              autocomplete: rodauth.password_field_autocomplete_value, required: true,
+              class: "form-control #{"is-invalid" if rodauth.field_error(rodauth.password_param)}",
+              aria: ({ invalid: true, describedby: "password_error_message" } if rodauth.field_error(rodauth.password_param)) %>
+        <%= content_tag(:span, rodauth.field_error(rodauth.password_param), class: "invalid-feedback",
+              id: "password_error_message") if rodauth.field_error(rodauth.password_param) %>
+      </div>
+    <% end %>
+
+    <div class="form-group mb-3">
+      <%= form.submit rodauth.close_account_button, class: "btn btn-danger",
+            disabled: owed.any? || in_flight.positive? %>
+    </div>
+  <% end %>
+</div>

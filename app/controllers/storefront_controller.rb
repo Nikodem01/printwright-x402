@@ -1,4 +1,6 @@
 class StorefrontController < ApplicationController
+  after_action :record_analytics, only: %i[index show]
+
   def index
     @query = params[:q]
     @category_key = params[:category]
@@ -19,21 +21,28 @@ class StorefrontController < ApplicationController
     scope = scope.where("printability -> 'materials' ? :m", m: params[:material]) if params[:material].present?
     scope = scope.where("(printability ->> 'supports')::boolean = false") if params[:supports_free].present?
     if params[:max_price_cents].present?
-      affordable = LicenseOffer.where(price_cents: ..params[:max_price_cents].to_i).select(:model3d_id)
+      affordable = LicenseOffer.active.where(price_cents: ..params[:max_price_cents].to_i).select(:model3d_id)
       scope = scope.where(id: affordable)
     end
     @models = @query.present? ? scope : scope.order(:title)
     assign_shopkeeper unless @catalog_definition
+    @analytics_event = {
+      model_ids: @models.map(&:id), event: "impression",
+      channel: "human", source: impression_source
+    }
   end
 
   def show
-    @model = Model3d.published.includes(:designer, :license_offers,
-                                        model_files: { file_attachment: :blob }).find_by!(slug: params[:slug])
+    @model = Model3d.publicly_resolvable.includes(:designer, :license_offers,
+                                                  model_files: { file_attachment: :blob }).find_by!(slug: params[:slug])
     @licenses_issued = License.joins(purchase: :license_offer)
                               .where(purchases: { sandbox: false },
                                      license_offers: { model3d_id: @model.id }).count
     @successful_prints = PrintReport.joins(license: { purchase: :license_offer })
                                     .where(license_offers: { model3d_id: @model.id }).count
+    @analytics_event = {
+      model_ids: [ @model.id ], event: "view", channel: "human", source: "marketplace"
+    }
   end
 
   private
@@ -42,5 +51,17 @@ class StorefrontController < ApplicationController
     conversation = ChatConversation.active.find_by(id: session[:chat_conversation_id])
     @turns = conversation&.turns || []
     @purchase_proposal = conversation&.purchase_proposal&.deep_stringify_keys || {}
+  end
+
+  def impression_source
+    return "search" if @query.present?
+    return "category" if @category_key.present?
+    return "collection" if @collection_key.present?
+
+    "marketplace"
+  end
+
+  def record_analytics
+    Analytics::Recorder.record_later(**@analytics_event) if response.successful? && @analytics_event
   end
 end

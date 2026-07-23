@@ -54,6 +54,65 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "x402", response.headers["WWW-Authenticate"]
   end
 
+  test "initial real quote records one bounded channel event but sandbox does not" do
+    clear_enqueued_jobs
+
+    perform_enqueued_jobs(only: RecordModelMetricsJob) do
+      get download_path, headers: { "X-Printwright-Channel" => "human" }
+    end
+
+    assert_response :payment_required
+    metric = @model.model_metrics.find_by!(channel: "human", source: "checkout")
+    assert_equal 1, metric.payment_requests
+
+    clear_enqueued_jobs
+    get download_path, headers: { "X-Sandbox" => "true", "X-Printwright-Channel" => "human" }
+    assert_response :payment_required
+    assert_not enqueued_jobs.any? { |job| job[:job] == RecordModelMetricsJob }
+    assert_equal 1, @model.model_metrics.sum(:payment_requests)
+
+    tampered = @payload.deep_dup
+    tampered["accepted"]["amount"] = "1"
+    clear_enqueued_jobs
+    get download_path, headers: payment_headers(tampered).merge("X-Printwright-Channel" => "human")
+    assert_response :payment_required
+    assert_equal "invalid_payment_requirements", response.parsed_body["error"]
+    assert_not enqueued_jobs.any? { |job| job[:job] == RecordModelMetricsJob },
+      "a refreshed challenge is not a new initial quote request"
+  end
+
+  test "analytics enqueue failure never changes the 402 buyer contract" do
+    singleton = RecordModelMetricsJob.singleton_class
+    original = RecordModelMetricsJob.method(:perform_later)
+    singleton.define_method(:perform_later) { |**| raise ActiveJob::EnqueueError, "queue unavailable" }
+
+    get download_path, headers: { "X-Printwright-Channel" => "human" }
+
+    assert_response :payment_required
+    assert_equal "x402", response.headers["WWW-Authenticate"]
+    assert response.headers["PAYMENT-REQUIRED"].present?
+  ensure
+    singleton&.define_method(:perform_later, original) if original
+  end
+
+  test "paused and retired listings refuse every new payment before reservation" do
+    @model.update!(status: "paused")
+
+    get download_path
+    assert_response :conflict
+    assert_equal({ "error" => "sales_paused", "listing_status" => "paused" }, response.parsed_body)
+    get download_path, headers: payment_headers(@payload)
+    assert_response :conflict
+    assert_equal 0, Purchase.count
+    assert_not_requested :post, "#{FACILITATOR}/verify"
+
+    @model.update!(status: "retired")
+    get download_path
+    assert_response :gone
+    assert_equal({ "error" => "listing_retired", "listing_status" => "retired" }, response.parsed_body)
+    assert_equal 0, Purchase.count
+  end
+
   # --- row: malformed header -> 400 invalid_payload ---
 
   test "malformed payment headers get 400 invalid_payload" do
@@ -75,6 +134,34 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert_response :payment_required
     assert_equal "invalid_payment_requirements", response.parsed_body["error"]
     assert_equal 0, Purchase.count
+  end
+
+  test "a signed quote for a superseded offer receives the current revision challenge" do
+    Purchase.create!(license_offer: @offer, status: "pending", replay_key: SecureRandom.hex(32))
+    current = LicenseOffers::Reviser.call(model: @model,
+      attributes: { id: @offer.id, kind: "personal", price_cents: 50, currency: "HBAR" })
+
+    get download_path, headers: payment_headers(@payload)
+
+    assert_response :payment_required
+    assert_equal "invalid_payment_requirements", response.parsed_body["error"]
+    hbar = response.parsed_body.fetch("accepts").find { |option| option["asset"] == "0.0.0" }
+    assert_equal "20000000", hbar.fetch("amount")
+    assert_equal current.id, @model.reload.license_offers.sole.id
+    assert_equal 1, Purchase.count
+  end
+
+  test "reservation refuses an offer object that became inactive after lookup" do
+    stale = @offer
+    Purchase.create!(license_offer: stale, status: "pending", replay_key: SecureRandom.hex(32))
+    LicenseOffers::Reviser.call(model: @model,
+      attributes: { id: stale.id, kind: "personal", price_cents: 50, currency: "HBAR" })
+
+    result = Api::V1::DownloadsController.new.send(:create_purchase, stale, @payload,
+      { asset: "0.0.0", amount: "10000000" }, sandbox: false)
+
+    assert_equal :offer_changed, result
+    assert_equal 1, Purchase.count
   end
 
   # --- happy path (real bytes end to end) ---
@@ -231,6 +318,8 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     original = response.parsed_body
 
+    @model.update!(status: "paused")
+
     get download_path, headers: payment_headers(@payload)
     assert_response :conflict
     replayed = response.parsed_body
@@ -238,6 +327,26 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original["transaction_id"], replayed["transaction_id"]
     assert_equal 1, Purchase.count
     assert_requested :post, "#{FACILITATOR}/settle", times: 1
+
+    get download_path, params: { license: "commercial_unit" }, headers: payment_headers(@payload)
+    assert_response :conflict
+    assert_equal "duplicate_payment", response.parsed_body["error"]
+    assert_not response.parsed_body.key?("files")
+  end
+
+  test "an in-flight purchase remains recoverable after the listing retires" do
+    stub_request(:post, "#{FACILITATOR}/verify").to_timeout
+    get download_path, headers: payment_headers(@payload)
+    assert_response :service_unavailable
+    assert Purchase.sole.pending?
+
+    @model.update!(status: "retired")
+    stub_verify_ok
+    stub_settle(body: fixture("settle_ok.json"))
+    get download_path, headers: payment_headers(@payload)
+
+    assert_response :success
+    assert Purchase.sole.delivered?
   end
 
   test "replaying a settled purchase finishes the crashed delivery" do

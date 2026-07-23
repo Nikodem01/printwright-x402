@@ -6,9 +6,24 @@ Rails.application.routes.draw do
   end
 
   namespace :designer do
+    root "home#show"
     resources :models, except: %i[destroy show] do
-      member { post :publish }
+      member do
+        match :review, via: %i[post patch]
+        post :publish
+        patch :pause
+        patch :resume
+        patch :retire
+        patch :restore
+        post :retry_analysis
+      end
       resources :versions, only: :create, controller: :model_versions
+      resources :files, only: :destroy, controller: :model_files do
+        member do
+          patch :move
+          patch :feature
+        end
+      end
     end
     resources :imports, only: %i[index new create destroy] do
       collection { post :preview }
@@ -17,8 +32,23 @@ Rails.application.routes.draw do
       post :verify
     end
     resource :takedown_packet, only: %i[new create]
-    resources :sales, only: :index
-    resources :webhook_endpoints, only: %i[index new create destroy]
+    resources :sales, only: :index do
+      get :export, on: :collection
+    end
+    get :payouts, to: "sales#payouts"
+    get :analytics, to: "analytics#show"
+    resources :payout_attempts, only: [] do
+      post :retry, on: :member
+    end
+    resource :payout_destination, only: %i[create destroy] do
+      post :verify
+      patch :activate
+    end
+    resources :webhook_endpoints, only: %i[index new create destroy] do
+      resources :deliveries, only: [], controller: :webhook_deliveries do
+        post :retry, on: :member
+      end
+    end
     resource :account, only: %i[show update], controller: :account do
       post :revoke_other_sessions
       get :export

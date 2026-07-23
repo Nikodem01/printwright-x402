@@ -7,7 +7,7 @@ class BadgeCertificateTest < ActionDispatch::IntegrationTest
       designer: designers(:one), title: "Badge Cube", slug: "badge-cube",
       status: "published", file_hash: "sha256:abc"
     )
-    offer = model.license_offers.create!(kind: "personal", price_cents: 250)
+    offer = model.license_offers.create!(kind: "personal", price_cents: 250, max_units: 25)
     purchase = Purchase.create!(
       license_offer: offer, status: "settled", buyer_hint: "0.0.9067781",
       asset: "0.0.429274", amount_base_units: "250000",
@@ -41,7 +41,6 @@ class BadgeCertificateTest < ActionDispatch::IntegrationTest
 
   test "share card renders certificate facts and the honest license-sale cap" do
     offer = @license.purchase.license_offer
-    offer.update!(max_units: 25)
     offer.model3d.update!(title: "Useful <script>alert(1)</script> part")
 
     get verify_share_card_path(@license.verify_slug)

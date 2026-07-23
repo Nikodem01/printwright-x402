@@ -7,11 +7,11 @@
     <% @models.each do |model| %>
       <tr>
         <td><%= link_to model.title, edit_designer_model_path(model) %></td>
-        <td><%= render "shared/state", state: model.published? ? "settled" : "pending",
+        <td><%= render "shared/state", state: model.published? ? "settled" : (model.retired? ? "void" : "pending"),
                        label: model.status.humanize %></td>
-        <td><%= model.license_offers.map { |o| "#{o.kind} #{format_usdc_cents(o.price_cents)}" }.join(" · ") %></td>
+        <td><%= model.license_offers.map { |o| "#{o.kind} v#{o.revision} #{format_usdc_cents(o.price_cents)}" }.join(" · ") %></td>
         <td class="mono"><%= model.file_hash&.truncate(18) || "—" %></td>
-        <td><%= link_to "view", model_page_path(model.slug) if model.published? %></td>
+        <td><%= link_to "view", model_page_path(model.slug) unless model.draft? %></td>
       </tr>
     <% end %>
   </table>

@@ -13,6 +13,10 @@ class Admin::DashboardController < Admin::BaseController
     @designers = Designer.order(:display_name)
     @ledger_totals = LedgerEntry.group(:entry_kind, :asset).sum(:amount_base_units)
     @owed_totals = LedgerEntry.owed.group(:asset).sum(:amount_base_units)
+    @payout_issues = PayoutAttempt.unresolved.includes(:designer).order(last_attempted_at: :desc).limit(100)
+    @payout_issue_amounts = LedgerEntry.where(
+      purchase_id: @payout_issues.map(&:purchase_id), entry_kind: "designer_share"
+    ).index_by(&:purchase_id)
     @audit_logs = AdminAuditLog.includes(:actor_designer).order(created_at: :desc).limit(30)
     @sandbox_count = Purchase.where(sandbox: true).count
   end

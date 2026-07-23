@@ -1,5 +1,6 @@
 class Api::V1::ModelsController < Api::V1::BaseController
   rate_limit to: 120, within: 1.minute, store: RateLimitStore, with: :api_rate_limited
+  after_action :record_analytics, only: %i[index show]
 
   def index
     models = Model3d.published.includes(:designer, :license_offers, model_files: { file_attachment: :blob })
@@ -13,19 +14,29 @@ class Api::V1::ModelsController < Api::V1::BaseController
     if params[:max_price_cents].present?
       # Subquery instead of joins+distinct: DISTINCT would clash with the
       # search scope's ORDER BY CASE expression on Postgres.
-      affordable = LicenseOffer.where(price_cents: ..params[:max_price_cents].to_i).select(:model3d_id)
+      affordable = LicenseOffer.active.where(price_cents: ..params[:max_price_cents].to_i).select(:model3d_id)
       models = models.where(id: affordable)
     end
 
-    render json: { models: models.map { |m| model_summary(m) }, count: models.length }
+    payload = models.map { |m| model_summary(m) }
+    @analytics_event = {
+      model_ids: payload.pluck(:id), event: "impression", channel: "agent",
+      source: params[:q].present? ? "api_search" : "api_catalog"
+    }
+    render json: { models: payload, count: payload.length }
   end
 
   def show
     model = Model3d.published.find(params[:id])
+    @analytics_event = { model_ids: [ model.id ], event: "view", channel: "agent", source: "api" }
     render json: model_details(model)
   end
 
   private
+
+  def record_analytics
+    Analytics::Recorder.record_later(**@analytics_event) if response.successful? && @analytics_event
+  end
 
   def model_summary(model)
     {

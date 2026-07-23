@@ -1,5 +1,24 @@
 <% content_for :title, "#{@model.title} — Printwright" %>
 <% content_for :head do %>
+  <% unless @model.published? %><meta name="robots" content="noindex,follow"><% end %>
+  <% schema_offers = if @model.published?
+       @model.license_offers.map do |offer|
+         { "@type": "Offer", price: format("%.2f", offer.price_cents / 100.0),
+           priceCurrency: "USDC",
+           availability: offer.sold_out? ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+           name: "#{offer.kind.humanize} license",
+           url: api_v1_model_download_url(model_id: @model.id, license: offer.kind),
+           itemOffered: {
+             "@type": "DigitalDocument",
+             additionalType: "PrintLicense",
+             name: "#{offer.kind.humanize} print license",
+             license: offer.terms_version ?
+               license_document_url(version: offer.terms_version, kind: offer.kind, format: :json) : nil
+           }.compact }
+       end
+     else
+       []
+     end %>
   <script type="application/ld+json">
     <%# json_escape: designer-supplied text must not be able to close the script tag;
         its output (unicode-escaped <, >, &) is safe to emit raw inside <script> %>
@@ -10,20 +29,7 @@
       description: @model.description,
       sku: @model.slug,
       brand: { "@type": "Person", name: @model.designer.display_name },
-      offers: @model.license_offers.map { |offer|
-        { "@type": "Offer", price: format("%.2f", offer.price_cents / 100.0),
-          priceCurrency: "USDC",
-          availability: offer.sold_out? ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
-          name: "#{offer.kind.humanize} license",
-          url: api_v1_model_download_url(model_id: @model.id, license: offer.kind),
-          itemOffered: {
-            "@type": "DigitalDocument",
-            additionalType: "PrintLicense",
-            name: "#{offer.kind.humanize} print license",
-            license: offer.terms_version ?
-              license_document_url(version: offer.terms_version, kind: offer.kind, format: :json) : nil
-          }.compact }
-      }
+      offers: schema_offers
     ) %>
   </script>
 <% end %>
@@ -35,13 +41,25 @@
     <% end %>
     <h1><%= @model.title %></h1>
     <p class="t-small muted">by <%= link_to @model.designer.display_name, designer_path(@model.designer) %><%= " ✓" if @model.designer.identity_verified? %></p>
+    <% unless @model.published? %>
+      <div class="flash flash-bad" data-listing-status="<%= @model.status %>">
+        <% if @model.paused? %>
+          New sales are temporarily paused by the designer. This listing is not available in discovery or checkout.
+        <% else %>
+          This listing has been retired by the designer and is not available for new purchases.
+        <% end %>
+        Existing buyers keep their receipts, certificates, entitled downloads, and model-update access.
+      </div>
+    <% end %>
   </header>
 
   <div class="model-main">
     <% render_files = @model.render_files.select { |file| file.file.attached? } %>
-    <% turntable_files = render_files.select { |file| file.file.filename.to_s.start_with?(RenderModelJob::AUTO_PREFIX) } %>
-    <% display_files = turntable_files.many? ? turntable_files : render_files %>
-    <% render_file = display_files.first || render_files.first %>
+    <%# Current media order is the buyer-facing order. The designer can feature
+        any image by moving it first; generated turntable frames remain in the
+        same ordered gallery rather than silently overriding that choice. %>
+    <% display_files = render_files %>
+    <% render_file = display_files.first %>
     <% frame_urls = display_files.map { |file| rails_storage_proxy_path(file.file) } %>
     <div class="gallery model-preview" data-controller="render-turntable"
          data-render-turntable-frames-value="<%= frame_urls.to_json %>">
@@ -57,7 +75,7 @@
       </div>
       <p class="t-caption muted model-preview-status" data-render-turntable-target="status" aria-live="polite">
         <% if display_files.many? %>
-          Rendered turntable ready — drag to change view, scroll to zoom.
+          Image gallery ready — drag to change view, scroll to zoom.
         <% else %>
           Designer render.
         <% end %>
@@ -107,7 +125,8 @@
   </div>
 
   <aside>
-    <%= form_with url: cart_items_path, class: "buy-panel", data: {
+    <% if @model.published? %>
+      <%= form_with url: cart_items_path, class: "buy-panel", data: {
           controller: "checkout",
           checkout_download_url_value: "/api/v1/models/#{@model.id}/download",
           checkout_batch_url_value: api_v1_batches_path,
@@ -179,6 +198,15 @@
         Pays via x402 on Hedera <%= Hedera::Network.name %> · HBAR or USDC.
         Your connected wallet signs only; the facilitator pays the network fee.
       </p>
+      <% end %>
+    <% else %>
+      <section class="buy-panel" aria-labelledby="listing-unavailable-title">
+        <h3 id="listing-unavailable-title"><%= @model.paused? ? "Sales paused" : "Listing retired" %></h3>
+        <p>No new license can be purchased while this status is in effect.</p>
+        <p class="t-small">Already bought it? Use your private receipt or
+          <%= link_to "license library", new_license_library_path %> for downloads, and keep using
+          the certificate's verification and update links.</p>
+      </section>
     <% end %>
   </aside>
 </div>

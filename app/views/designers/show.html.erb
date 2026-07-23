@@ -1,5 +1,14 @@
 <% content_for :title, "#{@designer.display_name} — Printwright" %>
 <div class="designer-page">
+  <% if @designer.account_closed? %>
+    <% content_for :head do %><meta name="robots" content="noindex"><% end %>
+    <h1><%= @designer.display_name %></h1>
+    <div class="empty-state">
+      <h2>Designer account closed</h2>
+      <p>This studio no longer sells on Printwright. Existing licenses, transaction-time terms,
+        receipts, certificates, downloads, and model-version rights remain valid.</p>
+    </div>
+  <% else %>
   <h1><%= @designer.display_name %><%= " ✓" if @designer.identity_verified? %></h1>
   <% if @designer.identity_verified? %>
     <p class="t-small"><%= link_to "Verified public profile", verified_profile_designer_path(@designer),
@@ -22,5 +31,6 @@
       <h2>No published models yet</h2>
       <p><%= @designer.display_name %> hasn't published any models yet — check back soon.</p>
     </div>
+  <% end %>
   <% end %>
 </div>

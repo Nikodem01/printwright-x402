@@ -155,14 +155,25 @@ above remains the stronger operational test.
 
 Every purchase settles to the treasury (destination-charge model): we are
 merchant-of-record and capture the platform fee atomically at settle. A
-designer's share is paid out **automatically, immediately after each checkout**
-by `DesignerPayoutJob`, which runs `Ledger::PayoutRunner` scoped to that
+designer's share is **queued automatically after delivery** by
+`DesignerPayoutJob`, which runs `Ledger::PayoutRunner` scoped to that
 checkout — one summed transfer per designer per asset, memo `printwright payout
 purchase-<id>` (single) or `printwright payout batch-<id>` (batch).
 
+Designers manage the destination in **Payouts**, not Profile. Creating or changing
+one requires enrolled two-factor authentication, a password used within five minutes,
+and a WalletConnect `hedera_signMessage` proof checked against the account's current
+on-chain key by the sidecar. Rails then runs the USDC receivability preflight. A first
+destination activates immediately after both checks; a replacement keeps the existing
+destination active during a visible 24-hour safety hold and requires an explicit final
+activation. The verified account email is notified when a change is requested, proved,
+activated, or cancelled. **Cancel pending change** is the self-service recovery path;
+an owner who did not initiate it should also change their password and revoke other
+sessions. No step changes purchases, licenses, certificates, receipts, or downloads.
+
 The rake task / admin panel below is the **backstop**: it sweeps everything
 still owed — designers who weren't payout-verified at checkout (their share
-waits until they verify) and any immediate payout that failed.
+waits until they verify) and any post-delivery payout that failed or exhausted retries.
 
 Panel: `/admin` → **Preview designer payouts** or **Run designer payouts**. The run button has
 an explicit confirmation and the same database advisory lock as the command.
@@ -172,13 +183,53 @@ DRY_RUN=1 bin/rails ledger:payout   # preview per-designer totals per asset
 bin/rails ledger:payout             # one batched tx per asset, HashScan links printed
 ```
 
-- Only designers whose payout account passed the mirror check are paid; the
-  rest stay owed (visible via `LedgerEntry.owed`).
-- Runs are serialized by a DB advisory lock (shared with the immediate job); still, run it from one shell.
-- Crash between the on-chain transfer and the ledger write: the memo names the
-  run — `printwright payout <checkout-ref>` (immediate) or `printwright designer
-  payout <date>` (backstop) — check the treasury account on HashScan for that
-  memo **before** re-running.
+- Only designers with an active payout destination are paid. New destinations must
+  pass signed control proof and the mirror receivability check; grandfathered active
+  destinations remain eligible until changed and are prompted to add signed proof.
+  Everyone else stays owed (visible via `LedgerEntry.owed`).
+- Runs are serialized by a session-level DB advisory lock shared with immediate jobs
+  and account closure. Each asset's ledger rows commit before the next asset begins,
+  so a later asset failure cannot erase the record for an earlier successful transfer.
+- `PayoutAttempt` is mutable operational state, not the financial ledger. Definitely
+  pre-submit failures (connection/setup unavailable) receive bounded automatic retries
+  and eventually expose a designer retry against the same owed rows and current verified
+  destination. A sidecar `hedera_error`, lost response, reset, timeout, invalid response,
+  or post-transfer ledger failure is instead `reconciliation_required` and is excluded
+  from every immediate and backstop payout run.
+- Reconciliation-required attempts appear in `/admin` under **Payout attention** with
+  their checkout reference, safe error code, amount, time, and known transaction id.
+  The memo names the run — `printwright payout <checkout-ref>` (immediate) or
+  `printwright designer payout <date>` (backstop). Check the treasury account on
+  HashScan for that exact transaction or memo. **Never retry while the result is
+  ambiguous**: first establish whether the transfer reached consensus, then record the
+  existing transaction in the ledger or return the attempt to a safe not-submitted
+  state through a reviewed operator repair. Preserve the attempt and evidence in the
+  incident record; do not edit an immutable ledger row.
+
+## Designer account closure
+
+Account closure is intentionally blocked while the designer has an owed ledger
+share or a non-sandbox purchase in `pending`, `verified`, or `settled`. Do not
+bypass either check: closing at that point could remove the payout destination
+before earned funds are sent or let an already-reserved payment settle after the
+seller has left.
+
+- For owed earnings, verify the active destination in **Payouts**, preview the
+  payout, run the payout procedure above, and confirm that no `LedgerEntry.owed`
+  rows remain for the designer.
+- For an in-flight purchase, use `/admin` to reconcile it. Reap a genuinely stale
+  signed payment with `MINUTES=0 bin/rails purchases:reap`; never mark it failed
+  without the mirror-node check performed by the reconciler.
+- Ask the designer to reload the closure review after the blocker is resolved.
+  There is no operator force-close path.
+
+A successful closure deletes unpurchased listings and private seller integrations,
+retires every listing with purchase history, removes it from discovery and all new
+checkout paths, revokes sessions, and scrubs email, bio, identity, and payout data.
+The studio display name and purchase-backed records remain as the minimum historical
+attribution needed by receipts and certificates. Existing licenses, certified
+bundles, grants, downloads, receipts, certificate verification, and version rights
+continue to work. Queued webhook jobs whose seller delivery was deleted safely no-op.
 
 ## Refunds
 

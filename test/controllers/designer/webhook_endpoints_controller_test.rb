@@ -39,4 +39,78 @@ class Designer::WebhookEndpointsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
     assert endpoint.reload.persisted?
   end
+
+  test "designer sees private-safe delivery health and queues one retry for a failed callback" do
+    endpoint, delivery, purchase = failed_delivery_for(designers(:one))
+    original_payload = delivery.payload.deep_dup
+
+    get designer_webhook_endpoints_path
+
+    assert_response :success
+    assert_select "#delivery-health", text: /Recent delivery health.*sale.completed.*Failed.*callback returned HTTP 503.*Retry/m
+    assert_select "form[action=?]", retry_designer_webhook_endpoint_delivery_path(endpoint, delivery)
+    assert_no_match "private-buyer-wallet", response.body
+    assert_no_match purchase.replay_key, response.body
+    assert_no_match Webhooks::SecretBox.decrypt(endpoint.secret_ciphertext), response.body
+
+    assert_enqueued_with(job: WebhookDeliveryJob, args: [ delivery.id ]) do
+      post retry_designer_webhook_endpoint_delivery_path(endpoint, delivery)
+    end
+    assert_redirected_to designer_webhook_endpoints_path(anchor: "delivery-health")
+    assert_equal "pending", delivery.reload.status
+    assert_equal 8, delivery.attempts
+    assert_equal original_payload, delivery.payload
+    assert_predicate purchase.reload, :delivered?
+
+    assert_no_enqueued_jobs only: WebhookDeliveryJob do
+      post retry_designer_webhook_endpoint_delivery_path(endpoint, delivery)
+    end
+    follow_redirect!
+    assert_select ".flash-bad", text: /already pending or delivered.*no duplicate retry/i
+  end
+
+  test "designer cannot inspect or retry another studio's failed callback" do
+    endpoint, delivery = failed_delivery_for(designers(:two))
+
+    get designer_webhook_endpoints_path
+    assert_no_match endpoint.url, response.body
+    assert_no_match delivery.last_error, response.body
+
+    assert_no_enqueued_jobs only: WebhookDeliveryJob do
+      post retry_designer_webhook_endpoint_delivery_path(endpoint, delivery)
+    end
+    assert_response :not_found
+    assert_predicate delivery.reload, :failed?
+  end
+
+  private
+
+  def failed_delivery_for(designer)
+    model = designer.models3d.create!(
+      title: "Webhook recovery", slug: "webhook-recovery-#{SecureRandom.hex(4)}", status: "published"
+    )
+    offer = model.license_offers.create!(kind: "personal", price_cents: 100)
+    purchase = Purchase.create!(
+      license_offer: offer, status: "verified", replay_key: SecureRandom.hex(32),
+      buyer_hint: "private-buyer-wallet", amount_base_units: "1000000",
+      asset: X402::Requirements.usdc_asset
+    )
+    purchase.transition_to!(:settled)
+    purchase.transition_to!(:delivered)
+    license = License.allocate!(purchase)
+    secret = "whsec_#{SecureRandom.hex(32)}"
+    endpoint = designer.webhook_endpoints.create!(
+      url: "https://hooks-#{SecureRandom.hex(3)}.example/recovery",
+      secret_ciphertext: Webhooks::SecretBox.encrypt(secret)
+    )
+    delivery = WebhookDelivery.create!(
+      webhook_endpoint: endpoint, license: license, status: "failed", attempts: 8,
+      event_type: "sale.completed", target_kind: "designer",
+      event_id: "evt_#{SecureRandom.hex(12)}", event_key: "sale.completed:#{SecureRandom.hex(12)}",
+      url: endpoint.url, secret_ciphertext: endpoint.secret_ciphertext,
+      payload: { "data" => { "buyer_hint" => purchase.buyer_hint } },
+      last_error: "callback returned HTTP 503"
+    )
+    [ endpoint, delivery, purchase ]
+  end
 end

@@ -45,19 +45,38 @@ class Model3d < ApplicationRecord
     }
   }.freeze
 
+  TAG_SUGGESTIONS = {
+    "desk-organization" => [ "desk organizer", "cable management", "space saving" ],
+    "home-and-garden" => [ "wall mount", "plant accessory", "home storage" ],
+    "kitchen-and-dining" => [ "kitchen organizer", "measuring", "cleanup" ],
+    "workshop-tools" => [ "jig", "tool holder", "gauge" ],
+    "replacement-parts" => [ "replacement part", "repair", "fitting" ],
+    "toys-and-games" => [ "tabletop", "fidget", "game piece" ]
+  }.transform_values(&:freeze).freeze
+
   belongs_to :designer
   belongs_to :catalog_import, optional: true
   has_many :model_files, -> { order(:position) }, dependent: :destroy
   has_many :model_versions, -> { order(:number) }, dependent: :destroy
+  has_many :model_metrics, dependent: :destroy
   # Personal is the storefront default; keep preload/query order deterministic
   # so a commercial offer cannot become checked merely because PostgreSQL
   # returned rows in a different physical order.
-  has_many :license_offers, -> { order(kind: :desc, id: :asc) }, dependent: :destroy
+  has_many :all_license_offers, -> { order(kind: :desc, revision: :asc) },
+    class_name: "LicenseOffer", dependent: :destroy
+  has_many :license_offers, -> { active.order(kind: :desc, id: :asc) },
+    class_name: "LicenseOffer"
   accepts_nested_attributes_for :license_offers, allow_destroy: true,
-                                reject_if: ->(attrs) { attrs["price_cents"].blank? }
+                                reject_if: ->(attrs) {
+                                  attrs["price_cents"].blank? && attrs["price_usdc"].blank?
+                                }
   has_neighbors :embedding
 
-  enum :status, %w[draft published retired].index_by(&:itself), default: "draft"
+  # Explicit string mapping keeps existing status values stable. Paused is a
+  # reversible no-new-sales state.
+  enum :status, %w[draft published retired paused].index_by(&:itself), default: "draft"
+
+  scope :publicly_resolvable, -> { where(status: %w[published paused retired]) }
 
   validates :mesh_analysis_status, inclusion: { in: %w[pending passed failed] }
 
@@ -143,6 +162,10 @@ class Model3d < ApplicationRecord
 
   def self.collection_definition(key)
     COLLECTIONS.fetch(key.to_s) { raise ActiveRecord::RecordNotFound, "unknown catalog collection" }
+  end
+
+  def self.tag_suggestions(category)
+    TAG_SUGGESTIONS.fetch(category.to_s, [])
   end
 
   def render_file

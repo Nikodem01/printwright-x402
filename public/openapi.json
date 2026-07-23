@@ -2,10 +2,10 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Printwright API",
-    "version": "1.9.0",
+    "version": "1.9.1",
     "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; every purchase mints a public HCS license certificate.",
     "contact": { "url": "https://github.com/Nikodem01/printwright-x402" },
-    "x-guidance": "Search GET /api/v1/models, inspect offers, then buy one license with GET /api/v1/models/{id}/download or up to 20 licenses with POST /api/v1/batches. An unpaid request returns an x402 v2 challenge; sign one exact payment option and retry the identical request. Batch items must share one payTo account. For a zero-funds rehearsal, send X-Sandbox: true on both requests; sandbox artifacts are explicitly not payments or licenses."
+    "x-guidance": "Search GET /api/v1/models, inspect offers, then buy one license with GET /api/v1/models/{id}/download or up to 20 licenses with POST /api/v1/batches. An unpaid request returns an x402 v2 challenge; sign one exact payment option and retry the identical request. Paid requests settle to Printwright's treasury; designer payout happens separately after delivery and does not change buyer rights. For a zero-funds rehearsal, send X-Sandbox: true on both requests; sandbox artifacts are explicitly not payments or licenses."
   },
   "servers": [{ "url": "/api/v1" }],
   "paths": {
@@ -13,7 +13,7 @@
       "post": {
         "operationId": "buyLicenseBatch",
         "summary": "Buy up to 20 licenses with one x402 settlement",
-        "description": "Send the same JSON body for both legs. The first returns one aggregate x402 challenge; the signed retry settles once and returns one independently verifiable certificate per item. All items must resolve to the same payTo account; Printwright never reroutes a mixed-payee batch through custody. An optional buyer webhook reports certificate.anchored only after the paid certificate lands on HCS; it never creates a license.",
+        "description": "Send the same JSON body for both legs. The first returns one aggregate x402 challenge to Printwright's treasury; the signed retry settles once and returns one independently verifiable certificate per item, including mixed-designer batches. Designer payout happens separately after delivery. An optional buyer webhook reports certificate.anchored only after the paid certificate lands on HCS; it never creates a license.",
         "security": [],
         "x-payment-info": {
           "price": { "mode": "dynamic", "currency": "USD", "min": "0.01", "max": "200000.00" },
@@ -38,7 +38,7 @@
           },
           "400": { "description": "invalid_batch or invalid_payload", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
           "402": {
-            "description": "Aggregate PaymentRequired challenge",
+            "description": "Aggregate PaymentRequired challenge. After a signed retry, error=offer_changed returns fresh current-revision requirements when an offer changed before reservation.",
             "headers": {
               "PAYMENT-REQUIRED": { "schema": { "type": "string" }, "description": "base64 of the same PaymentRequired JSON" },
               "WWW-Authenticate": { "schema": { "type": "string", "const": "x402" } }
@@ -46,8 +46,8 @@
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaymentRequired" } } }
           },
           "404": { "$ref": "#/components/responses/NotFound" },
-          "409": { "description": "Replayed payment; delivered batches return the original BatchDelivery", "content": { "application/json": { "schema": { "oneOf": [ { "$ref": "#/components/schemas/BatchDelivery" }, { "$ref": "#/components/schemas/Error" } ] } } } },
-          "410": { "description": "At least one requested offer is sold out", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "409": { "description": "Replayed payment (delivered batches return the original BatchDelivery), or error: sales_paused before a new reservation", "content": { "application/json": { "schema": { "oneOf": [ { "$ref": "#/components/schemas/BatchDelivery" }, { "$ref": "#/components/schemas/Error" } ] } } } },
+          "410": { "description": "At least one requested offer is sold out, or error: listing_retired before a new reservation", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
           "422": { "description": "incompatible_payees or invalid_webhook", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
           "429": { "$ref": "#/components/responses/RateLimited" },
           "503": { "description": "facilitator_unavailable; retry the identical signed batch", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
@@ -112,7 +112,7 @@
         ],
         "responses": {
           "402": {
-            "description": "Payment required — PaymentRequired object in body and PAYMENT-REQUIRED header. `error` is \"payment required\" when no payment is attached, or \"invalid_payment_requirements\" when the attached payment matches none of the offer's `accepts` entries (still a fresh PaymentRequired body to retry against).",
+            "description": "Payment required — PaymentRequired object in body and PAYMENT-REQUIRED header. `error` is \"payment required\" when no payment is attached, \"invalid_payment_requirements\" when the attached payment matches none of the offer's `accepts` entries, or \"offer_changed\" when a revision won the reservation race (all return fresh requirements to retry against).",
             "headers": {
               "PAYMENT-REQUIRED": { "schema": { "type": "string" }, "description": "base64 of the same PaymentRequired JSON" },
               "WWW-Authenticate": { "schema": { "type": "string", "const": "x402" }, "description": "Marks the challenge as x402 for generic HTTP-payment discovery clients" },
@@ -134,14 +134,14 @@
           },
           "404": { "$ref": "#/components/responses/NotFound" },
           "409": {
-            "description": "Replay of an already-presented payment. If the purchase already reached \"delivered\", the original Delivery payload is returned again unchanged (an idempotent replay, not an error); for any other in-flight status the body is {error: \"duplicate_payment\", status} naming the purchase's current status.",
+            "description": "Replay of an already-presented payment. If the purchase already reached \"delivered\", the original Delivery payload is returned again unchanged (an idempotent replay, not an error); for any other in-flight status the body is {error: \"duplicate_payment\", status} naming the purchase's current status. A new purchase on a temporarily paused listing returns {error: \"sales_paused\", listing_status: \"paused\"} before reservation.",
             "content": { "application/json": { "schema": { "oneOf": [
               { "$ref": "#/components/schemas/Delivery" },
               { "$ref": "#/components/schemas/Error" }
             ] } } }
           },
           "410": {
-            "description": "error: \"sold_out\" — the offer's max_units is exhausted. Includes transaction_id when the offer sold out to a concurrent buyer after this payment had already settled; that purchase is refundable on-chain (operator-run: see docs/OPERATIONS.md), and the transaction_id identifies it.",
+            "description": "error: \"sold_out\" — the offer's max_units is exhausted; or error: \"listing_retired\" when the designer has retired the listing before a new reservation. sold_out includes transaction_id when the offer sold out to a concurrent buyer after this payment had already settled; that purchase is refundable on-chain (operator-run: see docs/OPERATIONS.md), and the transaction_id identifies it.",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
           },
           "429": { "$ref": "#/components/responses/RateLimited" },
@@ -337,6 +337,7 @@
           "sandbox": { "type": "boolean" },
           "warning": { "type": "string" },
           "status": { "type": "string", "description": "included on 409 duplicate_payment: the existing purchase's current status" },
+          "listing_status": { "type": "string", "enum": ["paused", "retired"], "description": "included when designer controls stop a new purchase; already-presented payment replays remain recoverable" },
           "retry_after": { "type": "integer", "description": "included on 429 rate_limited (60) and 503 facilitator_unavailable (5)" },
           "transaction_id": { "type": "string", "description": "included on 410 sold_out when the offer sold out after this payment had already settled" }
         }

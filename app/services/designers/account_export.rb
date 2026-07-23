@@ -12,7 +12,9 @@ module Designers
         account: account_data,
         models: models_data,
         identity_verifications: verifications_data,
-        webhook_endpoints: webhooks_data
+        webhook_endpoints: webhooks_data,
+        payout_attempts: payout_attempts_data,
+        model_metrics: model_metrics_data
       }.to_json
     end
 
@@ -27,9 +29,13 @@ module Designers
         display_name: designer.display_name,
         bio: designer.bio,
         hedera_account_id: designer.hedera_account_id,
+        payout_pending_account_id: designer.payout_pending_account_id,
         email_verified: designer.email_verified?,
         identity_verified: designer.identity_verified?,
         payout_account_verified: designer.payout_account_verified?,
+        payout_account_control_verified_at: designer.payout_account_control_verified_at&.iso8601,
+        payout_change_requested_at: designer.payout_change_requested_at&.iso8601,
+        payout_hold_until: designer.payout_hold_until&.iso8601,
         created_at: designer.created_at&.iso8601
       }
     end
@@ -52,6 +58,29 @@ module Designers
       designer.webhook_endpoints.map do |endpoint|
         { url: endpoint.url, events: endpoint.events, active: endpoint.active,
           created_at: endpoint.created_at&.iso8601 }
+      end
+    end
+
+    def payout_attempts_data
+      designer.payout_attempts.map do |attempt|
+        {
+          purchase_id: attempt.purchase_id, asset: attempt.asset, status: attempt.status,
+          attempt_count: attempt.attempt_count, last_error_code: attempt.last_error_code,
+          tx_id: attempt.tx_id, last_attempted_at: attempt.last_attempted_at&.iso8601,
+          completed_at: attempt.completed_at&.iso8601
+        }
+      end
+    end
+
+    def model_metrics_data
+      ModelMetric.joins(:model3d).where(models3d: { designer_id: designer.id })
+        .order(:occurred_on, :model3d_id, :channel, :source).map do |metric|
+        {
+          model_id: metric.model3d_id, occurred_on: metric.occurred_on.iso8601,
+          channel: metric.channel, source: metric.source,
+          impressions: metric.impressions, views: metric.views,
+          payment_requests: metric.payment_requests
+        }
       end
     end
   end

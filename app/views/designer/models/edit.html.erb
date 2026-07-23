@@ -7,20 +7,50 @@
 <% end %>
 <%= render "form", model: @model %>
 
-<% if @model.published? %>
+<% unless @model.draft? %>
   <section class="section-stack">
-    <h2>Publish a file update</h2>
-    <p class="t-small">Paid x402 license holders can fetch the newest version. The original certified bundle stays unchanged.</p>
-    <%= form_with url: designer_model_versions_path(@model), scope: :model_version, multipart: true do |form| %>
-      <div class="field">
-        <%= form.label :file, "Printable file (STL, 3MF, or STEP)" %>
-        <%= form.file_field :file, accept: ".stl,.3mf,.step", required: true %>
+    <h2>Listing availability</h2>
+    <% if @model.published? %>
+      <p class="t-small">Live in discovery and available for new purchases. Pausing is temporary;
+        retiring removes it from sale until you explicitly restore it.</p>
+      <div class="field-row">
+        <%= button_to "Pause new sales", pause_designer_model_path(@model), method: :patch,
+              class: "btn", form: { data: { turbo_confirm: "Pause discovery and all new checkout? Existing buyer rights and downloads will remain available." } } %>
+        <%= button_to "Retire listing", retire_designer_model_path(@model), method: :patch,
+              class: "btn", form: { data: { turbo_confirm: "Retire this listing? It will keep a public status page and preserve every existing buyer right." } } %>
       </div>
-      <div class="field">
-        <%= form.label :changelog %>
-        <%= form.text_area :changelog, rows: 3, required: true %>
+    <% elsif @model.paused? %>
+      <p class="t-small">New discovery and checkout are paused. The public status page and every
+        existing receipt, certificate, entitled download, and model update remain available.</p>
+      <div class="field-row">
+        <%= button_to "Resume new sales", resume_designer_model_path(@model), method: :patch,
+              class: "btn btn-primary" %>
+        <%= button_to "Retire listing", retire_designer_model_path(@model), method: :patch,
+              class: "btn", form: { data: { turbo_confirm: "Retire this listing? Existing buyer rights remain available." } } %>
       </div>
-      <%= form.submit "Publish update", class: "button" %>
+    <% else %>
+      <p class="t-small">Retired from discovery and new checkout. Historical buyer rights remain
+        available. Restoring returns it to a paused state, never directly to live sales.</p>
+      <%= button_to "Restore as paused", restore_designer_model_path(@model), method: :patch,
+            class: "btn" %>
+    <% end %>
+  </section>
+
+  <section class="section-stack">
+    <h2>File updates for existing buyers</h2>
+    <p class="t-small">Paid x402 license holders can fetch the newest version. The original certified bundle stays unchanged, including while sales are paused or retired.</p>
+    <% unless @model.retired? %>
+      <%= form_with url: designer_model_versions_path(@model), scope: :model_version, multipart: true do |form| %>
+        <div class="field">
+          <%= form.label :file, "Printable file (STL, 3MF, or STEP)" %>
+          <%= form.file_field :file, accept: ".stl,.3mf,.step", required: true %>
+        </div>
+        <div class="field">
+          <%= form.label :changelog %>
+          <%= form.text_area :changelog, rows: 3, required: true %>
+        </div>
+        <%= form.submit "Publish update", class: "btn btn-primary" %>
+      <% end %>
     <% end %>
 
     <% if @model.model_versions.any? %>

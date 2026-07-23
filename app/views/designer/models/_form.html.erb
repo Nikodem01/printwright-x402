@@ -1,104 +1,447 @@
-<%= form_with model: model, scope: :model3d, html: { multipart: true },
-      url: model.persisted? ? designer_model_path(model) : designer_models_path do |f| %>
-  <% if model.errors.any? %>
-    <div class="flash flash-bad"><%= model.errors.full_messages.to_sentence %></div>
-  <% end %>
+<% readiness = Models::Readiness.new(model, current_designer) %>
+<% printable_files = model.printable_files.select { |file| file.file.attached? } %>
+<% render_files = model.render_files.select { |file| file.file.attached? } %>
+<% featured_render = render_files.first %>
+<% preview_offer = model.license_offers
+     .select { |offer| offer.price_cents.present? && !offer.marked_for_destruction? }
+     .min_by(&:price_cents) %>
+<% offers_by_kind = model.license_offers.index_by(&:kind) %>
+<% selected_category = Model3d::CATEGORIES[model.category] %>
+<% selected_collection_names = model.collections.filter_map { |key| Model3d::COLLECTIONS.dig(key, :name) } %>
+<% tag_suggestions = Model3d.tag_suggestions(model.category) %>
+<% printability = model.printability || {} %>
+<% preview_print_facts = [] %>
+<% preview_print_facts << Array(printability["materials"]).join(" / ") if Array(printability["materials"]).any? %>
+<% preview_print_facts << (printability["supports"] ? "supports needed" : "support-free") if printability.key?("supports") %>
+<% preview_print_facts << "#{printability['est_print_minutes']} min" if printability["est_print_minutes"].present? %>
+<% preview_print_facts << "#{printability['bed_min_mm']} mm bed" if printability["bed_min_mm"].present? %>
+<% product_offers = LicenseOffer::KINDS.map do |kind|
+     offers_by_kind[kind] || model.license_offers.build(kind: kind)
+   end %>
 
-  <% if model.source_url.present? %>
-    <div class="flash flash-ok">
-      Imported provenance: <%= link_to model.source_url, model.source_url,
-        target: "_blank", rel: "noopener noreferrer", class: "mono" %><br>
-      <span class="t-small">Source license: <strong><%= model.source_license %></strong> ·
-        ownership warranted <%= model.ownership_warranted_at ? l(model.ownership_warranted_at, format: :short) : "not recorded" %>. This draft still
-        requires the normal publish warranty and mesh checks.</span>
+<div class="listing-editor" data-controller="listing-editor"
+     data-listing-editor-fee-bps-value="<%= LedgerEntry::PLATFORM_FEE_BPS %>"
+     data-action="input->listing-editor#changed change->listing-editor#changed">
+  <div class="listing-editor-main">
+    <nav class="editor-section-nav" aria-label="Listing editor sections">
+      <a href="#details">Details</a>
+      <a href="#files">Printable bundle</a>
+      <a href="#images">Images</a>
+      <a href="#guidance">Print guidance</a>
+      <a href="#license">License and price</a>
+      <a href="#review">Review</a>
+    </nav>
+
+    <div class="editor-mobile-readiness">
+      <a href="#listing-readiness">
+        <strong><%= readiness.required_complete_count %> of <%= readiness.required_count %> required checks complete</strong>
+        <span><%= readiness.ready_to_review? ? "Ready to review" : "See what still needs attention" %></span>
+      </a>
     </div>
-  <% end %>
 
-  <div class="field"><%= f.label :title %><%= f.text_field :title, required: true %></div>
-  <div class="field"><%= f.label :description %><%= f.text_area :description, rows: 5 %></div>
-  <div class="field">
-    <%= f.label :tags_text, "Tags (comma-separated)" %>
-    <%= text_field_tag "model3d[tags_text]", model.tags.join(", ") %>
+    <%= form_with model: model, scope: :model3d,
+          html: { multipart: true, class: "listing-editor-form",
+                  data: { turbo: false, action: "submit->listing-editor#saving" } },
+          url: model.persisted? ? designer_model_path(model) : designer_models_path do |f| %>
+      <% if model.errors.any? %>
+        <div class="flash flash-bad"><%= model.errors.full_messages.to_sentence %></div>
+      <% end %>
+
+      <section id="details" class="editor-section">
+        <header>
+          <p class="eyebrow">Details and discovery</p>
+          <h2>Help buyers recognize the right model</h2>
+          <p>Title, description, and tags help search. Category and collections place a published listing in the buyer browse filters shown below.</p>
+        </header>
+        <div class="field">
+          <%= f.label :title, "Title" %>
+          <%= f.text_field :title, required: true, autocomplete: "off" %>
+        </div>
+        <div class="field">
+          <%= f.label :description, "Description" %>
+          <%= f.text_area :description, rows: 6,
+                placeholder: "What is included, what it is for, and anything a buyer should know before printing." %>
+        </div>
+        <div class="field">
+          <%= f.label :category, "Category" %>
+          <%= f.select :category,
+                options_for_select(Model3d::CATEGORIES.map { |key, definition|
+                  [ definition.fetch(:name), key, {
+                    "data-description": definition.fetch(:description),
+                    "data-tag-suggestions": Model3d.tag_suggestions(key).to_json
+                  } ]
+                }, model.category),
+                { include_blank: "Choose a buyer category" } %>
+          <p class="field-help" data-listing-editor-target="categoryHelp"><%= selected_category&.fetch(:description) || "Choose the single category that best matches what the buyer will print." %></p>
+        </div>
+        <fieldset class="editor-taxonomy-fieldset">
+          <legend>Collections</legend>
+          <p class="field-help">Select only shelves this model genuinely fits. Saved selections place a published listing in those browse filters.</p>
+          <%= hidden_field_tag "model3d[collections][]", "" %>
+          <div class="editor-taxonomy-options">
+            <% Model3d::COLLECTIONS.each do |key, definition| %>
+              <label class="editor-taxonomy-option">
+                <%= check_box_tag "model3d[collections][]", key, model.collections.include?(key),
+                      id: "model3d_collection_#{key}", data: { collection_name: definition.fetch(:name) } %>
+                <span>
+                  <strong><%= definition.fetch(:name) %></strong>
+                  <small><%= definition.fetch(:description) %></small>
+                </span>
+              </label>
+            <% end %>
+          </div>
+        </fieldset>
+        <div class="field">
+          <%= f.label :tags_text, "Tags (comma-separated)" %>
+          <%= text_field_tag "model3d[tags_text]", model.tags.join(", "),
+                placeholder: "desk organizer, cable clip, support-free",
+                data: { listing_editor_target: "tagsInput" } %>
+          <p class="field-help">Use a few accurate object, function, and compatibility terms. Tags inform relevance; they never guarantee a search position.</p>
+          <div class="editor-tag-suggestions" data-listing-editor-target="tagSuggestions" aria-live="polite">
+            <% if tag_suggestions.any? %>
+              <span>Suggestions for <%= selected_category.fetch(:name) %>:</span>
+              <% tag_suggestions.each do |suggestion| %>
+                <button type="button" class="editor-tag-suggestion"
+                        data-tag-value="<%= suggestion %>" data-action="listing-editor#addSuggestedTag"><%= suggestion %></button>
+              <% end %>
+            <% else %>
+              <span>Choose a category to see optional tag suggestions.</span>
+            <% end %>
+          </div>
+        </div>
+      </section>
+
+      <section id="files" class="editor-section">
+        <header>
+          <p class="eyebrow">Printable bundle</p>
+          <h2>The files a buyer is licensed to print</h2>
+          <p>Order related parts clearly. Publishing freezes this exact certified bundle; later fixes are additive versions.</p>
+        </header>
+
+        <% if printable_files.any? %>
+          <ol class="editor-file-list" aria-label="Current printable files">
+            <% printable_files.each_with_index do |file, index| %>
+              <li class="editor-file-row">
+                <span class="editor-file-position"><%= index + 1 %></span>
+                <span class="editor-file-copy">
+                  <strong><%= file.file.filename %></strong>
+                  <span><%= file.kind.upcase %> · <%= number_to_human_size(file.file.byte_size) %></span>
+                </span>
+                <% if model.persisted? && model.draft? %>
+                  <span class="editor-file-actions">
+                    <%= link_to "Up", move_designer_model_file_path(model, file, direction: "up"),
+                          data: { turbo_method: :patch }, class: "editor-file-action",
+                          aria: { label: "Move #{file.file.filename} up" } unless index.zero? %>
+                    <%= link_to "Down", move_designer_model_file_path(model, file, direction: "down"),
+                          data: { turbo_method: :patch }, class: "editor-file-action",
+                          aria: { label: "Move #{file.file.filename} down" } unless index == printable_files.length - 1 %>
+                    <%= link_to "Remove", designer_model_file_path(model, file),
+                          data: { turbo_method: :delete,
+                                  turbo_confirm: "Remove #{file.file.filename} from this draft bundle? Its analysis will run again." },
+                          class: "editor-file-action editor-file-action-danger" %>
+                  </span>
+                <% else %>
+                  <span class="badge badge-kind">certified</span>
+                <% end %>
+              </li>
+            <% end %>
+          </ol>
+        <% else %>
+          <div class="editor-empty-state">No printable files attached yet.</div>
+        <% end %>
+
+        <% if model.persisted? && printable_files.any? %>
+          <div class="editor-analysis" data-analysis-status="<%= model.mesh_analysis_status %>">
+            <strong>Mesh analysis: <%= model.mesh_analysis_status %></strong>
+            <% if model.mesh_analysis_errors.any? %>
+              <ul>
+                <% model.mesh_analysis_errors.each do |message| %><li><%= message %></li><% end %>
+              </ul>
+            <% elsif model.mesh_analysis_status == "pending" %>
+              <span>Checking manifold geometry, wall thickness, and prior uploads.</span>
+            <% else %>
+              <span>This saved bundle passed the publish checks.</span>
+            <% end %>
+            <% if model.draft? && model.mesh_analysis_status != "passed" %>
+              <span class="editor-analysis-actions">
+                <%= link_to model.mesh_analysis_status == "failed" ? "Run analysis again" : "Restart analysis",
+                      retry_analysis_designer_model_path(model), data: { turbo_method: :post }, class: "btn" %>
+                <%= link_to "Refresh status", edit_designer_model_path(model, anchor: "files"), class: "t-small" %>
+              </span>
+              <% if model.mesh_analysis_status == "failed" %>
+                <span>Fix or replace the listed printable file before retrying if the same geometry error persists.</span>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+
+        <% if model.draft? %>
+          <div class="editor-upload-zone">
+            <label>Printable files (STL/3MF/STEP)
+              <%= file_field_tag "model3d[printable_files][]", multiple: true,
+                    accept: ".stl,.3mf,.step,.zip" %>
+            </label>
+            <p>New files are content-checked, attached to this draft, then analyzed after an explicit save.</p>
+          </div>
+        <% else %>
+          <p class="editor-frozen-note">The certified printable bundle is frozen. Use “Publish a file update” below so historical buyer certificates and downloads remain intact.</p>
+        <% end %>
+      </section>
+
+      <section id="images" class="editor-section">
+        <header>
+          <p class="eyebrow">Images and previews</p>
+          <h2>Show buyers what they will make</h2>
+          <p>The first image is featured on catalog cards and the storefront. Images never alter the certified printable bundle.</p>
+        </header>
+
+        <% if render_files.any? %>
+          <ol class="editor-media-grid" aria-label="Current render images">
+            <% render_files.each_with_index do |file, index| %>
+              <li class="editor-media-card">
+                <%= image_tag file.file, alt: "#{model.title} render #{index + 1}", loading: "lazy" %>
+                <div class="editor-media-copy">
+                  <strong><%= file.file.filename %></strong>
+                  <span><%= number_to_human_size(file.file.byte_size) %></span>
+                </div>
+                <div class="editor-media-actions">
+                  <% if index.zero? %>
+                    <span class="badge badge-kind">featured</span>
+                  <% elsif model.persisted? %>
+                    <%= link_to "Feature", feature_designer_model_file_path(model, file),
+                          data: { turbo_method: :patch }, class: "editor-file-action" %>
+                  <% end %>
+                  <% if model.persisted? %>
+                    <%= link_to "Up", move_designer_model_file_path(model, file, direction: "up"),
+                          data: { turbo_method: :patch }, class: "editor-file-action",
+                          aria: { label: "Move #{file.file.filename} up" } unless index.zero? %>
+                    <%= link_to "Down", move_designer_model_file_path(model, file, direction: "down"),
+                          data: { turbo_method: :patch }, class: "editor-file-action",
+                          aria: { label: "Move #{file.file.filename} down" } unless index == render_files.length - 1 %>
+                    <%= link_to "Remove", designer_model_file_path(model, file),
+                          data: { turbo_method: :delete,
+                                  turbo_confirm: "Remove #{file.file.filename} from the current storefront? Buyer licenses and printable downloads are unchanged." },
+                          class: "editor-file-action editor-file-action-danger" %>
+                  <% end %>
+                </div>
+              </li>
+            <% end %>
+          </ol>
+        <% else %>
+          <div class="editor-empty-state">No buyer-facing images yet. The storefront will show its neutral placeholder.</div>
+        <% end %>
+
+        <div class="editor-upload-zone">
+          <label>Render images
+            <%= file_field_tag "model3d[render_files][]", multiple: true, accept: "image/*",
+                  data: { listing_editor_target: "renderInput" } %>
+          </label>
+          <p>Add clear renders or photos. The first newly selected image appears in the local preview before save.</p>
+        </div>
+      </section>
+
+      <section id="guidance" class="editor-section">
+        <header>
+          <p class="eyebrow">Print guidance</p>
+          <h2>Set practical expectations</h2>
+          <p>Materials and support status feed buyer filters. Time and bed size appear as practical listing facts before purchase.</p>
+        </header>
+        <label class="editor-check-row">
+          <%= check_box_tag "model3d[printability][supports]", "true", printability["supports"] %>
+          This model needs supports
+        </label>
+        <div class="field-row">
+          <label class="field">Materials
+            <%= text_field_tag "model3d[printability][materials_text]", Array(printability["materials"]).join(" "),
+                  placeholder: "PLA PETG" %>
+          </label>
+          <label class="field">Est. print minutes
+            <%= number_field_tag "model3d[printability][est_print_minutes]", printability["est_print_minutes"], min: 1 %>
+          </label>
+          <label class="field">Min bed (mm)
+            <%= number_field_tag "model3d[printability][bed_min_mm]", printability["bed_min_mm"], min: 1 %>
+          </label>
+        </div>
+      </section>
+
+      <section id="license" class="editor-section">
+        <header>
+          <p class="eyebrow">License and price</p>
+          <h2>Choose what buyers may do</h2>
+          <p>Canonical versioned terms govern checkout and certificates. Sold offer revisions remain attached to historical purchases.</p>
+        </header>
+        <div class="editor-license-products">
+        <%= f.fields_for :license_offers, product_offers do |offer| %>
+          <% license_offer = offer.object %>
+          <% product = LicenseOffer.product(license_offer.kind) %>
+          <% offered = license_offer.persisted? || license_offer.price_usdc.present? %>
+          <% price_cents = license_offer.price_cents %>
+          <% fee_cents = price_cents.to_i * LedgerEntry::PLATFORM_FEE_BPS / 10_000 %>
+          <details class="editor-license-card" data-license-product
+                   data-license-state="<%= offered ? "active" : "available" %>" <%= "open" if offered %>>
+            <summary>
+              <span>
+                <strong><%= offered ? product.fetch(:name) : "Add #{product.fetch(:name)}" %> license</strong>
+                <small><%= product.fetch(:summary) %></small>
+              </span>
+              <span class="badge badge-kind"><%= offered ? "offered" : "optional" %></span>
+            </summary>
+            <div class="editor-license-body">
+              <%= offer.hidden_field :kind %>
+              <p class="editor-license-example"><%= product.fetch(:example) %></p>
+              <div class="field-row">
+                <label class="field">Price (USDC)
+                  <span class="editor-money-field">
+                    <span aria-hidden="true">$</span>
+                    <%= offer.number_field :price_usdc, min: "0.01", step: "0.01",
+                          inputmode: "decimal", placeholder: "2.50", data: {
+                            action: "input->listing-editor#priceChanged", license_price: true
+                          } %>
+                    <span>USDC</span>
+                  </span>
+                </label>
+                <label class="field">Optional sales limit
+                  <%= offer.number_field :max_units, placeholder: "Unlimited licenses", min: 1 %>
+                </label>
+                <label class="field">Preferred checkout quote
+                  <%= offer.select :currency, [ [ "USDC first", "USDC" ], [ "HBAR first", "HBAR" ] ] %>
+                </label>
+              </div>
+              <p class="editor-license-net" aria-live="polite">
+                Estimated share after 10% platform fee:
+                <strong data-license-net><%= price_cents ? format_usdc_cents(price_cents - fee_cents) : "Set a price" %></strong>
+              </p>
+              <p class="field-help">The optional limit caps how many licenses can be sold. It does not change the usage rights above or technically limit physical print count.</p>
+              <p class="field-help">Price is denominated in USDC. Checkout offers exact USDC and HBAR settlement options; this preference chooses which appears first. The buyer's choice does not change this gross price or estimated share.</p>
+
+              <% if license_offer.persisted? %>
+                <label class="editor-remove-offer">
+                  <%= offer.check_box :_destroy %>
+                  Stop offering this license to future buyers when I save
+                </label>
+                <p class="t-caption muted">Active revision <%= license_offer.revision %>. Past buyers keep their purchased revision, terms, receipts, and certificates.</p>
+              <% else %>
+                <p class="t-caption muted">Set a price and save to add this optional license.</p>
+              <% end %>
+
+              <% canonical_terms = license_offer.terms_version.present? &&
+                   Licensing::Documents.exists?(license_offer.terms_version, license_offer.kind) %>
+              <div class="t-small editor-license-terms">
+                <% if canonical_terms %>
+                  <p><strong>Governing terms:</strong> Canonical <%= license_offer.kind.humanize.downcase %>
+                    license (<%= license_offer.terms_version %>). This exact text is what buyers read and certificates hash; it is not editable per listing.</p>
+                  <details>
+                    <summary>Read the exact <%= product.fetch(:name).downcase %> license</summary>
+                    <pre><%= license_offer.terms_text %></pre>
+                    <%= link_to "Open permalink and hash recipe",
+                          license_document_path(version: license_offer.terms_version, kind: license_offer.kind),
+                          target: "_blank", rel: "noopener", class: "t-caption" %>
+                  </details>
+                <% else %>
+                  <p><strong>Governing terms:</strong> Legacy custom terms (read-only). Existing terms are preserved for compatibility and cannot be silently replaced here.</p>
+                  <details><summary>Read the exact legacy license</summary><pre><%= license_offer.terms_text %></pre></details>
+                <% end %>
+              </div>
+            </div>
+          </details>
+        <% end %>
+        </div>
+      </section>
+
+      <% if model.source_url.present? || model.file_hash.present? || model.preview_file&.file&.attached? %>
+        <details id="advanced" class="editor-advanced">
+          <summary>Provenance and technical evidence</summary>
+          <% if model.source_url.present? %>
+            <p>Imported from <%= link_to model.source_url, model.source_url,
+              target: "_blank", rel: "noopener noreferrer", class: "mono" %> under
+              <strong><%= model.source_license %></strong>. Ownership warranted
+              <%= model.ownership_warranted_at ? l(model.ownership_warranted_at, format: :short) : "not recorded" %>.</p>
+          <% end %>
+          <% if model.file_hash.present? %><p class="mono">Certified bundle <%= model.file_hash %></p><% end %>
+          <% if model.geometry_hash.present? %><p class="mono">Geometry <%= model.geometry_hash %></p><% end %>
+          <% if model.preview_file&.file&.attached? %><p>Generated interactive preview is attached.</p><% end %>
+        </details>
+      <% end %>
+
+      <section id="review" class="editor-section editor-review-section">
+        <header>
+          <p class="eyebrow">Review and publish</p>
+          <h2>Save the current draft, then review the exact snapshot</h2>
+          <p>Saving is explicit: offer edits can create immutable future-buyer revisions, and large uploads need validation and analysis. Nothing is silently autosaved.</p>
+        </header>
+        <div class="editor-save-row">
+          <span class="editor-save-status" data-listing-editor-target="saveStatus" aria-live="polite">All changes saved</span>
+          <span class="editor-save-actions">
+            <%= f.submit model.persisted? ? "Save changes" : "Save draft", class: "btn btn-primary",
+                  data: { action: "click->listing-editor#saving" } %>
+            <% if model.persisted? && model.draft? %>
+              <%= f.button "Review and publish", type: "submit",
+                    formaction: review_designer_model_path(model), formmethod: "post", class: "btn",
+                    data: { action: "click->listing-editor#saving" } %>
+            <% end %>
+          </span>
+        </div>
+      </section>
+    <% end %>
   </div>
 
-  <fieldset class="field">
-    <legend>Printability</legend>
-    <% printability = model.printability || {} %>
-    <label class="t-small">
-      <%= check_box_tag "model3d[printability][supports]", "true", printability["supports"] %>
-      needs supports
-    </label>
-    <div class="field-row">
-      <label class="t-small">Materials
-        <%= text_field_tag "model3d[printability][materials_text]", Array(printability["materials"]).join(" ") %>
-      </label>
-      <label class="t-small">Est. print minutes
-        <%= number_field_tag "model3d[printability][est_print_minutes]", printability["est_print_minutes"] %>
-      </label>
-      <label class="t-small">Min bed (mm)
-        <%= number_field_tag "model3d[printability][bed_min_mm]", printability["bed_min_mm"] %>
-      </label>
-    </div>
-  </fieldset>
-
-  <fieldset class="field">
-    <legend>Files</legend>
-    <% if model.persisted? && model.model_files.any? %>
-      <ul class="t-small">
-        <% model.model_files.each do |file| %>
-          <li><span class="badge badge-kind"><%= file.kind %></span>
-              <%= file.file.attached? ? file.file.filename : "(empty)" %></li>
+  <aside class="listing-editor-aside">
+    <section id="listing-readiness" class="editor-side-card">
+      <p class="eyebrow">Publish readiness</p>
+      <h2><%= readiness.required_complete_count %> of <%= readiness.required_count %> required</h2>
+      <ul class="editor-readiness-list">
+        <% readiness.items.each do |item| %>
+          <% item_path = item.key == :payout ? designer_payouts_path(anchor: item.anchor) : "##{item.anchor}" %>
+          <li data-readiness-status="<%= item.status %>">
+            <span class="editor-readiness-mark" aria-hidden="true"><%= item.complete? ? "✓" : (item.status == :working ? "…" : "○") %></span>
+            <span>
+              <% if item.key == :email && !item.complete? %>
+                <strong><%= item.label %></strong>
+              <% else %>
+                <%= link_to item.label, item_path %>
+              <% end %>
+              <small><%= item.detail %></small>
+              <% if item.key == :email && !item.complete? %>
+                <%= button_to "Send verification email", rodauth.verify_account_resend_path,
+                      method: :post, params: { rodauth.login_param => current_designer.email_address },
+                      class: "editor-readiness-action", form: { data: { turbo: false } } %>
+              <% end %>
+            </span>
+          </li>
         <% end %>
       </ul>
-    <% end %>
-    <% if model.persisted? && model.printable_files.any? %>
-      <div class="flash <%= model.mesh_analysis_status == 'failed' ? 'flash-bad' : (model.mesh_analysis_status == 'passed' ? 'flash-ok' : '') %>">
-        Mesh analysis: <strong><%= model.mesh_analysis_status %></strong>
-        <% if model.mesh_analysis_errors.any? %>
-          <ul>
-            <% model.mesh_analysis_errors.each do |message| %><li><%= message %></li><% end %>
-          </ul>
-        <% elsif model.mesh_analysis_status == "pending" %>
-          — checking manifold geometry, wall thickness, and prior uploads.
+    </section>
+
+    <section class="editor-side-card editor-storefront-preview" aria-label="Storefront preview">
+      <p class="eyebrow">Storefront preview</p>
+      <div class="editor-preview-image">
+        <% if featured_render %>
+          <%= image_tag featured_render.file, alt: "Saved featured render",
+                data: { listing_editor_target: "previewImage" } %>
+          <div data-listing-editor-target="previewPlaceholder" hidden>Preview render unavailable</div>
+        <% else %>
+          <img alt="Selected render preview" data-listing-editor-target="previewImage" hidden>
+          <div data-listing-editor-target="previewPlaceholder">Preview render unavailable</div>
         <% end %>
       </div>
-    <% end %>
-    <% if model.published? %>
-      <p class="t-small">The certified printable bundle is frozen. Use “Publish a file update” below.</p>
-    <% else %>
-      <label class="t-small">Printable files (STL/3MF/STEP)
-        <%= file_field_tag "model3d[printable_files][]", multiple: true, accept: ".stl,.3mf,.step,.zip" %>
-      </label>
-    <% end %>
-    <label class="t-small">Render images
-      <%= file_field_tag "model3d[render_files][]", multiple: true, accept: "image/*" %>
-    </label>
-  </fieldset>
-
-  <fieldset class="field">
-    <legend>License offers</legend>
-    <%= f.fields_for :license_offers do |offer| %>
-      <div class="field-row">
-        <label class="t-small">Kind <%= offer.select :kind, LicenseOffer::KINDS %></label>
-        <label class="t-small">Price (USDC cents) <%= offer.number_field :price_cents, min: 1 %></label>
-        <label class="t-small">License issuance cap <%= offer.number_field :max_units, placeholder: "unlimited" %></label>
+      <div class="editor-preview-copy">
+        <h3 data-listing-editor-target="previewTitle"><%= model.title.presence || "Untitled model" %></h3>
+        <p data-listing-editor-target="previewDescription"><%= model.description.presence || "Add a description so buyers know what is included." %></p>
+        <div class="editor-preview-discovery">
+          <p data-listing-editor-target="previewCategory"><%= selected_category ? "Category: #{selected_category.fetch(:name)}" : "No buyer category yet" %></p>
+          <p data-listing-editor-target="previewCollections"><%= selected_collection_names.any? ? "Browse shelves: #{selected_collection_names.join(', ')}" : "No collection shelves selected" %></p>
+          <p data-listing-editor-target="previewPrintability"><%= preview_print_facts.any? ? "Print facts: #{preview_print_facts.join(' · ')}" : "No print-filter facts yet" %></p>
+        </div>
+        <p class="t-caption muted" data-listing-editor-target="previewTags"><%= model.tags.any? ? "Tags: #{model.tags.join(', ')}" : "No discovery tags yet" %></p>
+        <strong class="price" data-listing-editor-target="previewPrice"><%= preview_offer ? format_usdc_cents(preview_offer.price_cents) : "Price not set" %></strong>
       </div>
-      <p class="t-caption muted">Optional. This caps licenses sold, not physical copies; Printwright cannot technically enforce print count.</p>
-      <label class="t-small">Terms <%= offer.text_area :terms_md, rows: 2 %></label>
-    <% end %>
-  </fieldset>
-
-  <%= f.submit model.persisted? ? "Save changes" : "Save draft", class: "btn btn-primary", style: "width:auto" %>
-<% end %>
-
-<% if model.persisted? && !model.published? %>
-  <%= form_with url: publish_designer_model_path(model), method: :post, class: "publish-form" do |pf| %>
-    <label class="t-small publish-note">
-      <input type="checkbox" name="warranty" value="1">
-      I warrant that this model is my own work or work I am licensed to sell,
-      and that it prints as described. This warranty is recorded and named in
-      every license certificate sold. (<%= link_to "designer warranty terms", license_document_path(version: "v1", kind: "personal"), target: "_blank" %>, §4)
-    </label>
-    <%= pf.submit "Publish — freeze the bundle hash and go live", class: "btn" %>
-  <% end %>
-<% end %>
+      <p class="editor-preview-discovery-note">Browse placement follows saved category and collections. Search position still depends on each buyer's query and marketplace relevance.</p>
+      <p class="editor-preview-note" data-listing-editor-target="previewStatus">
+        <%= model.draft? ? "Draft preview — only you can see this." : "Saved preview of the current buyer-facing listing." %>
+      </p>
+      <% unless model.draft? %>
+        <%= link_to "Open public storefront", model_page_path(model.slug), class: "t-small" %>
+      <% end %>
+    </section>
+  </aside>
+</div>

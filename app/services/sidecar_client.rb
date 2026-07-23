@@ -3,6 +3,7 @@ require "net/http"
 # Client for the local HCS signing sidecar (the only key-holder).
 class SidecarClient
   class Unavailable < StandardError; end
+  class Ambiguous < StandardError; end
   class Rejected < StandardError; end
 
   TIMEOUT_SECONDS = 15
@@ -38,9 +39,19 @@ class SidecarClient
   # => { "transactionId" => ... } — a batched treasury -> designers transfer.
   # Money moves on 200; the CALLER records it (nothing here is retried).
   def payout(token_id:, transfers:, memo: nil)
-    post("/payout", { tokenId: token_id, transfers: transfers, memo: memo }) do |body|
+    post("/payout", { tokenId: token_id, transfers: transfers, memo: memo },
+      ambiguous_on_response_loss: true) do |body|
       raise Unavailable, body["error"] if body["error"] == "treasury_not_configured"
+      raise Ambiguous, body["error"] if body["error"] == "hedera_error"
     end
+  end
+
+  # Verifies a WalletConnect hedera_signMessage SignatureMap against the
+  # current on-chain key for the claimed account. No private key enters Rails.
+  def verify_payout_proof(account_id:, message:, signature_map:)
+    post("/verify-payout-proof", {
+      accountId: account_id, message: message, signatureMap: signature_map
+    })
   end
 
   # => { "tokenId" => ..., "transactionId" => ... }
@@ -56,7 +67,7 @@ class SidecarClient
 
   private
 
-  def post(path, payload)
+  def post(path, payload, ambiguous_on_response_loss: false)
     req = Net::HTTP::Post.new(path, "content-type" => "application/json")
     req["Authorization"] = "Bearer #{ENV.fetch('SIDECAR_TOKEN')}"
     req.body = JSON.generate(payload)
@@ -73,8 +84,10 @@ class SidecarClient
       raise Rejected, body["error"]
     end
     body
-  rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED, Errno::ECONNRESET,
-         SocketError, JSON::ParserError => e
+  rescue Net::OpenTimeout, Errno::ECONNREFUSED, SocketError => e
     raise Unavailable, e.message
+  rescue Net::ReadTimeout, Errno::ECONNRESET, JSON::ParserError => e
+    error_class = ambiguous_on_response_loss ? Ambiguous : Unavailable
+    raise error_class, e.message
   end
 end

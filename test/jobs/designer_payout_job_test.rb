@@ -77,6 +77,57 @@ class DesignerPayoutJobTest < ActiveJob::TestCase
     assert_equal 1, LedgerEntry.where(entry_kind: "designer_payout", purchase: purchase).count
   end
 
+  test "a safe pre-submit failure records a bounded automatic retry" do
+    purchase = settled_purchase(@designer, "250000")
+    stub_request(:post, "#{SIDECAR}/payout")
+      .to_return(status: 503, body: { error: "treasury_not_configured" }.to_json,
+                 headers: { "content-type" => "application/json" })
+
+    assert_enqueued_with(job: DesignerPayoutJob) do
+      DesignerPayoutJob.perform_now(purchase_ids: [ purchase.id ], ref: "purchase-#{purchase.id}")
+    end
+
+    attempt = PayoutAttempt.find_by!(purchase: purchase)
+    assert_equal [ "retrying", "service_unavailable", 1 ],
+      attempt.values_at("status", "last_error_code", "attempt_count")
+    assert_includes LedgerEntry.owed.pluck(:purchase_id), purchase.id
+  end
+
+  test "exhausting safe retries exposes a manual retry instead of losing the state" do
+    purchase = settled_purchase(@designer, "250000")
+    ref = "purchase-#{purchase.id}"
+    stub_request(:post, "#{SIDECAR}/payout")
+      .to_return(status: 503, body: { error: "treasury_not_configured" }.to_json,
+                 headers: { "content-type" => "application/json" })
+    job = DesignerPayoutJob.new(purchase_ids: [ purchase.id ], ref: ref)
+    job.executions = 9
+    job.exception_executions = { [ SidecarClient::Unavailable ].to_s => 9 }
+
+    job.perform_now
+
+    attempt = PayoutAttempt.find_by!(purchase: purchase)
+    assert_equal [ "failed", "service_unavailable", 1 ],
+      attempt.values_at("status", "last_error_code", "attempt_count")
+    assert attempt.retryable?
+    assert_no_enqueued_jobs(only: DesignerPayoutJob)
+  end
+
+  test "a lost payout response requires reconciliation and enqueues no retry" do
+    purchase = settled_purchase(@designer, "250000")
+    stub_request(:post, "#{SIDECAR}/payout").to_raise(Net::ReadTimeout.new("response lost"))
+
+    assert_raises(SidecarClient::Ambiguous) do
+      DesignerPayoutJob.perform_now(purchase_ids: [ purchase.id ], ref: "purchase-#{purchase.id}")
+    end
+
+    attempt = PayoutAttempt.find_by!(purchase: purchase)
+    assert_equal [ "reconciliation_required", "ambiguous_result" ],
+      attempt.values_at("status", "last_error_code")
+    assert_not attempt.retryable?
+    assert_no_enqueued_jobs(only: DesignerPayoutJob)
+    assert_includes LedgerEntry.owed.pluck(:purchase_id), purchase.id
+  end
+
   private
 
   def stub_payout(tx_id)

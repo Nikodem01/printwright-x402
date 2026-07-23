@@ -1,10 +1,10 @@
 <% content_for :title, "Webhooks — Printwright designer" %>
 <h1>Webhooks</h1>
 <p class="muted">Receive a signed <code class="mono">sale.completed</code> event after an x402 payment delivers a license.</p>
-<p><%= link_to "Add endpoint", new_designer_webhook_endpoint_path, class: "button" %></p>
+<p><%= link_to "Add endpoint", new_designer_webhook_endpoint_path, class: "btn btn-primary" %></p>
 
 <% if @endpoints.any? %>
-  <table class="facts-table">
+  <div class="table-scroll"><table class="facts-table">
     <tr><th>endpoint</th><th>events</th><th>status</th><th></th></tr>
     <% @endpoints.each do |endpoint| %>
       <tr>
@@ -14,7 +14,33 @@
         <td><%= button_to "Remove", designer_webhook_endpoint_path(endpoint), method: :delete, class: "linklike" %></td>
       </tr>
     <% end %>
-  </table>
+  </table></div>
 <% else %>
   <p class="muted">No webhook endpoints configured.</p>
 <% end %>
+
+<section id="delivery-health" class="section-stack">
+  <h2>Recent delivery health</h2>
+  <p class="t-small muted">Seller callbacks run after durable buyer delivery. Retrying here never repeats payment, license issuance, or file delivery, and no buyer email, wallet id, or bearer download URL is shown.</p>
+  <% if @deliveries.any? %>
+    <div class="table-scroll"><table class="facts-table">
+      <tr><th>event</th><th>created</th><th>status</th><th>attempts</th><th>result</th><th></th></tr>
+      <% @deliveries.each do |delivery| %>
+        <tr>
+          <td><%= delivery.event_type %></td>
+          <td class="t-small"><%= time_ago_in_words(delivery.created_at) %> ago</td>
+          <td><%= render "shared/state", state: delivery.delivered? ? "settled" : (delivery.failed? ? "void" : "pending"), label: delivery.status.humanize %></td>
+          <td><%= delivery.attempts %></td>
+          <td class="t-small"><%= delivery.last_error.to_s.truncate(120).presence || (delivery.response_code ? "HTTP #{delivery.response_code}" : "Awaiting delivery") %></td>
+          <td>
+            <% if delivery.failed? %>
+              <%= button_to "Retry", retry_designer_webhook_endpoint_delivery_path(delivery.webhook_endpoint_id, delivery), class: "btn" %>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </table></div>
+  <% else %>
+    <p class="muted">No seller webhook deliveries yet.</p>
+  <% end %>
+</section>

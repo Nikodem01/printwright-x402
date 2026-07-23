@@ -28,6 +28,7 @@ class Ledger::PayoutRunnerTest < ActiveSupport::TestCase
     assert_nil results.first.tx_id
     assert_equal [ { accountId: "0.0.9604186", amount: "306000" } ], results.first.transfers
     assert_empty LedgerEntry.where(entry_kind: "designer_payout")
+    assert_empty PayoutAttempt.all
   end
 
   test "payout pays verified designers, records entries, and is idempotent" do
@@ -43,6 +44,9 @@ class Ledger::PayoutRunnerTest < ActiveSupport::TestCase
     assert_equal [ @owed_a.id, @owed_b.id ].sort, payouts.pluck(:purchase_id).sort
     assert payouts.all? { |e| e.tx_id == "0.0.9067781@777.888" && e.held_by == "designer" }
     assert_equal 306_000, payouts.sum { |e| e.amount_base_units }
+    attempts = PayoutAttempt.where(purchase: [ @owed_a, @owed_b ])
+    assert_equal %w[succeeded succeeded], attempts.order(:purchase_id).pluck(:status)
+    assert attempts.all? { |attempt| attempt.tx_id == "0.0.9067781@777.888" }
 
     # the unverified designer's share stays owed
     assert_equal [ @owed_unverified.id ], LedgerEntry.owed.pluck(:purchase_id)
@@ -66,6 +70,17 @@ class Ledger::PayoutRunnerTest < ActiveSupport::TestCase
     assert_requested stub, times: 1
   end
 
+  test "a replacement safety hold continues paying only the old active destination" do
+    @paid_designer.update!(payout_account_control_verified_at: Time.current,
+      payout_pending_account_id: "0.0.7007", payout_proof_verified_at: Time.current,
+      payout_hold_until: 24.hours.from_now)
+
+    results = Ledger::PayoutRunner.call(dry_run: true)
+
+    assert_equal [ { accountId: "0.0.9604186", amount: "306000" } ], results.first.transfers
+    assert_equal "0.0.7007", @paid_designer.reload.payout_pending_account_id
+  end
+
   test "direct-paid purchases are never owed" do
     direct = Purchase.create!(
       license_offer: @owed_a.license_offer, status: "verified",
@@ -78,16 +93,61 @@ class Ledger::PayoutRunnerTest < ActiveSupport::TestCase
     assert_not_includes LedgerEntry.owed.pluck(:purchase_id), direct.id
   end
 
+  test "a pre-submit outage records a safe failed attempt for an operator run" do
+    stub_request(:post, "#{SIDECAR}/payout")
+      .to_return(status: 503, body: { error: "treasury_not_configured" }.to_json,
+                 headers: { "content-type" => "application/json" })
+
+    assert_raises(SidecarClient::Unavailable) do
+      Ledger::PayoutRunner.call(ref: "operator-safe-failure")
+    end
+
+    attempts = PayoutAttempt.where(designer: @paid_designer)
+    assert_equal 2, attempts.count
+    assert attempts.all?(&:retryable?)
+    assert_equal [ "service_unavailable" ], attempts.distinct.pluck(:last_error_code)
+    assert_equal [ @owed_a.id, @owed_b.id ].sort,
+      LedgerEntry.owed.where(designer: @paid_designer).pluck(:purchase_id).sort
+  end
+
+  test "an ambiguous response is never retried by a later sweep" do
+    ambiguous = owed_purchase(@paid_designer, "100000", asset: "0.0.0")
+    stub_request(:post, "#{SIDECAR}/payout")
+      .with(body: hash_including("tokenId" => "0.0.429274"))
+      .to_return(body: { transactionId: "0.0.9067781@5.5" }.to_json,
+                 headers: { "content-type" => "application/json" })
+    ambiguous_stub = stub_request(:post, "#{SIDECAR}/payout")
+      .with(body: hash_including("tokenId" => "0.0.0"))
+      .to_return(status: 502, body: { error: "hedera_error" }.to_json,
+                 headers: { "content-type" => "application/json" })
+
+    assert_raises(SidecarClient::Ambiguous) do
+      Ledger::PayoutRunner.call(ref: "multi-asset-ambiguous")
+    end
+
+    assert_equal [ @owed_a.id, @owed_b.id ].sort,
+      LedgerEntry.where(entry_kind: "designer_payout").pluck(:purchase_id).sort
+    assert_not_includes LedgerEntry.owed.pluck(:purchase_id), @owed_a.id
+    issue = PayoutAttempt.find_by!(purchase: ambiguous)
+    assert_equal [ "reconciliation_required", "ambiguous_result" ],
+      issue.values_at("status", "last_error_code")
+    assert_not issue.retryable?
+
+    assert_empty Ledger::PayoutRunner.call(ref: "later-sweep")
+    assert_requested ambiguous_stub, times: 1
+    assert_includes LedgerEntry.owed.pluck(:purchase_id), ambiguous.id
+  end
+
   private
 
-  def owed_purchase(designer, amount)
+  def owed_purchase(designer, amount, asset: "0.0.429274")
     model = Model3d.create!(
       designer: designer, title: "Payout", slug: "payout-#{SecureRandom.hex(4)}"
     )
     offer = model.license_offers.create!(kind: "personal", price_cents: 250)
     purchase = Purchase.create!(
       license_offer: offer, status: "verified",
-      asset: "0.0.429274", amount_base_units: amount,
+      asset: asset, amount_base_units: amount,
       replay_key: SecureRandom.hex(32),
       requirements_json: { "payTo" => "0.0.9584959" }
     )

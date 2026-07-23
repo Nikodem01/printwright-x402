@@ -3,7 +3,7 @@
   <h1>Marketplace Terms of Service</h1>
   <p class="t-small muted"><strong>Template, not legal advice</strong> — this testnet
     demonstration runs on template terms; reviewed text replaces them before any
-    mainnet launch. Last updated 2026-07-17.</p>
+    mainnet launch. Last updated 2026-07-23.</p>
 
   <h2>What Printwright is</h2>
   <p>Printwright is a marketplace where designers sell print licenses for 3D models and
@@ -18,8 +18,10 @@
       recorded.</li>
     <li>You set prices; the marketplace retains a 10% platform fee per sale
       (the split is recorded in an immutable ledger and visible on your statement).</li>
-    <li>Payouts go to your Hedera account when it can receive USDC; otherwise sales are
-      held in marketplace custody until it can.</li>
+    <li>Printwright receives each buyer payment in its treasury as marketplace merchant of
+      record. After delivery, your 90% share is queued to your verified Hedera payout
+      destination. If the destination is not ready or a transfer cannot complete, that share
+      remains owed in treasury until it can be paid.</li>
   </ul>
 
   <h2>Buyers</h2>
@@ -28,6 +30,8 @@
       The certificate anchored on Hedera is the durable proof of that grant.</li>
     <li>Payments are on-chain and final; refunds are limited to purchases where delivery
       failed (see the certificate/verify page for your transaction id).</li>
+    <li>A pending, held, or failed designer payout does not revoke or delay the buyer's delivered
+      license, receipt, certificate, or entitled download.</li>
   </ul>
 
   <h2>The marketplace</h2>

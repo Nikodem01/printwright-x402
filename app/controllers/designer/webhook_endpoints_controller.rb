@@ -1,6 +1,9 @@
 class Designer::WebhookEndpointsController < Designer::BaseController
   def index
     @endpoints = current_designer.webhook_endpoints.order(created_at: :desc)
+    @deliveries = WebhookDelivery.where(
+      webhook_endpoint_id: @endpoints.select(:id), target_kind: "designer"
+    ).order(created_at: :desc).limit(20)
   end
 
   def new

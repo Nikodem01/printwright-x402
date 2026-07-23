@@ -49,13 +49,16 @@ class TermsSurfacesTest < ActionDispatch::IntegrationTest
     )
     sign_in_as designers(:two)
 
-    post publish_designer_model_path(draft)
+    token = Models::PublishReview.token(draft)
+    post publish_designer_model_path(draft), params: { review_token: token }
     assert_redirected_to edit_designer_model_path(draft)
     assert draft.reload.status == "draft"
     assert_nil draft.warranty_accepted_at
 
     AnalyzeModelMeshJob.perform_now(draft.id)
-    post publish_designer_model_path(draft), params: { warranty: "1" }
+    post review_designer_model_path(draft), params: { model3d: { title: draft.title } }
+    token = css_select("input[name='review_token']").sole["value"]
+    post publish_designer_model_path(draft), params: { warranty: "1", review_token: token }
     assert draft.reload.published?
     assert_not_nil draft.warranty_accepted_at
   end

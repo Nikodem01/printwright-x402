@@ -9,6 +9,9 @@
     <li>You set your own per-print price on every license offer.</li>
     <li>You keep <strong>90%</strong> of every sale; the platform fee is <strong>10%</strong>
       (recorded per-sale in an immutable ledger, visible on your statement).</li>
+    <li>Each buyer payment settles to Printwright's treasury. After delivery, your 90% share is
+      queued to your verified payout destination. If that payout cannot complete, the share
+      remains owed in treasury with transaction proof on your statement.</li>
     <li>No listing fees, no subscription.</li>
   </ul>
 
@@ -24,7 +27,9 @@
   </ul>
 
   <h2>Settlement</h2>
-  <p>Every payment and every certificate is a real transaction on Hedera
+  <p>Buyer settlement is separate from buyer delivery and designer payout. A pending or held
+    designer payout does not delay or revoke the buyer's delivered license. Every payment and
+    every certificate is a real transaction on Hedera
     <%= Hedera::Network.name %> — see the <%= link_to "API docs", docs_path %> for the exact
     negotiation, or <%= link_to "verify a certificate", verify_path(cert_id: "pw-000038") %>
     against the public mirror node.</p>

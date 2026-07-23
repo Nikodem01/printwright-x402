@@ -99,12 +99,42 @@ class Api::V1::ModelsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show 404s for drafts and unknown ids" do
+    clear_enqueued_jobs
     draft = Model3d.find_by(slug: "secret-draft")
     get api_v1_model_url(draft)
     assert_response :not_found
     get api_v1_model_url(id: 999_999)
     assert_response :not_found
     assert_equal({ "error" => "not_found" }, response.parsed_body)
+    assert_not enqueued_jobs.any? { |job| job[:job] == RecordModelMetricsJob }
+  end
+
+  test "catalog and detail responses enqueue agent aggregates without search text" do
+    clear_enqueued_jobs
+
+    get api_v1_models_url(q: "beaver private agent intent")
+    assert_response :success
+    job = enqueued_jobs.find { |candidate| candidate[:job] == RecordModelMetricsJob }
+    assert job
+    refute_includes job.fetch(:args).to_s, "beaver private agent intent"
+    perform_enqueued_jobs(only: RecordModelMetricsJob)
+    assert_equal 1, @beaver.model_metrics.find_by!(channel: "agent", source: "api_search").impressions
+
+    perform_enqueued_jobs(only: RecordModelMetricsJob) { get api_v1_model_url(@beaver) }
+    assert_response :success
+    assert_equal 1, @beaver.model_metrics.find_by!(channel: "agent", source: "api").views
+  end
+
+  test "paused and retired models leave agent discovery and public API detail" do
+    @beaver.update!(status: "paused")
+    @lodge.update!(status: "retired")
+
+    get api_v1_models_url
+    assert_equal [ "calibration-cube" ], response.parsed_body.fetch("models").pluck("slug")
+    get api_v1_model_url(@beaver)
+    assert_response :not_found
+    get api_v1_model_url(@lodge)
+    assert_response :not_found
   end
 
   private

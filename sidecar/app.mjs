@@ -19,7 +19,7 @@ export function createApp({
 
     const routes = [
       "/create-topic", "/create-heartbeat-topic", "/submit-cert", "/submit-version",
-      "/submit-heartbeat", "/payout", "/create-collection", "/mint-airdrop",
+      "/submit-heartbeat", "/payout", "/verify-payout-proof", "/create-collection", "/mint-airdrop",
     ];
     if (req.method !== "POST" || !routes.includes(req.url)) {
       return send(404, { error: "not_found" });
@@ -110,6 +110,26 @@ export function createApp({
           transfers: body.transfers,
           memo: body.memo,
         }));
+      }
+
+      if (req.url === "/verify-payout-proof") {
+        if (typeof body.accountId !== "string" || !/^0\.0\.\d+$/.test(body.accountId)) {
+          return send(400, { error: "invalid_account_id" });
+        }
+        if (typeof body.message !== "string" || body.message.length === 0 ||
+            Buffer.byteLength(body.message, "utf8") > 1024) {
+          return send(400, { error: "invalid_message" });
+        }
+        if (typeof body.signatureMap !== "string" || body.signatureMap.length === 0 ||
+            body.signatureMap.length > 4096 || !/^[A-Za-z0-9+/]+={0,2}$/.test(body.signatureMap)) {
+          return send(400, { error: "invalid_signature_map" });
+        }
+        const verified = await hedera.verifyPayoutProof({
+          accountId: body.accountId,
+          message: body.message,
+          signatureMap: body.signatureMap,
+        });
+        return send(200, { verified });
       }
 
       // Certificate and version events share the configured provenance topic,

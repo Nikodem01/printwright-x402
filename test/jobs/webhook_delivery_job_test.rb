@@ -80,6 +80,11 @@ class WebhookDeliveryJobTest < ActiveJob::TestCase
     assert_not_requested :post, @endpoint.url
   end
 
+  test "a delivery removed during account closure is a no-op" do
+    assert_nothing_raised { WebhookDeliveryJob.perform_now(-1) }
+    assert_not_requested :post, %r{hooks\.example}
+  end
+
   test "buyer certificate event requires a paid batch callback and an HCS anchor" do
     batch_secret = "buyer_#{SecureRandom.hex(32)}"
     batch = PurchaseBatch.create!(

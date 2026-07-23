@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_22_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_23_201000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -163,7 +163,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_100000) do
     t.datetime "identity_verified_at"
     t.string "nft_collection_id"
     t.string "password_digest"
+    t.datetime "payout_account_control_verified_at"
     t.datetime "payout_account_verified_at"
+    t.text "payout_challenge"
+    t.string "payout_challenge_digest"
+    t.datetime "payout_challenge_expires_at"
+    t.datetime "payout_change_requested_at"
+    t.datetime "payout_hold_until"
+    t.string "payout_pending_account_id"
+    t.datetime "payout_proof_verified_at"
     t.integer "status", default: 1, null: false
     t.datetime "updated_at", null: false
     t.boolean "verified", default: false, null: false
@@ -223,17 +231,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_100000) do
   end
 
   create_table "license_offers", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.string "currency", default: "USDC", null: false
     t.string "kind", null: false
     t.integer "max_units"
     t.bigint "model3d_id", null: false
     t.integer "price_cents", null: false
+    t.integer "revision", default: 1, null: false
+    t.bigint "supersedes_id"
     t.string "terms_hash"
     t.text "terms_md"
     t.string "terms_version", default: "v1"
     t.datetime "updated_at", null: false
+    t.index ["model3d_id", "kind"], name: "index_license_offers_on_active_model_and_kind", unique: true, where: "active"
     t.index ["model3d_id"], name: "index_license_offers_on_model3d_id"
+    t.index ["supersedes_id"], name: "index_license_offers_on_supersedes_id", unique: true
   end
 
   create_table "licenses", force: :cascade do |t|
@@ -262,6 +275,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_100000) do
     t.integer "position", default: 0, null: false
     t.datetime "updated_at", null: false
     t.index ["model3d_id"], name: "index_model_files_on_model3d_id"
+  end
+
+  create_table "model_metrics", force: :cascade do |t|
+    t.string "channel", null: false
+    t.datetime "created_at", null: false
+    t.integer "impressions", default: 0, null: false
+    t.bigint "model3d_id", null: false
+    t.date "occurred_on", null: false
+    t.integer "payment_requests", default: 0, null: false
+    t.string "source", null: false
+    t.datetime "updated_at", null: false
+    t.integer "views", default: 0, null: false
+    t.index ["model3d_id", "occurred_on", "channel", "source"], name: "index_model_metrics_on_daily_dimension", unique: true
+    t.index ["model3d_id"], name: "index_model_metrics_on_model3d_id"
   end
 
   create_table "model_versions", force: :cascade do |t|
@@ -317,6 +344,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_100000) do
     t.index ["status"], name: "index_models3d_on_status"
     t.index ["tags"], name: "index_models3d_on_tags", using: :gin
     t.index ["title"], name: "index_models3d_on_title_trgm", opclass: :gin_trgm_ops, using: :gin
+  end
+
+  create_table "payout_attempts", force: :cascade do |t|
+    t.string "asset", null: false
+    t.integer "attempt_count", default: 0, null: false
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.bigint "designer_id", null: false
+    t.datetime "last_attempted_at"
+    t.string "last_error_code"
+    t.bigint "purchase_id", null: false
+    t.string "ref", null: false
+    t.string "status", default: "processing", null: false
+    t.string "tx_id"
+    t.datetime "updated_at", null: false
+    t.index ["designer_id", "status"], name: "index_payout_attempts_on_designer_id_and_status"
+    t.index ["designer_id"], name: "index_payout_attempts_on_designer_id"
+    t.index ["purchase_id"], name: "index_payout_attempts_on_purchase_id", unique: true
+    t.index ["ref", "asset"], name: "index_payout_attempts_on_ref_and_asset"
   end
 
   create_table "print_reports", force: :cascade do |t|
@@ -448,12 +494,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_22_100000) do
   add_foreign_key "ledger_entries", "designers"
   add_foreign_key "ledger_entries", "purchases"
   add_foreign_key "library_memberships", "licenses"
+  add_foreign_key "license_offers", "license_offers", column: "supersedes_id"
   add_foreign_key "license_offers", "models3d"
   add_foreign_key "licenses", "purchases"
   add_foreign_key "model_files", "models3d"
+  add_foreign_key "model_metrics", "models3d"
   add_foreign_key "model_versions", "models3d"
   add_foreign_key "models3d", "catalog_imports"
   add_foreign_key "models3d", "designers"
+  add_foreign_key "payout_attempts", "designers"
+  add_foreign_key "payout_attempts", "purchases"
   add_foreign_key "print_reports", "licenses"
   add_foreign_key "profile_verifications", "designers"
   add_foreign_key "purchases", "license_offers"

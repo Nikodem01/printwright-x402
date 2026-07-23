@@ -10,6 +10,7 @@ import {
   paymentSignatureHeaders,
   selectAcceptedPayment,
 } from "./payment.js";
+import { payoutMessageRequest } from "./payout_proof.js";
 
 class PrintwrightBrowserWallet {
   constructor(element) {
@@ -87,6 +88,16 @@ class PrintwrightBrowserWallet {
       transactionBody: transaction,
     });
     return paymentSignatureHeaders(paymentRequired, accepted, signed);
+  }
+
+  async signMessage(message, expectedAccountId) {
+    const accountId = this.accountId || await this.connectForPayment();
+    return this.provider.hedera_signMessage(payoutMessageRequest({
+      network: this.network,
+      connectedAccountId: accountId,
+      expectedAccountId,
+      message,
+    }));
   }
 
   async connectForPayment() {

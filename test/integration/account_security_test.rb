@@ -62,7 +62,7 @@ class AccountSecurityTest < ActionDispatch::IntegrationTest
     designer = Designer.find_by!(email_address: "pending@example.com")
     model = designer.models3d.create!(title: "Draft", slug: "draft-#{SecureRandom.hex(3)}")
 
-    post publish_designer_model_path(model), params: { warranty: "1" }
+    post review_designer_model_path(model), params: { model3d: { title: model.title } }
     assert_redirected_to edit_designer_model_path(model)
     assert_match(/verify your email/i, flash[:alert])
     refute model.reload.published?
@@ -83,6 +83,6 @@ class AccountSecurityTest < ActionDispatch::IntegrationTest
       status: "verified", password_digest: BCrypt::Password.create("HorseBatteryStaple99"))
 
     post "/login", params: { email: "legacy@example.com", password: "HorseBatteryStaple99" }
-    assert_redirected_to "/designer/models"
+    assert_redirected_to designer_root_path
   end
 end

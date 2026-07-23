@@ -16,6 +16,7 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
   end
 
   test "well-known commerce manifest exposes each published x402 offer" do
+    clear_enqueued_jobs
     get "/.well-known/x402-catalog.json"
 
     assert_response :success
@@ -37,6 +38,18 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
     assert_equal "v1", offer.dig("terms", "version")
     assert_includes offer.dig("terms", "permissions_url"), ".json"
     refute_includes response.body, "private-draft"
+    assert_not enqueued_jobs.any? { |job| job[:job] == RecordModelMetricsJob },
+      "pollable manifests must not inflate agent impressions"
+  end
+
+  test "paused and retired listings disappear from agent discovery" do
+    @model.update!(status: "paused")
+    get "/.well-known/x402-catalog.json"
+    assert_empty response.parsed_body.fetch("models")
+
+    @model.update!(status: "retired")
+    get "/.well-known/x402-catalog.json"
+    assert_empty response.parsed_body.fetch("models")
   end
 
   test "toy crawler follows manifest links and reaches an x402 challenge" do

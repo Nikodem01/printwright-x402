@@ -18,4 +18,10 @@ class Model3dTaxonomyTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordNotFound) { Model3d.category_definition("unknown") }
     assert_raises(ActiveRecord::RecordNotFound) { Model3d.collection_definition("unknown") }
   end
+
+  test "tag suggestions are controlled guidance rather than accepted taxonomy" do
+    assert_equal [ "jig", "tool holder", "gauge" ], Model3d.tag_suggestions("workshop-tools")
+    assert_empty Model3d.tag_suggestions("unknown")
+    assert_empty Model3d.tag_suggestions(nil)
+  end
 end

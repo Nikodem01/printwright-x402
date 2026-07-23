@@ -7,7 +7,9 @@ class WebhookDeliveryJob < ApplicationJob
   end
 
   def perform(delivery_id)
-    delivery = WebhookDelivery.find(delivery_id)
+    delivery = WebhookDelivery.find_by(id: delivery_id)
+    return unless delivery
+
     Webhooks::Sender.call(delivery)
   rescue Webhooks::Sender::Retryable => error
     delivery&.update!(last_error: error.message)

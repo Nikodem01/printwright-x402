@@ -20,9 +20,9 @@ curl -i "http://localhost:3000/api/v1/models/5/download?license=personal"
 #   payment-required: eyJ4NDAyVmVyc2lvbiI6Mi...        (base64 of the JSON body below)
 #   {"x402Version":2,"error":"payment required","resource":{"url":"...","description":"..."},
 #    "accepts":[
-#      {"scheme":"exact","network":"hedera:testnet","payTo":"0.0.9604186","amount":"900000",
+#      {"scheme":"exact","network":"hedera:testnet","payTo":"0.0.9584959","amount":"900000",
 #       "asset":"0.0.429274","extra":{"feePayer":"0.0.7162784"},"maxTimeoutSeconds":180},
-#      {"scheme":"exact","network":"hedera:testnet","payTo":"0.0.9604186","amount":"1358695652",
+#      {"scheme":"exact","network":"hedera:testnet","payTo":"0.0.9584959","amount":"1358695652",
 #       "asset":"0.0.0","extra":{"feePayer":"0.0.7162784"},"maxTimeoutSeconds":180}]}
 
 # 2. Pick one `accepts` entry (asset 0.0.0 = HBAR tinybars, 0.0.429274 = testnet USDC).
@@ -70,8 +70,9 @@ curl -i "http://localhost:3000/api/v1/models/5/download?license=personal" \
   <p class="t-small">Print farms can acquire up to 20 licenses with one x402 negotiation and one
     settlement. Probe and retry the identical <code class="mono">POST /api/v1/batches</code>
     body. Every item receives its own serial, file grant, PWC-1 certificate, and verify URL. Items
-    must share a direct <code class="mono">payTo</code>; mixed-payee batches return
-    <code class="mono">incompatible_payees</code> instead of silently changing settlement custody.</p>
+    settle to Printwright's treasury through one <code class="mono">payTo</code>, including
+    mixed-designer batches. Designer shares are recorded per item and paid after delivery;
+    designer payout never changes the buyer's certificate or delivery result.</p>
   <pre class="mono t-small" style="overflow-x:auto">curl -i -X POST http://localhost:3000/api/v1/batches \
   -H "Content-Type: application/json" \
   -d '{"items":[
@@ -217,9 +218,12 @@ console.log(receipt.warning, await sandbox.verify(receipt.license.cert_id));</pr
         <tr><td>400</td><td><code class="mono">invalid_payload</code></td><td>download — PAYMENT-SIGNATURE not decodable</td></tr>
         <tr><td>402</td><td><code class="mono">payment required</code></td><td>download — no payment attached</td></tr>
         <tr><td>402</td><td><code class="mono">invalid_payment_requirements</code></td><td>download — attached payment matches no <code class="mono">accepts</code> entry</td></tr>
+        <tr><td>402</td><td><code class="mono">offer_changed</code></td><td>download/batch — the offer was revised between quote and reservation; sign one of the fresh requirements returned with this response</td></tr>
         <tr><td>404</td><td><code class="mono">not_found</code></td><td>any resource missing</td></tr>
         <tr><td>409</td><td><code class="mono">duplicate_payment</code> (+ <code class="mono">status</code>)</td><td>download — replayed payment (a replay of an already-delivered purchase instead returns the original delivery payload, not this error)</td></tr>
+        <tr><td>409</td><td><code class="mono">sales_paused</code> (+ <code class="mono">listing_status</code>)</td><td>download/batch — the designer temporarily stopped new sales before reservation; do not submit a new payment, but retry an already-presented payment unchanged for recovery</td></tr>
         <tr><td>410</td><td><code class="mono">sold_out</code></td><td>download — offer <code class="mono">max_units</code> exhausted (may include <code class="mono">transaction_id</code> when it sold out after payment)</td></tr>
+        <tr><td>410</td><td><code class="mono">listing_retired</code> (+ <code class="mono">listing_status</code>)</td><td>download/batch — retired for new sales; historical receipts, certificates, entitled downloads, updates, and already-presented payment recovery remain available</td></tr>
         <tr><td>410</td><td><code class="mono">grant_expired</code></td><td>files — download grant no longer usable</td></tr>
         <tr><td>422</td><td><code class="mono">invalid_webhook</code></td><td>batch — callback is not public HTTPS or its secret is outside 32–256 bytes</td></tr>
         <tr><td>429</td><td><code class="mono">rate_limited</code> (+ <code class="mono">retry_after: 60</code>)</td><td>all API endpoints; also sets <code class="mono">Retry-After: 60</code></td></tr>

@@ -13,6 +13,9 @@ class AuthScreensTest < ApplicationSystemTestCase
   test "capture signup, login, and account" do
     visit "/create-account"
     assert_selector "h1", text: "Create Account"
+    assert_text "Buyer payments settle to Printwright"
+    assert_text "your 90% share is paid after delivery"
+    assert_no_field "Hedera account id (payout target)"
     shoot("signup")
 
     visit "/login"
@@ -25,5 +28,11 @@ class AuthScreensTest < ApplicationSystemTestCase
     visit "/designer/account"
     assert_selector "h1", text: "Account"
     shoot("account")
+
+    visit "/close-account"
+    assert_selector "h1", text: "Close account"
+    assert_text "This is permanent"
+    assert_text "preserves existing buyer rights"
+    shoot("closure")
   end
 end

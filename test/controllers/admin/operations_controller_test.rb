@@ -97,4 +97,25 @@ class Admin::OperationsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "payout_completed", AdminAuditLog.order(:id).last.action
     assert_requested stub, times: 1
   end
+
+  test "operator panel surfaces reconciliation-required payouts without rerunning them" do
+    ENV["X402_PAY_TO"] = "0.0.9584959"
+    admin = designers(:one)
+    model = admin.models3d.create!(title: "Ambiguous payout", slug: "ambiguous-payout-#{SecureRandom.hex(4)}")
+    offer = model.license_offers.create!(kind: "personal", price_cents: 250)
+    purchase = Purchase.create!(license_offer: offer, status: "verified", asset: "0.0.429274",
+      amount_base_units: "250000", replay_key: SecureRandom.hex(32),
+      requirements_json: { "payTo" => "0.0.9584959" })
+    purchase.transition_to!(:settled)
+    PayoutAttempt.create!(designer: admin, purchase: purchase, ref: "purchase-#{purchase.id}",
+      asset: purchase.asset, status: "reconciliation_required", attempt_count: 1,
+      last_error_code: "ambiguous_result", last_attempted_at: Time.current)
+    sign_in_as admin
+
+    get admin_root_path
+
+    assert_select "h2", text: "Payout attention"
+    assert_select ".facts-table", text: /Ambiguous payout|#{admin.display_name}.*purchase-#{purchase.id}.*0\.22 USDC.*Reconciliation required.*ambiguous_result/m
+    assert_not_requested :post, "http://localhost:4021/payout"
+  end
 end

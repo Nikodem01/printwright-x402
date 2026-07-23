@@ -1,7 +1,7 @@
 <% content_for :title, "Privacy — Printwright" %>
 <div class="container" style="max-width: 720px">
   <h1>Privacy</h1>
-  <p class="t-small muted"><strong>Template, not legal advice.</strong> Last updated 2026-07-17.</p>
+  <p class="t-small muted"><strong>Template, not legal advice.</strong> Last updated 2026-07-23.</p>
 
   <h2>What we store</h2>
   <ul>
@@ -23,12 +23,20 @@
   <h2>What we don't do</h2>
   <ul>
     <li>No advertising, no tracking pixels, no sale of data.</li>
-    <li>No analytics beyond server logs (rotated) needed to run the service.</li>
+    <li>Marketplace analytics are daily impression, detail-view, and initial x402 quote-request
+      counters by model, surface, and human/agent channel. They do not contain a buyer id,
+      account id, session id, IP address, query text, referrer, or user agent. Individual
+      analytics events are not retained after aggregation; operational job data and server
+      logs are rotated.</li>
     <li>Private keys never touch our servers — payments are signed client-side.</li>
   </ul>
 
   <h2>Removal</h2>
-  <p>Email us to delete a designer account, optional buyer-library email, or early-access address;
-    database records go, on-chain certificates are permanent by design. Questions: see the
-    repository README for contact.</p>
+  <p>Designers can export their data and close their account from Account settings. Closure removes
+    private profile, payout, import, and integration data; unpurchased listings are deleted. We
+    retain the studio name, purchase-backed listing and transaction-time license evidence needed
+    to keep existing receipts, downloads, certificates, and rights valid. Those listings are
+    retired from all new sales. Closure is blocked while a real-money purchase or owed payout is
+    unresolved. Optional buyer-library email and early-access addresses can be removed by email;
+    on-chain certificates are permanent by design. Questions: see the repository README for contact.</p>
 </div>

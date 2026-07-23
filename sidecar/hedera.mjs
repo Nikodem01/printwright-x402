@@ -3,6 +3,7 @@
 // git, logs, or any hosted service.
 import {
   AccountId,
+  AccountInfoFlow,
   Client,
   CustomRoyaltyFee,
   Hbar,
@@ -17,6 +18,18 @@ import {
   TopicMessageSubmitTransaction,
   TransferTransaction,
 } from "@hiero-ledger/sdk";
+import { proto } from "@hiero-ledger/proto";
+
+export function payoutProofPayload(message) {
+  return Buffer.from(`\x19Hedera Signed Message:\n${message.length}${message}`);
+}
+
+export function payoutProofSignature(signatureMap) {
+  const decoded = proto.SignatureMap.decode(Buffer.from(signatureMap, "base64"));
+  if (decoded.sigPair.length !== 1) return null;
+  const pair = decoded.sigPair[0];
+  return pair.ed25519 || pair.ECDSASecp256k1 || null;
+}
 
 export function buildHedera({ network, accountId, privateKey, treasury }) {
   const operatorKey = PrivateKey.fromStringECDSA(privateKey);
@@ -140,6 +153,14 @@ export function buildHedera({ network, accountId, privateKey, treasury }) {
       const response = await tx.execute(client);
       await response.getReceipt(client); // throws unless SUCCESS
       return { transactionId: response.transactionId.toString() };
+    },
+
+    async verifyPayoutProof({ accountId: payoutAccountId, message, signatureMap }) {
+      const signature = payoutProofSignature(signatureMap);
+      if (!signature) return false;
+      return AccountInfoFlow.verifySignature(
+        client, payoutAccountId, payoutProofPayload(message), signature
+      );
     },
 
     close() {

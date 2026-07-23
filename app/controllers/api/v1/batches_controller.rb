@@ -3,32 +3,59 @@ class Api::V1::BatchesController < Api::V1::BaseController
   MAX_ITEMS = 20
 
   rate_limit to: 15, within: 1.minute, store: RateLimitStore, with: :api_rate_limited
+  after_action :record_payment_request
 
   def create
     items = normalized_items
     webhook = normalized_webhook
-    offers = items.map { |item| offer_for(item) }
     sandbox = request.headers["X-Sandbox"] == "true"
     response.set_header("X-Printwright-Sandbox", "true") if sandbox
+    raw_payment = X402::PaymentHeader.raw(request)
+    payload = X402::PaymentHeader.decode(request) if raw_payment
+    key = replay_key(payload) if payload
+    if key && Purchase.exists?(replay_key: key)
+      return replay_existing(key, payload, items: items, sandbox: sandbox)
+    end
+
+    models = models_for(items)
+    if (unavailable = models.find { |model| !model.published? })
+      return render_listing_unavailable(unavailable)
+    end
+    offers = offers_for(items, models)
     requirements = X402::BatchRequirements.new(
       offers: offers, resource_url: request.original_url, sandbox: sandbox
     )
 
-    if X402::PaymentHeader.raw(request).nil?
+    if payload.nil?
       return render json: { error: "sold_out" }, status: :gone if !sandbox && sold_out?(offers)
+      @analytics_event = {
+        model_ids: models.map(&:id), event: "payment_request",
+        channel: analytics_channel, source: "batch_checkout"
+      } unless sandbox
       return payment_required(requirements)
     end
 
-    payload = X402::PaymentHeader.decode(request)
     matched = requirements.match(payload["accepted"])
     return payment_required(requirements, error: "invalid_payment_requirements") unless matched
 
-    key = replay_key(payload)
-    return replay_existing(key, payload) if Purchase.exists?(replay_key: key)
-
     batch = reserve(offers, matched, key, sandbox: sandbox, webhook: webhook)
-    return replay_existing(key, payload) if batch.nil?
+    return replay_existing(key, payload, items: items, sandbox: sandbox) if batch.nil?
     return render json: { error: "sold_out" }, status: :gone if batch == :sold_out
+    if batch == :listing_unavailable
+      unavailable = offers.map(&:model3d).uniq.find { |model| !model.reload.published? }
+      return render_listing_unavailable(unavailable || offers.first.model3d)
+    end
+    if batch == :offer_changed
+      models = models_for(items)
+      if (unavailable = models.find { |model| !model.published? })
+        return render_listing_unavailable(unavailable)
+      end
+      current = offers_for(items, models)
+      current_requirements = X402::BatchRequirements.new(
+        offers: current, resource_url: request.original_url, sandbox: sandbox
+      )
+      return payment_required(current_requirements, error: "offer_changed")
+    end
 
     verify_and_settle(batch, payload)
   rescue X402::BatchRequirements::IncompatiblePayees
@@ -42,6 +69,14 @@ class Api::V1::BatchesController < Api::V1::BaseController
   end
 
   private
+
+  def record_payment_request
+    Analytics::Recorder.record_later(**@analytics_event) if response.status == 402 && @analytics_event
+  end
+
+  def analytics_channel
+    request.headers["X-Printwright-Channel"] == "human" ? "human" : "agent"
+  end
 
   def normalized_items
     raw = params.require(:items)
@@ -57,8 +92,19 @@ class Api::V1::BatchesController < Api::V1::BaseController
     end
   end
 
-  def offer_for(item)
-    Model3d.published.find(item[:model_id]).license_offers.find_by!(kind: item[:license])
+  def models_for(items)
+    ids = items.map { |item| item.fetch(:model_id) }.uniq
+    models = Model3d.where(id: ids).index_by(&:id)
+    raise ActiveRecord::RecordNotFound unless models.length == ids.length
+    raise ActiveRecord::RecordNotFound if models.values.any?(&:draft?)
+
+    items.map { |item| models.fetch(item.fetch(:model_id)) }
+  end
+
+  def offers_for(items, models)
+    items.each_with_index.map do |item, index|
+      models.fetch(index).license_offers.find_by!(kind: item.fetch(:license))
+    end
   end
 
   def normalized_webhook
@@ -91,6 +137,8 @@ class Api::V1::BatchesController < Api::V1::BaseController
     PurchaseBatch.transaction do
       locked = LicenseOffer.where(id: offers.map(&:id).uniq).order(:id).lock.index_by(&:id)
       resolved = offers.map { |offer| locked.fetch(offer.id) }
+      return :offer_changed if resolved.any? { |offer| !offer.active? }
+      return :listing_unavailable if resolved.any? { |offer| !offer.model3d.reload.published? }
       return :sold_out if !sandbox && sold_out?(resolved)
 
       batch = PurchaseBatch.create!(
@@ -194,9 +242,16 @@ class Api::V1::BatchesController < Api::V1::BaseController
     end
   end
 
-  def replay_existing(key, payload)
+  def replay_existing(key, payload, items:, sandbox:)
     existing = Purchase.find_by!(replay_key: key)
-    return replay(existing.purchase_batch, payload) if existing.purchase_batch
+    if (batch = existing.purchase_batch)
+      purchased_items = batch.purchases.order(:batch_position).map do |purchase|
+        { model_id: purchase.license_offer.model3d_id, license: purchase.license_offer.kind }
+      end
+      if purchased_items == items && batch.sandbox? == sandbox
+        return replay(batch, payload)
+      end
+    end
 
     render json: { error: "duplicate_payment", status: existing.status }, status: :conflict
   end

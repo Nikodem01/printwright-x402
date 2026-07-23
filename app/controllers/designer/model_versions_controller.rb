@@ -3,7 +3,7 @@ class Designer::ModelVersionsController < Designer::BaseController
 
   def create
     model = current_designer.models3d.find(params[:model_id])
-    unless model.published?
+    unless model.published? || model.paused?
       return redirect_to edit_designer_model_path(model), alert: "Publish the model before adding a version."
     end
 

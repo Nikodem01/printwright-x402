@@ -1,0 +1,121 @@
+<% content_for :title, "Payouts — Printwright designer" %>
+
+<nav class="business-tabs" aria-label="Sales and payouts">
+  <%= link_to "Sales", designer_sales_path %>
+  <%= link_to "Payouts", designer_payouts_path, aria: { current: "page" } %>
+</nav>
+
+<header class="money-heading">
+  <p class="card-taxonomy">Business</p>
+  <h1>Payouts</h1>
+  <p>Set where your share is sent, see what treasury still owes, and verify completed transfers.</p>
+</header>
+
+<section class="money-summary" aria-labelledby="payout-summary-title">
+  <h2 id="payout-summary-title" class="t-title">Payout summary</h2>
+  <div class="home-metrics money-metrics-two">
+    <article class="home-metric">
+      <span>Awaiting payout</span>
+      <% if @owed.any? %>
+        <% @owed.each do |asset, amount| %><strong><%= format_base_units(amount, asset) %></strong><% end %>
+      <% else %><strong>0.00 USDC</strong><% end %>
+      <small><%= Current.designer.payout_account_verified? ? "Eligible for automatic payout" : "Held until destination is ready" %></small>
+    </article>
+    <article class="home-metric">
+      <span>Paid out</span>
+      <% if @paid.any? %>
+        <% @paid.each do |asset, amount| %><strong><%= format_base_units(amount, asset) %></strong><% end %>
+      <% else %><strong>0.00 USDC</strong><% end %>
+      <small>Recorded designer payout ledger entries</small>
+    </article>
+  </div>
+  <p class="t-small"><strong>Timing:</strong> eligible payouts are attempted automatically after
+    delivery. Network and operational retries mean an exact arrival time is not promised. A pending
+    or held payout never delays the buyer's receipt, certificate, download, or historical rights.</p>
+</section>
+
+<% if @payout_issue_groups.any? %>
+  <section id="payout-attention" class="account-section" aria-labelledby="payout-attention-title">
+    <h2 id="payout-attention-title" class="t-title">Payout attention</h2>
+    <p class="t-small">These are transfer-operation states only. The buyer's payment,
+      receipt, certificate, download, and license rights are already complete.</p>
+    <div class="payout-issues">
+      <% @payout_issue_groups.each do |group| %>
+        <article class="notice-card payout-issue">
+          <% case group[:status] %>
+          <% when "retrying", "processing" %>
+            <h3>Automatic retry in progress</h3>
+            <p>The transfer was not submitted successfully and a bounded background retry is scheduled.</p>
+          <% when "reconciliation_required" %>
+            <h3>Transfer result needs reconciliation</h3>
+            <p>The sidecar response was lost or the ledger write did not complete. Do not retry: marketplace
+              operations must verify the network result first to prevent a duplicate payment.</p>
+          <% when "failed" %>
+            <% if group[:retryable] %>
+              <h3>Safe retry available</h3>
+              <p>The transfer did not reach submission and automatic retries ended. Retrying uses only the
+                existing owed ledger shares and the currently verified destination.</p>
+            <% elsif group[:error_code] == "destination_not_ready" %>
+              <h3>Payout destination needs attention</h3>
+              <p>The destination is no longer eligible. Prove an account that can receive the configured token.</p>
+            <% else %>
+              <h3>Transfer was rejected</h3>
+              <p>The transfer could not complete. Review the active destination and ask marketplace operations
+                to inspect the safe error code before another submission.</p>
+            <% end %>
+          <% end %>
+
+          <dl class="account-facts">
+            <dt>Amount</dt><dd class="price"><%= format_base_units(group[:amount], group[:asset]) %></dd>
+            <dt>Sales</dt><dd><%= pluralize(group[:sale_count], "sale") %></dd>
+            <dt>Attempts</dt><dd><%= group[:attempt_count] %></dd>
+            <% if group[:last_attempted_at] %>
+              <dt>Last attempt</dt><dd><%= group[:last_attempted_at].utc.strftime("%Y-%m-%d %H:%M UTC") %></dd>
+            <% end %>
+            <% if group[:tx_id] %><dt>Known transaction</dt><dd><%= hashscan_tx_link(group[:tx_id]) %></dd><% end %>
+          </dl>
+
+          <% if group[:retryable] %>
+            <%= button_to "Retry payout safely", retry_designer_payout_attempt_path(group[:attempt]),
+                  method: :post, class: "btn btn-primary" %>
+          <% elsif group[:error_code] == "destination_not_ready" %>
+            <%= link_to "Review payout destination", designer_payouts_path(anchor: "payout-destination"), class: "btn" %>
+          <% else %>
+            <p class="t-small muted"><%= link_to "Open a marketplace support issue",
+              "https://github.com/Nikodem01/printwright-x402/issues/new", target: "_blank",
+              rel: "noopener noreferrer" %>. Include only the visible state, date, and safe error
+              description—never post buyer data, wallet signatures, secrets, or receipt/download capabilities.</p>
+          <% end %>
+        </article>
+      <% end %>
+    </div>
+  </section>
+<% end %>
+
+<%= render "payout_destination" %>
+
+<section aria-labelledby="payout-history-title">
+  <h2 id="payout-history-title" class="t-title">Payout history</h2>
+  <% if @payout_groups.any? %>
+    <p class="t-small muted">Sales paid in one on-chain transfer are grouped together. Open the
+      transaction proof to verify the destination used at that time; the current wallet may have changed since.</p>
+    <div class="table-scroll">
+      <table class="facts-table payout-table">
+        <thead><tr><th>Paid at</th><th>Sales</th><th>Amount</th><th>Destination</th><th>Proof</th></tr></thead>
+        <tbody>
+          <% @payout_groups.each do |group| %>
+            <tr>
+              <td><time datetime="<%= group[:paid_at].utc.iso8601 %>"><%= group[:paid_at].utc.strftime("%Y-%m-%d %H:%M UTC") %></time></td>
+              <td><%= pluralize(group[:sale_count], "sale") %></td>
+              <td class="price"><%= format_base_units(group[:amount], group[:asset]) %></td>
+              <td>Recorded on-chain</td>
+              <td><%= group[:tx_id] ? hashscan_tx_link(group[:tx_id]) : "Ledger record only" %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty-state"><p>No completed payouts yet. Eligible balances appear here after their on-chain transfer is recorded.</p></div>
+  <% end %>
+</section>

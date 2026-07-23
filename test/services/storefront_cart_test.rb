@@ -55,6 +55,31 @@ class StorefrontCartTest < ActiveSupport::TestCase
     assert_equal 2, @cart.count
   end
 
+  test "a cart transparently resolves a superseded offer to the current revision" do
+    @cart.add!(@personal, "1")
+    Purchase.create!(license_offer: @personal, status: "pending", replay_key: SecureRandom.hex(32))
+    current = LicenseOffers::Reviser.call(model: @personal.model3d,
+      attributes: { id: @personal.id, kind: "personal", price_cents: 175, currency: "USDC" })
+
+    reloaded = StorefrontCart.new(@session)
+
+    assert_equal [ current ], reloaded.entries.map(&:offer)
+    assert_equal 175, reloaded.total_cents
+    assert_equal({ current.id.to_s => 1 }, @session[:storefront_cart])
+  end
+
+  test "pausing a listing removes its stale cart entry and prevents re-adding it" do
+    @cart.add!(@personal, "1")
+    @personal.model3d.update!(status: "paused")
+
+    reloaded = StorefrontCart.new(@session)
+    assert_empty reloaded.entries
+    assert_empty @session.fetch(:storefront_cart)
+
+    error = assert_raises(StorefrontCart::Invalid) { reloaded.add!(@personal, "1") }
+    assert_equal "That listing is no longer available for new purchases.", error.message
+  end
+
   private
 
   def create_offer(title, kind, price_cents, max_units: nil, designer: @designer)

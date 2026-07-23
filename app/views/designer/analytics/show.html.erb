@@ -1,0 +1,140 @@
+<% content_for :title, "Analytics — Printwright designer" %>
+
+<nav class="business-tabs" aria-label="Business sections">
+  <%= link_to "Sales", designer_sales_path %>
+  <%= link_to "Payouts", designer_payouts_path %>
+  <%= link_to "Analytics", designer_analytics_path, aria: { current: "page" } %>
+</nav>
+
+<header class="page-heading-row money-heading">
+  <div>
+    <p class="card-taxonomy">Business</p>
+    <h1>Analytics</h1>
+    <p>First-party discovery counts, delivered sales, revenue, and payout health—without buyer tracking.</p>
+  </div>
+</header>
+
+<div class="money-periods" aria-label="Analytics period">
+  <% Designer::AnalyticsController::PERIODS.each_key do |period| %>
+    <%= link_to period == "all" ? "All time" : "Last #{period.delete_suffix('d')} days",
+          designer_analytics_path(period: period),
+          aria: ({ current: "page" } if @period == period) %>
+  <% end %>
+</div>
+
+<section aria-labelledby="analytics-summary-title">
+  <div class="home-section-heading">
+    <div>
+      <p class="card-taxonomy">Observed performance</p>
+      <h2 id="analytics-summary-title"><%= @period == "all" ? "All recorded activity" : "Last #{@period.delete_suffix('d')} days" %></h2>
+    </div>
+  </div>
+  <div class="home-metrics analytics-summary">
+    <article class="home-metric"><span>Listing impressions</span><strong><%= number_with_delimiter(@impressions) %></strong></article>
+    <article class="home-metric"><span>Detail views</span><strong><%= number_with_delimiter(@views) %></strong></article>
+    <article class="home-metric"><span>x402 quote requests</span><strong><%= number_with_delimiter(@payment_requests) %></strong></article>
+    <article class="home-metric"><span>Delivered sales</span><strong><%= number_with_delimiter(@delivered_sales) %></strong></article>
+    <article class="home-metric">
+      <span>Gross revenue</span>
+      <% if @gross_by_asset.any? %>
+        <% @gross_by_asset.each do |asset, amount| %><strong><%= format_base_units(amount, asset) %></strong><% end %>
+      <% else %><strong>0.00 USDC</strong><% end %>
+    </article>
+  </div>
+  <% if @tracking_started_on %>
+    <p class="t-small muted">Discovery tracking began <%= @tracking_started_on.iso8601 %> UTC. Sales and revenue use the canonical delivered-sale ledger; historic traffic before this date is not estimated.</p>
+  <% else %>
+    <p class="t-small muted">Discovery tracking starts with future public impressions and detail views. Historic traffic is not estimated or backfilled.</p>
+  <% end %>
+</section>
+
+<div class="home-columns analytics-breakdowns">
+  <section class="home-card" aria-labelledby="analytics-channel-title">
+    <p class="card-taxonomy">Discovery channel</p>
+    <h2 id="analytics-channel-title">Humans and agents</h2>
+    <% if @channel_rows.any? %>
+      <div class="table-scroll">
+        <table class="facts-table analytics-compact-table">
+          <thead><tr><th>Channel</th><th>Impressions</th><th>Views</th><th>Quotes</th></tr></thead>
+          <tbody>
+            <% @channel_rows.each do |row| %>
+              <tr><td><%= row[:name].humanize %></td><td><%= number_with_delimiter(row[:impressions]) %></td><td><%= number_with_delimiter(row[:views]) %></td><td><%= number_with_delimiter(row[:payment_requests]) %></td></tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %><p class="muted">No discovery activity in this period.</p><% end %>
+  </section>
+
+  <section class="home-card" aria-labelledby="analytics-source-title">
+    <p class="card-taxonomy">Discovery surface</p>
+    <h2 id="analytics-source-title">Where listings appeared</h2>
+    <% if @source_rows.any? %>
+      <div class="table-scroll">
+        <table class="facts-table analytics-compact-table">
+          <thead><tr><th>Surface</th><th>Impressions</th><th>Views</th><th>Quotes</th></tr></thead>
+          <tbody>
+            <% @source_rows.each do |row| %>
+              <tr><td><%= row[:name].humanize %></td><td><%= number_with_delimiter(row[:impressions]) %></td><td><%= number_with_delimiter(row[:views]) %></td><td><%= number_with_delimiter(row[:payment_requests]) %></td></tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %><p class="muted">No discovery activity in this period.</p><% end %>
+  </section>
+</div>
+
+<section aria-labelledby="analytics-models-title">
+  <div class="home-section-heading">
+    <div>
+      <p class="card-taxonomy">Per-model performance</p>
+      <h2 id="analytics-models-title">Listings in this period</h2>
+    </div>
+  </div>
+  <% if @model_rows.any? %>
+    <div class="table-scroll">
+      <table class="facts-table analytics-model-table">
+        <thead><tr><th>Model</th><th>Status</th><th>Impressions</th><th>Views</th><th>Observed view rate</th><th>x402 quotes</th><th>View → quote</th><th>Delivered sales</th></tr></thead>
+        <tbody>
+          <% @model_rows.each do |row| %>
+            <tr>
+              <td><%= link_to row[:model].title, edit_designer_model_path(row[:model]) %></td>
+              <td><%= row[:model].status.humanize %></td>
+              <td><%= number_with_delimiter(row[:impressions]) %></td>
+              <td><%= number_with_delimiter(row[:views]) %></td>
+              <td><%= row[:view_rate] ? number_to_percentage(row[:view_rate], precision: 1) : "—" %></td>
+              <td><%= number_with_delimiter(row[:payment_requests]) %></td>
+              <td><%= row[:quote_rate] ? number_to_percentage(row[:quote_rate], precision: 1) : "—" %></td>
+              <td><%= number_with_delimiter(row[:delivered_sales]) %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    <p class="t-small muted">Observed view rate is detail views divided by listing impressions; view → quote is initial x402 requirements issued divided by detail views. These are event ratios, not unique visitors. Purchases are not attributed to a person, session, query, referrer, or discovery channel.</p>
+  <% else %>
+    <div class="empty-state"><p><strong>No models yet.</strong></p><p>Add a model to begin measuring real marketplace discovery.</p><%= link_to "Add model", new_designer_model_path, class: "btn btn-primary" %></div>
+  <% end %>
+</section>
+
+<aside class="notice-card analytics-privacy" aria-labelledby="analytics-privacy-title">
+  <div>
+    <strong id="analytics-privacy-title">Privacy-minimized by design</strong>
+    <span>Printwright retains daily counters by model, surface, and human/agent channel. It does not add a buyer id, account id, session id, IP address, query text, referrer, or user agent, and does not retain individual events after aggregation.</span>
+  </div>
+  <%= link_to "Read privacy details", privacy_path %>
+</aside>
+
+<aside class="notice-card analytics-payout-health" aria-labelledby="analytics-payout-title">
+  <div>
+    <strong id="analytics-payout-title">Payout health</strong>
+    <% if @payout_attention_count.positive? %>
+      <span><%= pluralize(@payout_attention_count, "transfer") %> needs retry or reconciliation. Buyer delivery and rights remain complete.</span>
+    <% elsif @owed_by_asset.any? %>
+      <span>Awaiting payout: <% @owed_by_asset.each do |asset, amount| %><%= format_base_units(amount, asset) %><% end %>.</span>
+    <% else %>
+      <span>No payout transfer needs attention.</span>
+    <% end %>
+  </div>
+  <%= link_to "Open Payouts", designer_payouts_path %>
+</aside>

@@ -10,9 +10,12 @@
 # pre-settle transport failure (Unavailable), which is raised before money moves.
 class DesignerPayoutJob < ApplicationJob
   queue_as :default
-  retry_on SidecarClient::Unavailable, wait: :polynomially_longer, attempts: 10
+  retry_on SidecarClient::Unavailable, wait: :polynomially_longer, attempts: 10 do |job, _error|
+    arguments = job.arguments.first
+    PayoutAttempt.exhaust!(ref: arguments["ref"] || arguments.fetch(:ref))
+  end
 
   def perform(purchase_ids:, ref:)
-    Ledger::PayoutRunner.call(purchase_ids: purchase_ids, ref: ref)
+    Ledger::PayoutRunner.call(purchase_ids: purchase_ids, ref: ref, automatic_retry: true)
   end
 end

@@ -20,11 +20,18 @@
 
 <% if @verification&.pending? || @verification&.failed? %>
   <h2>Current challenge</h2>
+  <% if @verification.failed? %>
+    <div class="notice-card" role="status">
+      <strong>The last check did not verify this profile.</strong>
+      <p><%= @verification.last_error.presence || "The proof could not be confirmed." %></p>
+      <p class="t-small">Update the public bio with the exact token below, then check again. Create a new proof above if the profile URL changed.</p>
+    </div>
+  <% end %>
   <ol>
     <li>Copy this exact token into the public profile bio:</li>
   </ol>
   <pre class="code-block"><code class="mono"><%= @verification.challenge_token %></code></pre>
   <p class="t-small muted">Expires <%= time_ago_in_words(@verification.expires_at) %> from now.</p>
-  <%= button_to "Check public profile", verify_designer_identity_path,
+  <%= button_to @verification.failed? ? "Check public profile again" : "Check public profile", verify_designer_identity_path,
         params: { verification_id: @verification.id }, class: "btn" %>
 <% end %>

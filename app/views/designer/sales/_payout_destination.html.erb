@@ -1,0 +1,72 @@
+<section id="payout-destination" class="account-section">
+  <h2 class="t-title">Payout destination</h2>
+  <p class="t-small">Buyer payments settle to Printwright's treasury. Only eligible future
+    designer payouts use the active destination below; buyer checkout, delivery, receipts,
+    certificates, downloads, and historical license rights never wait on a destination change.</p>
+
+  <dl class="account-facts">
+    <dt>State</dt>
+    <dd><strong><%= Current.designer.payout_destination_state.to_s.humanize %></strong></dd>
+    <dt>Active destination</dt>
+    <dd class="mono"><%= Current.designer.hedera_account_id.presence || "None" %></dd>
+    <% if Current.designer.payout_account_verified? %>
+      <dt>Readiness</dt><dd>Verified for the configured USDC payout</dd>
+    <% else %>
+      <dt>Readiness</dt><dd>Payout held in treasury until wallet control and USDC receipt are verified</dd>
+    <% end %>
+  </dl>
+
+  <% if Current.designer.payout_destination_change_pending? %>
+    <div class="notice-card">
+      <p><strong>Staged destination:</strong> <span class="mono"><%= Current.designer.payout_pending_account_id %></span></p>
+      <% if Current.designer.payout_proof_verified_at.blank? %>
+        <p class="t-small">Awaiting proof. Connect this exact wallet and sign the single-use
+          challenge before <%= Current.designer.payout_challenge_expires_at&.utc&.to_fs(:long) %> UTC.
+          A signature proves wallet control; it does not authorize a transfer.</p>
+        <%= form_with url: verify_designer_payout_destination_path, method: :post,
+              data: { controller: "payout-proof",
+                      payout_proof_account_value: Current.designer.payout_pending_account_id,
+                      payout_proof_message_value: Current.designer.payout_challenge } do |f| %>
+          <%= f.hidden_field :message, value: Current.designer.payout_challenge %>
+          <%= f.hidden_field :signature_map, value: "", data: { payout_proof_target: "signature" } %>
+          <button type="button" class="btn btn-primary" data-payout-proof-target="button"
+                  data-action="payout-proof#sign">Sign with staged wallet</button>
+          <span class="hint" data-payout-proof-target="status" role="status"></span>
+        <% end %>
+      <% elsif Current.designer.payout_hold_until&.future? %>
+        <p class="t-small"><strong>24-hour safety hold:</strong> wallet control and USDC receipt
+          passed. The current destination remains active. You may activate the replacement after
+          <%= Current.designer.payout_hold_until.utc.to_fs(:long) %> UTC, or cancel it now.</p>
+      <% else %>
+        <p class="t-small">The safety hold ended. Activate the proved destination, or cancel it
+          and keep the current destination.</p>
+        <%= button_to "Activate proved destination", activate_designer_payout_destination_path,
+              method: :patch, class: "btn btn-primary" %>
+      <% end %>
+      <%= button_to "Cancel pending change", designer_payout_destination_path,
+            method: :delete, class: "btn" %>
+    </div>
+  <% else %>
+    <% if Current.designer.payout_account_verified? &&
+          Current.designer.payout_account_control_verified_at.blank? %>
+      <p class="t-small">This existing destination predates signed wallet proof. It remains
+        active for backward compatibility; prove it now to bring it onto the current security model.</p>
+      <%= button_to "Prove this active wallet", designer_payout_destination_path,
+            params: { account_id: Current.designer.hedera_account_id }, class: "btn" %>
+    <% end %>
+    <%= form_with url: designer_payout_destination_path, method: :post do |f| %>
+      <div class="field">
+        <%= f.label :account_id, Current.designer.payout_account_verified? ?
+              "Stage a replacement Hedera account" : "Hedera account id" %>
+        <%= f.text_field :account_id, value: Current.designer.payout_account_verified? ? nil : Current.designer.hedera_account_id,
+              placeholder: "0.0.12345", pattern: "0\\.0\\.\\d+", required: true %>
+        <span class="hint">Starting or changing a destination requires enrolled two-factor
+          authentication and a password entered within the last five minutes. We email your
+          verified account address, require the new wallet's signature, and delay replacements
+          for 24 hours so you can cancel an unauthorized request.</span>
+      </div>
+      <%= f.submit Current.designer.payout_account_verified? ? "Stage replacement" : "Start wallet proof",
+            class: "btn btn-primary" %>
+    <% end %>
+  <% end %>
+</section>

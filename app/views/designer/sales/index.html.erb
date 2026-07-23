@@ -1,48 +1,118 @@
-<% content_for :title, "Statement — Printwright designer" %>
-<h1>Statement</h1>
+<% content_for :title, "Sales — Printwright designer" %>
 
-<% if @owed.any? %>
-  <p class="t-small">
-    Owed to you (marketplace custody, paid out in batches):
-    <% @owed.each do |asset, amount| %>
-      <strong class="price"><%= format_base_units(amount, asset) %></strong>
-    <% end %>
-    <% unless Current.designer.payout_account_verified? %>
-      <span class="muted">— add a Hedera account that can receive USDC to get paid directly.</span>
-    <% end %>
-  </p>
+<nav class="business-tabs" aria-label="Sales and payouts">
+  <%= link_to "Sales", designer_sales_path, aria: { current: "page" } %>
+  <%= link_to "Payouts", designer_payouts_path %>
+</nav>
+
+<header class="page-heading-row money-heading">
+  <div>
+    <p class="card-taxonomy">Business</p>
+    <h1>Sales</h1>
+    <p>Gross sales, Printwright's 10% fee, your 90% share, and settlement proof from the immutable ledger.</p>
+  </div>
+  <%= link_to "Export #{@period == 'custom' ? 'custom range' : @period} CSV",
+        export_designer_sales_path(@export_params), class: "btn" %>
+</header>
+
+<div class="money-periods" aria-label="Sales period">
+  <% Designer::SalesController::PERIODS.each_key do |period| %>
+    <%= link_to period == "all" ? "All time" : "Last #{period.delete_suffix('d')} days",
+          designer_sales_path(period: period),
+          aria: ({ current: "page" } if @period == period) %>
+  <% end %>
+</div>
+
+<%= form_with url: designer_sales_path, method: :get, class: "sales-date-filter",
+      data: { turbo: false } do |form| %>
+  <div class="field">
+    <%= form.label :start_date, "Start date (UTC)" %>
+    <%= form.date_field :start_date, value: @start_date, max: Time.current.utc.to_date.iso8601 %>
+  </div>
+  <div class="field">
+    <%= form.label :end_date, "End date (UTC)" %>
+    <%= form.date_field :end_date, value: @end_date, max: Time.current.utc.to_date.iso8601 %>
+  </div>
+  <%= form.submit "Apply dates", class: "btn" %>
+<% end %>
+<% if @filter_error %>
+  <p class="field-error" role="alert"><%= @filter_error %> Showing the default last 30 days below.</p>
+<% elsif @period == "custom" %>
+  <p class="t-small"><strong>Custom statement:</strong> <%= @start_date %> through <%= @end_date %>, inclusive, UTC.</p>
 <% end %>
 
-<% if @shares.any? %>
-  <table class="facts-table">
-    <tr><th>date</th><th>model</th><th>license</th><th>your share</th><th>money</th><th>cert</th></tr>
-    <% @shares.each do |share| %>
-      <% purchase = share.purchase %>
-      <tr>
-        <td class="t-small"><%= share.created_at.strftime("%b %-d %H:%M") %></td>
-        <td><%= purchase.license_offer.model3d.title %></td>
-        <td><%= purchase.license_offer.kind %></td>
-        <td class="price"><%= format_base_units(share.amount_base_units, share.asset) %></td>
-        <td class="t-small">
-          <% if (refund = @refunds[share.purchase_id]) %>
-            refunded · <%= hashscan_tx_link(refund.tx_id) %>
-          <% elsif share.held_by == "designer" %>
-            paid direct · <%= hashscan_tx_link(purchase.payment_tx_id) %>
-          <% elsif (payout = @payouts[share.purchase_id]) %>
-            paid out · <%= hashscan_tx_link(payout.tx_id) %>
-          <% else %>
-            owed
-          <% end %>
-        </td>
-        <td>
-          <% if purchase.license %>
-            <%= link_to purchase.license.cert_id, verify_path(purchase.license.verify_slug), class: "mono" %><br>
-            <%= link_to "takedown packet", new_designer_takedown_packet_path(cert_id: purchase.license.cert_id), class: "t-caption" %>
-          <% end %>
-        </td>
-      </tr>
-    <% end %>
-  </table>
+<% if @totals.any? %>
+  <% @totals.each do |asset, totals| %>
+    <section class="money-summary" aria-label="<%= asset %> sales totals">
+      <div class="home-metrics">
+        <article class="home-metric"><span>Delivered sales</span><strong><%= totals[:sales] %></strong></article>
+        <article class="home-metric"><span>Gross sales</span><strong><%= format_base_units(totals[:gross], asset) %></strong></article>
+        <article class="home-metric"><span>Printwright fee (10%)</span><strong><%= format_base_units(totals[:fees], asset) %></strong></article>
+        <article class="home-metric"><span>Your share (90%)</span><strong><%= format_base_units(totals[:net], asset) %></strong></article>
+      </div>
+    </section>
+  <% end %>
+
+  <p class="t-small"><strong>How money moves:</strong> Buyer paid → Treasury settled → Designer
+    payout pending, paid, or held. Buyer delivery, receipts, certificates, downloads, and license
+    rights do not wait for designer payout.</p>
+
+  <div class="table-scroll">
+    <table class="facts-table sales-table">
+      <thead>
+        <tr><th>Sold at</th><th>Model</th><th>License</th><th>Gross</th><th>Fee</th><th>Your share</th><th>Status</th><th>Proof</th></tr>
+      </thead>
+      <tbody>
+        <% @sale_rows.each do |row| %>
+          <% share = row.fetch(:share) %>
+          <% purchase = row.fetch(:purchase) %>
+          <tr>
+            <td class="t-small"><time datetime="<%= share.created_at.utc.iso8601 %>"><%= share.created_at.utc.strftime("%Y-%m-%d %H:%M UTC") %></time></td>
+            <td><%= purchase.model3d.title %></td>
+            <td><%= purchase.license_offer.kind.humanize %></td>
+            <td class="price"><%= format_base_units(row.fetch(:gross), share.asset) %></td>
+            <td class="price"><%= format_base_units(row.fetch(:fee), share.asset) %></td>
+            <td class="price"><%= format_base_units(share.amount_base_units, share.asset) %></td>
+            <td><%= row.fetch(:status) %></td>
+            <td>
+              <details class="sale-proof">
+                <summary>View proof</summary>
+                <dl>
+                  <dt>Buyer payment</dt><dd><%= hashscan_tx_link(purchase.payment_tx_id) %></dd>
+                  <% if row[:payout] %>
+                    <dt>Designer payout</dt><dd><%= hashscan_tx_link(row[:payout].tx_id) %></dd>
+                  <% end %>
+                  <% if row[:refund] %>
+                    <dt>Buyer refund</dt><dd><%= hashscan_tx_link(row[:refund].tx_id) %></dd>
+                  <% end %>
+                  <% if purchase.license %>
+                    <dt>Certificate</dt>
+                    <dd><%= link_to purchase.license.cert_id, verify_path(purchase.license.verify_slug), class: "mono" %></dd>
+                    <dt>Protection</dt>
+                    <dd><%= link_to "Create takedown packet", new_designer_takedown_packet_path(cert_id: purchase.license.cert_id) %></dd>
+                  <% end %>
+                </dl>
+              </details>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
 <% else %>
-  <div class="empty-state"><p>No sales yet. Published models are instantly buyable by agents via the API.</p></div>
+  <div class="empty-state money-empty">
+    <p><strong>No sales in this period.</strong></p>
+    <p>Published models remain discoverable and instantly buyable in the storefront and API.</p>
+    <div class="account-actions">
+      <%= link_to "Add model", new_designer_model_path, class: "btn btn-primary" %>
+      <%= link_to "Review models", designer_models_path, class: "btn" %>
+      <% unless @period == "all" %><%= link_to "View all sales", designer_sales_path(period: "all"), class: "btn" %><% end %>
+    </div>
+  </div>
 <% end %>
+
+<aside id="payout-destination" class="notice-card money-forward">
+  <strong>Payout settings have moved.</strong>
+  <span>Wallet verification, held balances, and payout history are now in
+    <%= link_to "Payouts", designer_payouts_path(anchor: "payout-destination") %>.</span>
+</aside>

@@ -53,8 +53,9 @@ The receipt capability is returned only by a real paid delivery. A successful-pr
 idempotent per license and contributes to the model's paid-holder report count. It is a buyer
 self-report, not independent physical inspection.
 
-Print farms can settle up to 20 licenses sharing one direct payout destination with one x402
-payment. Each item still receives its own file grant and independently verifiable certificate:
+Print farms can settle up to 20 licenses with one x402 payment to Printwright's treasury,
+including licenses from multiple designers. Each item still receives its own file grant and
+independently verifiable certificate; designer payout happens separately after delivery:
 
 ```js
 const batch = await buyer.buyBatch({

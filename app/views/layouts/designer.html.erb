@@ -1,20 +1,57 @@
+<% content_for :designer_workspace, "true" %>
 <% content_for :content do %>
+  <% model_section = controller_path.in?(%w[designer/models designer/model_versions]) &&
+       !(controller_path == "designer/models" && action_name.in?(%w[new create])) %>
+  <% designer_navigation = [
+       { label: "Workspace", items: [
+         { label: "Overview", path: designer_root_path, current: controller_path == "designer/home" }
+       ] },
+       { label: "Catalog", items: [
+         { label: "Models", path: designer_models_path, current: model_section },
+         { label: "Add model", path: new_designer_model_path,
+           current: controller_path == "designer/models" && action_name.in?(%w[new create]) },
+         { label: "Import catalog", path: designer_imports_path,
+           current: controller_path == "designer/imports" }
+       ] },
+       { label: "Business", items: [
+         { label: "Sales", path: designer_sales_path,
+           current: controller_path == "designer/sales" && action_name.in?(%w[index export]) },
+         { label: "Payouts", path: designer_payouts_path,
+           current: controller_path == "designer/payout_destinations" ||
+             (controller_path == "designer/sales" && action_name == "payouts") },
+         { label: "Analytics", path: designer_analytics_path,
+           current: controller_path == "designer/analytics" }
+       ] },
+       { label: "Trust & protection", items: [
+         { label: "Identity", path: designer_identity_path, current: controller_path == "designer/identity" },
+         { label: "Protection", path: new_designer_takedown_packet_path,
+           current: controller_path == "designer/takedown_packets" }
+       ] },
+       { label: "Integrations", items: [
+         { label: "Webhooks", path: designer_webhook_endpoints_path,
+           current: controller_path.in?(%w[designer/webhook_endpoints designer/webhook_deliveries]) }
+       ] },
+       { label: "Settings", items: [
+         { label: "Account", path: designer_account_path, current: controller_path == "designer/account" }
+       ] }
+     ] %>
+  <% navigation_items = designer_navigation.flat_map { |group| group[:items] } %>
+  <% current_section = navigation_items.find { |item| item[:current] } || navigation_items.first %>
   <div class="dash">
-    <nav class="dash-nav" aria-label="Designer">
-      <div class="dash-who"><%= Current.designer&.display_name %></div>
-      <%= link_to "Models", designer_models_path %>
-      <%= link_to "Upload", new_designer_model_path %>
-      <%= link_to "Bulk import", designer_imports_path %>
-      <%= link_to "Identity", designer_identity_path %>
-      <%= link_to "Sales", designer_sales_path %>
-      <%= link_to "Webhooks", designer_webhook_endpoints_path %>
-      <%= link_to "Account", designer_account_path %>
-      <%= link_to "Operator", admin_root_path if Current.designer&.admin? %>
-      <%= button_to "Sign out", rodauth.logout_path, method: :post, class: "linklike" %>
-    </nav>
+    <%= render "layouts/designer_navigation", groups: designer_navigation,
+          navigation_class: "dash-nav-desktop", show_designer: true %>
+    <details class="dash-menu">
+      <summary>
+        <span class="dash-menu-context">
+          <small><%= Current.designer&.display_name %></small>
+          <strong><%= current_section[:label] %></strong>
+        </span>
+        <span class="dash-menu-action" aria-hidden="true">Menu</span>
+      </summary>
+      <%= render "layouts/designer_navigation", groups: designer_navigation,
+            navigation_class: "dash-nav-mobile", show_designer: false %>
+    </details>
     <section class="dash-content">
-      <% if notice %><div class="flash flash-ok"><%= notice %></div><% end %>
-      <% if alert %><div class="flash flash-bad"><%= alert %></div><% end %>
       <%= yield %>
     </section>
   </div>

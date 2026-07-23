@@ -43,12 +43,12 @@ class BrandSurfacesTest < ActionDispatch::IntegrationTest
     assert_select ".header-actions > button.theme-toggle:last-child"
     assert_select ".header-actions a[href=?]", new_license_library_path, text: "My library"
     assert_select ".header-actions a[href=?]", "/login", text: "For designers"
-    assert_select ".header-actions a[href=?]", designer_models_path, count: 0
+    assert_select ".header-actions a[href=?]", designer_root_path, count: 0
 
     sign_in_as designers(:one)
     get root_url
 
-    assert_select ".header-actions a[href=?]", designer_models_path, text: "Dashboard"
+    assert_select ".header-actions a[href=?]", designer_root_path, text: "Designer home"
     assert_select ".header-actions a[href=?]", "/login", count: 0
   end
 

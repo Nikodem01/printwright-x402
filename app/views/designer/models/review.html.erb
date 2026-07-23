@@ -1,0 +1,75 @@
+<% content_for :title, "Review #{@model.title} — Printwright designer" %>
+<% listing = @snapshot.fetch(:model) %>
+<% payout = @snapshot.fetch(:payout) %>
+<% fee_bps = @snapshot.fetch(:platform_fee_bps) %>
+<% fee_percentage = fee_bps.fdiv(100) %>
+<% fee_label = "#{fee_percentage == fee_percentage.to_i ? fee_percentage.to_i : fee_percentage}%" %>
+<h1>Review and publish</h1>
+<p class="t-small muted">This is the exact saved snapshot that will become buyable. If it changes,
+  confirmation expires and you must review again.</p>
+
+<section class="section-stack">
+  <h2>Storefront listing</h2>
+  <dl class="fact-grid">
+    <dt>Title</dt><dd data-review-field="title"><%= listing.fetch(:title) %></dd>
+    <dt>Public URL</dt><dd class="mono">/models/<%= listing.fetch(:slug) %></dd>
+    <dt>Description</dt><dd data-review-field="description"><%= listing[:description].presence || "Not provided" %></dd>
+    <dt>Category</dt><dd data-review-field="category"><%= listing[:category].present? ? Model3d.category_definition(listing[:category]).fetch(:name) : "None" %></dd>
+    <dt>Collections</dt><dd data-review-field="collections"><%= listing.fetch(:collections).map { |key| Model3d.collection_definition(key).fetch(:name) }.join(", ").presence || "None" %></dd>
+    <dt>Tags</dt><dd><%= listing.fetch(:tags).join(", ").presence || "None" %></dd>
+    <dt>Print guidance</dt><dd><%= listing.fetch(:printability).to_json %></dd>
+  </dl>
+</section>
+
+<section class="section-stack">
+  <h2>Files going live</h2>
+  <ul>
+    <% listing.fetch(:files).each do |file| %>
+      <li data-review-field="file"><strong><%= file.fetch(:kind).upcase %></strong> ·
+        <%= file.fetch(:filename) %> · <%= number_to_human_size(file.fetch(:byte_size)) %></li>
+    <% end %>
+  </ul>
+  <p class="t-caption mono">Certified bundle: <%= listing.fetch(:mesh_analysis_digest) %></p>
+</section>
+
+<section class="section-stack">
+  <h2>License and price</h2>
+  <% listing.fetch(:offers).each do |offer| %>
+    <% fee = offer.fetch(:price_cents) * fee_bps / 10_000 %>
+    <% cap = offer[:max_units].present? ? "#{offer.fetch(:max_units)} licenses" : "unlimited licenses" %>
+    <p data-review-field="license"><strong><%= offer.fetch(:kind).humanize %></strong> · revision <%= offer.fetch(:revision) %> ·
+      <%= cap %> · <%= format_usdc_cents(offer.fetch(:price_cents)) %> gross · <%= fee_label %> platform fee
+      <%= format_usdc_cents(fee) %> · <strong>Your share after <%= fee_label %> fee:
+      <%= format_usdc_cents(offer.fetch(:price_cents) - fee) %></strong> · preferred checkout quote
+      <%= offer.fetch(:currency) %> first</p>
+    <details class="t-small"><summary>Read exact governing terms</summary><pre><%= offer.fetch(:terms_text) %></pre></details>
+    <p class="t-caption mono">Terms <%= offer[:terms_version].presence || "legacy" %> · <%= offer.fetch(:terms_hash) %></p>
+  <% end %>
+</section>
+
+<section class="section-stack">
+  <h2>Payout</h2>
+  <p data-review-field="payout">
+    <% if payout.fetch(:verified_at).present? %>
+      <strong><%= payout.fetch(:account_id) %></strong> · verified. Buyer payment settles
+      to Printwright's treasury; your share is queued after delivery.
+    <% elsif payout.fetch(:account_id).present? %>
+      <strong><%= payout.fetch(:account_id) %></strong> · not verified. Your share remains
+      owed in treasury until the destination is ready.
+    <% else %>
+      No payout destination. Your share remains owed in treasury until one is verified.
+    <% end %>
+  </p>
+</section>
+
+<%= form_with url: publish_designer_model_path(@model), method: :post, class: "publish-form" do |form| %>
+  <%= hidden_field_tag :review_token, @review_token %>
+  <label class="t-small publish-note">
+    <%= check_box_tag :warranty, "1", false %>
+    I warrant that this model is my own work or work I am licensed to sell, and that it prints as
+    described. This warranty is recorded and named in every license certificate sold.
+    (<%= link_to "designer warranty terms", license_document_path(version: "v1", kind: "personal"), target: "_blank", rel: "noopener" %>, §4)
+  </label>
+  <%= form.submit "Publish — freeze the bundle hash and go live", class: "btn btn-primary" %>
+  <%= link_to "Back to edit", edit_designer_model_path(@model), class: "btn" %>
+<% end %>

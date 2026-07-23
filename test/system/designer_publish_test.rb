@@ -8,12 +8,6 @@ class DesignerPublishTest < RackSystemTestCase
     WebMock.disable_net_connect!(allow_localhost: true)
     # Signup checks the password against Have I Been Pwned; keep it offline.
     stub_request(:get, %r{api\.pwnedpasswords\.com/range/}).to_return(status: 200, body: "")
-    # Publish runs the payout-account mirror check; this account can receive
-    # USDC directly (unlimited auto-association), same stub as the API tests.
-    stub_request(:get, %r{testnet\.mirrornode\.hedera\.com/api/v1/accounts/0\.0\.42/tokens})
-      .to_return(body: { tokens: [], links: {} }.to_json, headers: { "content-type" => "application/json" })
-    stub_request(:get, %r{testnet\.mirrornode\.hedera\.com/api/v1/accounts/0\.0\.42\z})
-      .to_return(body: { max_automatic_token_associations: -1 }.to_json, headers: { "content-type" => "application/json" })
   end
 
   test "sign up, upload, hit the warranty gate, publish, land on the live page" do
@@ -21,7 +15,6 @@ class DesignerPublishTest < RackSystemTestCase
     fill_in "Studio / display name", with: "Form Flow Studio"
     fill_in "Email address", with: "formflow@example.com"
     fill_in "Password", with: "verdigris-kettle-9-monsoon"
-    fill_in "Hedera account id (payout target)", with: "0.0.42"
     click_button "Create Account"
 
     # Publishing is gated on a verified email (S2); simulate clicking the link.
@@ -30,7 +23,9 @@ class DesignerPublishTest < RackSystemTestCase
     visit new_designer_model_path
     fill_in "Title", with: "Form Flow Clip"
     fill_in "Tags (comma-separated)", with: "cable, clip"
-    fill_in "Terms", with: "Personal print license."
+    assert_text "Canonical personal license (v1)"
+    assert_text "Personal Print License"
+    assert_no_field "Terms"
     attach_file "Printable files (STL/3MF/STEP)", Rails.root.join("db/seed_assets/calibration-cube.stl")
     click_button "Save draft"
     assert_text "Saved as draft."
@@ -42,11 +37,21 @@ class DesignerPublishTest < RackSystemTestCase
     visit edit_designer_model_path(model)
     assert_text "Mesh analysis: passed"
 
-    # Publishing without the recorded warranty must bounce, not go live.
+    click_button "Review and publish"
+    assert_text "Review and publish"
+    assert_text "Form Flow Clip"
+    assert_text "calibration-cube.stl"
+    assert_text "Personal"
+    assert_text "2.50 USDC"
+    assert_text "Your share after 10% fee"
+    assert model.reload.draft?
+
+    # Final confirmation without the recorded warranty must bounce, not go live.
     click_button "Publish — freeze the bundle hash and go live"
     assert_text(/warranty/i)
     assert model.reload.draft?
 
+    click_button "Review and publish"
     check "warranty"
     click_button "Publish — freeze the bundle hash and go live"
 
@@ -56,5 +61,23 @@ class DesignerPublishTest < RackSystemTestCase
     model.reload
     assert model.published?
     assert_match(/\Asha256:[0-9a-f]{64}\z/, model.file_hash)
+
+    visit edit_designer_model_path(model)
+    click_button "Pause new sales"
+    assert_text "Sales paused"
+    assert model.reload.paused?
+
+    visit root_path
+    within "#models" do
+      assert_no_text "Form Flow Clip"
+    end
+    visit model_page_path(model.slug)
+    assert_text "Sales paused"
+    assert_no_button "Buy license · 2.50 USDC"
+
+    visit edit_designer_model_path(model)
+    click_button "Resume new sales"
+    assert_text "Sales resumed"
+    assert model.reload.published?
   end
 end

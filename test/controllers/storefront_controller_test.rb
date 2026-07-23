@@ -141,8 +141,63 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "draft model pages 404" do
+    clear_enqueued_jobs
     get model_page_path("hidden-draft")
     assert_response :not_found
+    assert_not enqueued_jobs.any? { |job| job[:job] == RecordModelMetricsJob }
+  end
+
+  test "search and detail responses enqueue privacy-minimized human aggregates" do
+    clear_enqueued_jobs
+
+    get root_path(q: "beaver private intent")
+    assert_response :success
+    job = enqueued_jobs.find { |candidate| candidate[:job] == RecordModelMetricsJob }
+    assert job
+    refute_includes job.fetch(:args).to_s, "beaver private intent"
+
+    perform_enqueued_jobs(only: RecordModelMetricsJob)
+    metric = @beaver.model_metrics.find_by!(channel: "human", source: "search")
+    assert_equal 1, metric.impressions
+
+    perform_enqueued_jobs(only: RecordModelMetricsJob) { get model_page_path(@beaver.slug) }
+    assert_equal 1, @beaver.model_metrics.find_by!(channel: "human", source: "marketplace").views
+    assert_equal 0, Model3d.find_by!(slug: "hidden-draft").model_metrics.count
+  end
+
+  test "analytics queue failure never changes the buyer response" do
+    singleton = RecordModelMetricsJob.singleton_class
+    original = RecordModelMetricsJob.method(:perform_later)
+    singleton.define_method(:perform_later) { |**| raise ActiveJob::EnqueueError, "queue unavailable" }
+
+    get root_path
+
+    assert_response :success
+    assert_select ".model-card h3", text: "Articulated Beaver with Hat"
+  ensure
+    singleton&.define_method(:perform_later, original) if original
+  end
+
+  test "paused and retired listings keep an honest status page without checkout or discovery" do
+    @beaver.update!(status: "paused")
+
+    get root_path
+    assert_select ".model-card", text: /Articulated Beaver/, count: 0
+    get model_page_path(@beaver.slug)
+    assert_response :success
+    assert_select 'meta[name="robots"][content="noindex,follow"]'
+    assert_select "[data-listing-status='paused']", text: /temporarily paused.*Existing buyers keep/m
+    assert_select "form.buy-panel", count: 0
+    assert_select "button", text: /Buy license/, count: 0
+    assert_select "script[type='application/ld+json']" do |nodes|
+      assert_empty JSON.parse(nodes.first.text).fetch("offers")
+    end
+
+    @beaver.update!(status: "retired")
+    get model_page_path(@beaver.slug)
+    assert_response :success
+    assert_select "[data-listing-status='retired']", text: /retired.*not available for new purchases/m
+    assert_select "h3", text: "Listing retired"
   end
 
   test "landing page narrates the three doors and how a purchase works" do

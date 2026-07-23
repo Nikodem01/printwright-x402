@@ -38,6 +38,51 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
       JSON.parse(Base64.strict_decode64(response.headers.fetch("PAYMENT-REQUIRED")))
   end
 
+  test "one initial batch quote counts each model once as agent intent" do
+    clear_enqueued_jobs
+
+    perform_enqueued_jobs(only: RecordModelMetricsJob) do
+      post api_v1_batches_path, params: { items: @items }, as: :json
+    end
+
+    assert_response :payment_required
+    metric = @model.model_metrics.find_by!(channel: "agent", source: "batch_checkout")
+    assert_equal 1, metric.payment_requests
+  end
+
+  test "paused and retired listings refuse a new batch before reservation" do
+    @model.update!(status: "paused")
+    post api_v1_batches_path, params: { items: @items }, as: :json
+    assert_response :conflict
+    assert_equal "sales_paused", response.parsed_body["error"]
+    assert_equal 0, Purchase.count
+
+    @model.update!(status: "retired")
+    post api_v1_batches_path, params: { items: @items }, as: :json
+    assert_response :gone
+    assert_equal "listing_retired", response.parsed_body["error"]
+    assert_equal 0, Purchase.count
+  end
+
+  test "a signed batch quote for a superseded offer receives current aggregate requirements" do
+    accepted = challenge.fetch("accepts").find { |option| option["asset"] == X402::Requirements.usdc_asset }
+    payload = payment_payload(accepted)
+    Purchase.create!(license_offer: @offer, status: "pending", replay_key: SecureRandom.hex(32))
+    LicenseOffers::Reviser.call(model: @model,
+      attributes: { id: @offer.id, kind: "commercial_unit", price_cents: 50, currency: "USDC" })
+
+    post api_v1_batches_path, params: { items: @items }, as: :json,
+      headers: { "PAYMENT-SIGNATURE" => encode(payload) }
+
+    assert_response :payment_required
+    assert_equal "invalid_payment_requirements", response.parsed_body["error"]
+    usdc = response.parsed_body.fetch("accepts").find do |option|
+      option["asset"] == X402::Requirements.usdc_asset
+    end
+    assert_equal "1500000", usdc.fetch("amount")
+    assert_equal 1, Purchase.count
+  end
+
   test "machine POST receives JSON x402 challenge when browser CSRF protection is enabled" do
     previous = ActionController::Base.allow_forgery_protection
     ActionController::Base.allow_forgery_protection = true
@@ -96,6 +141,7 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
     post api_v1_batches_path, params: { items: @items }, as: :json,
       headers: { "PAYMENT-SIGNATURE" => encode(payload) }
     original = response.parsed_body.fetch("licenses")
+    @model.update!(status: "retired")
     post api_v1_batches_path, params: { items: @items }, as: :json,
       headers: { "PAYMENT-SIGNATURE" => encode(payload) }
 
@@ -103,6 +149,12 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
     assert_equal original, response.parsed_body.fetch("licenses")
     assert_equal 3, Purchase.count
     assert_requested :post, "#{FACILITATOR}/settle", times: 1
+
+    post api_v1_batches_path, params: { items: @items.first(2) }, as: :json,
+      headers: { "PAYMENT-SIGNATURE" => encode(payload) }
+    assert_response :conflict
+    assert_equal "duplicate_payment", response.parsed_body["error"]
+    assert_not response.parsed_body.key?("licenses")
   end
 
   test "capacity is rejected before payment; a mixed-designer batch routes to one treasury payTo" do

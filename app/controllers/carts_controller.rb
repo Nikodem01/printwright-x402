@@ -13,7 +13,7 @@ class CartsController < ApplicationController
   end
 
   def update
-    offer = LicenseOffer.find(params.require(:offer_id))
+    offer = LicenseOffer.active.find(params.require(:offer_id))
     @cart.update!(offer, params.require(:quantity))
     redirect_to cart_path, notice: "Cart quantity updated."
   rescue StorefrontCart::Invalid => error

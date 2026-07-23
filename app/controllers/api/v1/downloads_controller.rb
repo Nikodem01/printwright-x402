@@ -3,24 +3,35 @@
 # NEVER fail a purchase — the tx may have settled; we reconcile via mirror.
 class Api::V1::DownloadsController < Api::V1::BaseController
   rate_limit to: 30, within: 1.minute, store: RateLimitStore, with: :api_rate_limited
+  after_action :record_payment_request
 
   def show
-    model = Model3d.published.find(params[:model_id])
-    offer = model.license_offers.find_by!(kind: params.fetch(:license, "personal"))
-
+    model = Model3d.find(params[:model_id])
+    raise ActiveRecord::RecordNotFound if model.draft?
     sandbox = sandbox_request?
     response.set_header("X-Printwright-Sandbox", "true") if sandbox
-    requirements = if sandbox
-      Sandbox::Requirements.new(offer: offer, resource_url: request.original_url)
-    else
-      X402::Requirements.new(offer: offer, resource_url: request.original_url)
+    raw_payment = X402::PaymentHeader.raw(request)
+    payload = X402::PaymentHeader.decode(request) if raw_payment
+    if payload && (existing = Purchase.find_by(replay_key: replay_key(payload)))
+      requested_kind = params.fetch(:license, "personal")
+      unless existing.license_offer.model3d_id == model.id && existing.license_offer.kind == requested_kind
+        return render json: { error: "duplicate_payment", status: existing.status }, status: :conflict
+      end
+      return replay(payload)
     end
-    if X402::PaymentHeader.raw(request).nil?
+    return render_listing_unavailable(model) unless model.published?
+
+    offer = model.license_offers.find_by!(kind: params.fetch(:license, "personal"))
+    requirements = requirements_for(offer, sandbox: sandbox)
+    if payload.nil?
       return render json: { error: "sold_out" }, status: :gone if !sandbox && offer.sold_out?
+      @analytics_event = {
+        model_ids: [ model.id ], event: "payment_request",
+        channel: analytics_channel, source: "checkout"
+      } unless sandbox
       return payment_required(requirements)
     end
 
-    payload = X402::PaymentHeader.decode(request)
     matched = requirements.match(payload["accepted"])
     return payment_required(requirements, error: "invalid_payment_requirements") unless matched
 
@@ -28,11 +39,14 @@ class Api::V1::DownloadsController < Api::V1::BaseController
 
     # Replay detection must precede the sold-out gate: an already-paid
     # purchase keeps its recovery path even when the offer sells out.
-    return replay(payload) if Purchase.exists?(replay_key: replay_key(payload))
-
     purchase = create_purchase(offer, payload, matched, sandbox: sandbox)
     return replay(payload) if purchase.nil? # lost a same-tx race
     return render json: { error: "sold_out" }, status: :gone if purchase == :sold_out
+    return render_listing_unavailable(offer.model3d.reload) if purchase == :listing_unavailable
+    if purchase == :offer_changed
+      current = offer.model3d.license_offers.find_by!(kind: offer.kind)
+      return payment_required(requirements_for(current, sandbox: sandbox), error: "offer_changed")
+    end
 
     verify_and_settle(purchase, payload, matched)
   rescue ActiveRecord::RecordNotFound
@@ -45,11 +59,24 @@ class Api::V1::DownloadsController < Api::V1::BaseController
 
   private
 
+  def record_payment_request
+    Analytics::Recorder.record_later(**@analytics_event) if response.status == 402 && @analytics_event
+  end
+
+  def analytics_channel
+    request.headers["X-Printwright-Channel"] == "human" ? "human" : "agent"
+  end
+
   def payment_required(requirements, error: "payment required")
     body = requirements.payment_required(error: error)
     response.set_header("PAYMENT-REQUIRED", Base64.strict_encode64(JSON.generate(body)))
     response.set_header("WWW-Authenticate", "x402")
     render json: body, status: :payment_required
+  end
+
+  def requirements_for(offer, sandbox:)
+    klass = sandbox ? Sandbox::Requirements : X402::Requirements
+    klass.new(offer: offer, resource_url: request.original_url)
   end
 
   def replay_key(payload)
@@ -62,7 +89,11 @@ class Api::V1::DownloadsController < Api::V1::BaseController
   # License.allocate! keeps its own max_units enforcement as the backstop.
   def create_purchase(offer, payload, matched, sandbox:)
     offer.with_lock do
-      if !sandbox && offer.sold_out?
+      if !offer.active?
+        :offer_changed
+      elsif !offer.model3d.reload.published?
+        :listing_unavailable
+      elsif !sandbox && offer.sold_out?
         :sold_out
       else
         Purchase.create!(

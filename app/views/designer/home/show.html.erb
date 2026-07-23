@@ -1,0 +1,165 @@
+<% content_for :title, "Designer home — Printwright" %>
+
+<div class="designer-home">
+  <header class="home-heading">
+    <div>
+      <p class="card-taxonomy">Designer overview</p>
+      <h1><%= Current.designer.display_name %></h1>
+      <% if @model_counts.fetch("published", 0).positive? %>
+        <p><strong>Your shop is live.</strong> <%= pluralize(@model_counts.fetch("published", 0), "listing") %>
+          can be discovered and purchased.</p>
+      <% else %>
+        <p><strong>Your shop is not live yet.</strong> Complete the next task below to publish a listing.</p>
+      <% end %>
+    </div>
+    <div class="home-heading-actions">
+      <%= link_to "Add model", new_designer_model_path, class: "btn btn-primary" %>
+      <%= link_to "Import catalog", designer_imports_path, class: "btn" %>
+    </div>
+  </header>
+
+  <section class="home-card" aria-labelledby="setup-title">
+    <div class="home-section-heading">
+      <div>
+        <p class="card-taxonomy">Setup and readiness</p>
+        <h2 id="setup-title"><%= @readiness.count { |item| item[:complete] } %> of <%= @readiness.size %> operational steps complete</h2>
+      </div>
+      <% if Current.designer.identity_verified? %>
+        <span class="state st-settled">Public identity verified</span>
+      <% else %>
+        <%= link_to "Verify public identity (optional)", designer_identity_path, class: "t-small" %>
+      <% end %>
+    </div>
+    <ol class="home-checklist">
+      <% @readiness.each do |item| %>
+        <li>
+          <%= render "shared/state_mark", state: item[:complete] ? "settled" : "pending" %>
+          <span><strong><%= item[:label] %></strong><small><%= item[:detail] %></small></span>
+          <span class="home-check-state"><%= item[:complete] ? "Complete" : "To do" %></span>
+        </li>
+      <% end %>
+    </ol>
+  </section>
+
+  <% if @model_counts.values.sum.zero? %>
+    <section class="home-card home-sample" aria-labelledby="sample-listing-title">
+      <p class="card-taxonomy">Your first listing</p>
+      <h2 id="sample-listing-title">What buyers will see</h2>
+      <div class="home-sample-grid">
+        <div class="home-sample-image" aria-hidden="true">3D preview</div>
+        <div>
+          <h3>Your model name</h3>
+          <ul>
+            <li>Clear printable-file and material details</li>
+            <li>Readable license and price before checkout</li>
+            <li>Verifiable purchase certificate and receipt</li>
+          </ul>
+          <p class="t-small muted">This is a structure preview, not fake marketplace performance.
+            Your real title, media, print details, license, and price appear after review and publish.</p>
+        </div>
+      </div>
+    </section>
+  <% end %>
+
+  <section aria-labelledby="tasks-title">
+    <div class="home-section-heading">
+      <div>
+        <p class="card-taxonomy">Next actions</p>
+        <h2 id="tasks-title">What needs attention</h2>
+      </div>
+    </div>
+    <% if @tasks.any? %>
+      <div class="home-task-list">
+        <% @tasks.each do |task| %>
+          <article class="home-task">
+            <div><h3><%= task[:title] %></h3><p><%= task[:detail] %></p></div>
+            <% if task[:method] %>
+              <%= button_to task[:action], task[:path], method: task[:method], params: task[:params],
+                    class: "btn", form: { data: { turbo: false } } %>
+            <% else %>
+              <%= link_to task[:action], task[:path], class: "btn" %>
+            <% end %>
+          </article>
+        <% end %>
+      </div>
+      <p class="home-recovery-support t-small muted">Still blocked after the listed recovery step?
+        <%= link_to "Open a marketplace support issue", "https://github.com/Nikodem01/printwright-x402/issues/new",
+              target: "_blank", rel: "noopener noreferrer" %>. Include the visible error and state only—never post wallet signatures,
+        webhook secrets, receipt capabilities, buyer data, or private account details.</p>
+    <% else %>
+      <div class="notice-card" role="status">
+        <strong>No urgent actions.</strong> Your live catalog, payout destination, certificates, and integrations have no known blocker.
+      </div>
+    <% end %>
+  </section>
+
+  <section aria-labelledby="earnings-snapshot-title">
+    <div class="home-section-heading">
+      <div>
+        <p class="card-taxonomy">Sales and payouts</p>
+        <h2 id="earnings-snapshot-title">Business snapshot</h2>
+      </div>
+      <%= link_to "Open Sales", designer_sales_path, class: "t-small" %>
+    </div>
+    <div class="home-metrics">
+      <article class="home-metric"><span>Delivered sales</span><strong><%= @completed_sale_count %></strong></article>
+      <article class="home-metric">
+        <span>Gross sales</span>
+        <% if @gross_by_asset.any? %>
+          <% @gross_by_asset.each do |asset, amount| %><strong><%= format_base_units(amount, asset) %></strong><% end %>
+        <% else %><strong>0.00 USDC</strong><% end %>
+      </article>
+      <article class="home-metric">
+        <span>Your net after 10% fee</span>
+        <% if @net_by_asset.any? %>
+          <% @net_by_asset.each do |asset, amount| %><strong><%= format_base_units(amount, asset) %></strong><% end %>
+        <% else %><strong>0.00 USDC</strong><% end %>
+      </article>
+      <article class="home-metric">
+        <span>Awaiting payout</span>
+        <% if @owed_by_asset.any? %>
+          <% @owed_by_asset.each do |asset, amount| %><strong><%= format_base_units(amount, asset) %></strong><% end %>
+        <% else %><strong>0.00 USDC</strong><% end %>
+        <small><%= Current.designer.payout_account_verified? ? "Eligible for automatic payout" : "Held until destination is ready" %></small>
+      </article>
+    </div>
+    <% if @paid_by_asset.any? %>
+      <p class="t-small muted">Paid to verified destinations:
+        <% @paid_by_asset.each do |asset, amount| %><strong><%= format_base_units(amount, asset) %></strong><% end %>
+      </p>
+    <% end %>
+  </section>
+
+  <div class="home-columns">
+    <section class="home-card" aria-labelledby="performance-title">
+      <p class="card-taxonomy">Model performance</p>
+      <h2 id="performance-title">Delivered sales by model</h2>
+      <% if @top_models.any? %>
+        <ol class="home-ranking">
+          <% @top_models.each do |(model_id, title), count| %>
+            <li><%= link_to title, edit_designer_model_path(model_id) %><strong><%= pluralize(count, "sale") %></strong></li>
+          <% end %>
+        </ol>
+      <% else %>
+        <p class="muted">No delivered sales yet. Published models are discoverable now; this overview does not invent view or conversion data.</p>
+      <% end %>
+    </section>
+
+    <section class="home-card" aria-labelledby="activity-title">
+      <p class="card-taxonomy">Recent activity</p>
+      <h2 id="activity-title">What changed</h2>
+      <% if @recent_activity.any? %>
+        <ol class="home-activity">
+          <% @recent_activity.each do |activity| %>
+            <li>
+              <span><small><%= activity[:kind] %> · <%= time_ago_in_words(activity[:at]) %> ago</small>
+                <%= link_to activity[:title], activity[:path] %><span><%= activity[:detail] %></span></span>
+            </li>
+          <% end %>
+        </ol>
+      <% else %>
+        <p class="muted">Activity appears after you add a model, import a catalog, or deliver a sale.</p>
+      <% end %>
+    </section>
+  </div>
+</div>

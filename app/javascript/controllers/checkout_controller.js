@@ -23,7 +23,8 @@ const FAILURE_COPY = {
   approval_already_used: () => "This approval has already been used.",
   invalid_purchase_intent: () => "The server could not verify this purchase approval.",
   payment_intent_replayed: () => "This approval is already bound to a different signed payment.",
-  incompatible_payees: () => "These items pay different designers directly and cannot share one Hedera transfer.",
+  incompatible_payees: () =>
+    "These items do not share compatible payment requirements and cannot use one Hedera transfer.",
 }
 
 // These are terminal for the purchase attempt: no retry button. Everything
@@ -150,7 +151,7 @@ export default class extends Controller {
             items: Array.from({ length: quantity }, () => ({ model_id: this.modelIdValue, license: kind })),
           })
         }
-        const requestHeaders = { accept: "application/json" }
+        const requestHeaders = { accept: "application/json", "X-Printwright-Channel": "human" }
         if (requestBody) requestHeaders["content-type"] = "application/json"
         const leg1 = await fetch(url, { method, headers: requestHeaders, body: requestBody })
         if (leg1.status !== 402) {
@@ -170,7 +171,7 @@ export default class extends Controller {
         return this.fail("wallet_refused", error.message)
       }
 
-      const paymentHeaders = { accept: "application/json", ...headers }
+      const paymentHeaders = { accept: "application/json", "X-Printwright-Channel": "human", ...headers }
       if (purchaseIntent) paymentHeaders["X-Printwright-Purchase-Intent"] = purchaseIntent
       if (requestBody) paymentHeaders["content-type"] = "application/json"
       this.pendingPayment = { url, method, body: requestBody, headers: paymentHeaders }

@@ -54,12 +54,33 @@
   </head>
 
   <% wallet_project_id = ENV["WALLETCONNECT_PROJECT_ID"].presence %>
-  <body<% if wallet_project_id %> data-controller="wallet-loader"
+  <% designer_workspace = content_for?(:designer_workspace) %>
+  <body class="<%= designer_workspace ? "designer-workspace" : "marketplace" %>"<% if wallet_project_id %> data-controller="wallet-loader"
     data-wallet-loader-module-url-value="<%= asset_path("hedera_wallet.js") %>"<% end %>>
     <%# The contour ground. Fixed, non-interactive, one per page. %>
     <canvas id="ground-tex" aria-hidden="true" data-controller="texture"></canvas>
 
-    <header class="site-header" data-controller="sticky-header">
+    <% if designer_workspace %>
+      <header class="site-header designer-site-header" data-controller="sticky-header">
+        <div class="container">
+          <%= link_to designer_root_path, class: "wordmark" do %>
+            <%= render "shared/brand_mark", size: 40 %>
+            <span class="wordmark-copy">
+              <span class="wordmark-name">Printwright</span>
+              <span class="tagline">Create, publish, and earn.</span>
+            </span>
+          <% end %>
+          <nav class="header-actions designer-header-actions t-small" aria-label="Workspace shortcuts">
+            <%= link_to "View marketplace", root_path %>
+            <%= link_to "View public profile", designer_path(Current.designer) %>
+            <button type="button" class="theme-toggle" data-controller="theme"
+                    data-action="theme#toggle" data-theme-target="button"
+                    aria-label="Switch to dark mode" aria-pressed="false">Dark mode</button>
+          </nav>
+        </div>
+      </header>
+    <% else %>
+      <header class="site-header" data-controller="sticky-header">
       <div class="container">
         <%= link_to root_path, class: "wordmark" do %>
           <%= render "shared/brand_mark", size: 40 %>
@@ -95,7 +116,7 @@
                 data: { cart_link: true } %>
           <%= link_to "My library", new_license_library_path %>
           <% if authenticated? %>
-            <%= link_to "Dashboard", designer_models_path %>
+            <%= link_to "Designer home", designer_root_path %>
           <% else %>
             <%= link_to "For designers", rodauth.login_path %>
           <% end %>
@@ -114,9 +135,10 @@
                   aria-label="Switch to dark mode" aria-pressed="false">Dark mode</button>
         </nav>
       </div>
-    </header>
+      </header>
+    <% end %>
 
-    <main class="container">
+    <main class="container<%= " designer-main" if designer_workspace %>">
       <% if notice %>
         <div class="flash flash-ok"><%= render "shared/state_mark", state: "settled" %><span><%= notice %></span></div>
       <% end %>
@@ -126,7 +148,19 @@
       <%= content_for?(:content) ? yield(:content) : yield %>
     </main>
 
-    <footer class="site-footer">
+    <% if designer_workspace %>
+      <footer class="site-footer designer-site-footer">
+        <div class="container">
+          <span>Printwright designer workspace for <strong><%= Current.designer.display_name %></strong>.</span>
+          <span class="footer-links t-small">
+            <%= link_to "View marketplace", root_path %> ·
+            <%= link_to "View public profile", designer_path(Current.designer) %> ·
+            <%= link_to "Privacy", privacy_path %>
+          </span>
+        </div>
+      </footer>
+    <% else %>
+      <footer class="site-footer">
       <div class="container">
         License certificates anchor to Hedera Consensus Service topic
         <a class="mono" href="<%= Hedera::Network.hashscan_base %>/topic/<%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %>"><%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %></a>
@@ -142,6 +176,7 @@
           <%= link_to "Ask the shopkeeper", chat_path %>
         </span>
       </div>
-    </footer>
+      </footer>
+    <% end %>
   </body>
 </html>

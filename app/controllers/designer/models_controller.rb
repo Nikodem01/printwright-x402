@@ -1,5 +1,5 @@
 class Designer::ModelsController < Designer::BaseController
-  rate_limit to: 10, within: 1.minute, only: %i[create], store: RateLimitStore
+  rate_limit to: 10, within: 1.minute, only: %i[create retry_analysis], store: RateLimitStore
   def index
     @models = current_designer.models3d.order(created_at: :desc)
   end
@@ -26,27 +26,69 @@ class Designer::ModelsController < Designer::BaseController
 
   def update
     @model = find_model
-    if @model.update(model_params)
-      attach_uploads
-      redirect_to edit_designer_model_path(@model), notice: "Updated."
-    else
-      render :edit, status: :unprocessable_entity
+    revised_offer = apply_draft_changes!
+    attach_uploads
+    notice = revised_offer ?
+      "Updated. A new offer revision is active for future buyers; past purchases keep the original." :
+      "Updated."
+    redirect_to edit_designer_model_path(@model), notice: notice
+  rescue ActiveRecord::RecordInvalid => error
+    @model.errors.add(:base, error.record.errors.full_messages.to_sentence) unless error.record == @model
+    render :edit, status: :unprocessable_entity
+  rescue ActiveRecord::RecordNotUnique
+    @model.errors.add(:base, "Only one active offer of each license kind is allowed.")
+    render :edit, status: :unprocessable_entity
+  end
+
+  def review
+    @model = find_model
+    return already_published unless @model.draft?
+
+    apply_draft_changes!
+    return redirect_to edit_designer_model_path(@model) if attach_uploads.any?
+
+    @model.reload
+    readiness = Models::Readiness.new(@model, current_designer)
+    blocker = readiness.review_blocker_message
+    return review_blocked(blocker) if blocker
+
+    digest = MeshAnalysis::Analyzer.bundle_digest(attached_printable_files)
+    if @model.mesh_analysis_digest != digest || @model.mesh_analysis_status == "pending"
+      queue_mesh_analysis
+      return review_blocked("Mesh analysis is running for this exact file bundle. Review again after it passes.")
     end
+    if (duplicate = duplicate_model(digest))
+      return review_blocked(
+        "Publish blocked: matches existing published model “#{duplicate.title}”. Contact support if you are authorized to republish it."
+      )
+    end
+
+    @snapshot = Models::PublishReview.snapshot(@model)
+    @review_token = Models::PublishReview.token(@model, snapshot: @snapshot)
+  rescue ActiveRecord::RecordInvalid => error
+    @model.errors.add(:base, error.record.errors.full_messages.to_sentence) unless error.record == @model
+    render :edit, status: :unprocessable_entity
+  rescue ActiveRecord::RecordNotUnique
+    @model.errors.add(:base, "Only one active offer of each license kind is allowed.")
+    render :edit, status: :unprocessable_entity
   end
 
   # Publishing freezes the bundle hash: sha256 over the printable files'
   # bytes, sorted by filename, so the certificate anchor is deterministic.
   def publish
     @model = find_model
+    unless Models::PublishReview.valid?(@model, params[:review_token])
+      return redirect_to edit_designer_model_path(@model),
+        alert: params[:review_token].present? ?
+          "This listing changed after review. Review the current draft again before publishing." :
+          "Review this exact listing before publishing."
+    end
     unless current_designer.email_verified?
       return redirect_to edit_designer_model_path(@model),
         alert: "Verify your email before publishing — we sent a confirmation link when you signed up. Resend it from your inbox or the login page."
     end
-    if @model.published?
-      return redirect_to edit_designer_model_path(@model),
-        alert: "The certified bundle is frozen. Publish a version update instead."
-    end
-    files = @model.printable_files.select { |f| f.file.attached? }
+    return already_published if @model.published?
+    files = attached_printable_files
     return redirect_to edit_designer_model_path(@model), alert: "Attach at least one printable file first." if files.empty?
     return redirect_to edit_designer_model_path(@model), alert: "Add at least one license offer first." if @model.license_offers.none?
     unless params[:warranty] == "1"
@@ -78,19 +120,98 @@ class Designer::ModelsController < Designer::BaseController
     redirect_to model_page_path(@model.slug), notice: publish_notice
   end
 
+  def pause
+    change_availability!(:pause,
+      "Sales paused. The listing is hidden from discovery and new checkout; existing buyer receipts, certificates, downloads, and updates remain available.")
+  end
+
+  def resume
+    change_availability!(:resume,
+      "Sales resumed. The listing is discoverable and available for new checkout again.")
+  end
+
+  def retire
+    change_availability!(:retire,
+      "Listing retired. New discovery and checkout are off; its public status page and existing buyer rights remain available.")
+  end
+
+  def restore
+    change_availability!(:restore,
+      "Listing restored in a paused state. Review it, then resume sales when it is ready for new buyers.")
+  end
+
+  def retry_analysis
+    @model = find_model
+    unless @model.draft?
+      return redirect_to edit_designer_model_path(@model, anchor: "files"),
+        alert: "The certified bundle is frozen. File analysis can only be restarted for a draft bundle."
+    end
+    if attached_printable_files.empty?
+      return redirect_to edit_designer_model_path(@model, anchor: "files"),
+        alert: "Attach a printable file before restarting analysis."
+    end
+
+    queue_mesh_analysis
+    redirect_to edit_designer_model_path(@model, anchor: "files"),
+      notice: "File analysis restarted in the background. You can keep editing and refresh this status later."
+  end
+
   private
 
-  # Publish is the moment the payout destination gets decided, so the mirror
-  # check runs here — and the notice says plainly where the money will go.
+  def apply_draft_changes!
+    attributes = model_params
+    offers = attributes.delete(:license_offers_attributes).to_h.values
+    removing_offer = offers.any? do |offer|
+      offer[:id].present? && ActiveModel::Type::Boolean.new.cast(offer[:_destroy])
+    end
+    revised_offer = false
+    Model3d.transaction do
+      @model.update!(attributes)
+      offers.each do |offer|
+        result = LicenseOffers::Reviser.call(model: @model, attributes: offer)
+        revised_offer ||= result&.supersedes_id.present?
+      end
+      ensure_future_offer! if removing_offer
+    end
+    revised_offer
+  end
+
+  def attached_printable_files
+    @model.printable_files.select { |file| file.file.attached? }
+  end
+
+  def already_published
+    redirect_to edit_designer_model_path(@model),
+      alert: "The certified bundle is frozen. Publish a version update instead."
+  end
+
+  def review_blocked(message)
+    redirect_to edit_designer_model_path(@model), alert: message
+  end
+
+  def change_availability!(action, notice)
+    @model = find_model
+    Models::Availability.call(model: @model, action: action)
+    redirect_to edit_designer_model_path(@model), notice: notice
+  rescue Models::Availability::InvalidTransition => error
+    redirect_to edit_designer_model_path(@model), alert: error.message.humanize
+  end
+
+  # Review establishes payout readiness; buyer settlement always goes to the
+  # treasury. Designer payout is a separate post-delivery state machine.
   def publish_notice
     base = "Published — live in the catalog and buyable by agents."
-    return base if current_designer.hedera_account_id.blank?
+    if current_designer.hedera_account_id.blank?
+      return "#{base} Buyer payments settle to Printwright's treasury. Add a payout " \
+        "destination in Payouts; your 90% share remains owed until it is verified."
+    end
 
-    if current_designer.verify_payout_account!
-      "#{base} Sales pay your Hedera account directly."
+    if current_designer.payout_account_verified?
+      "#{base} Buyer payments settle to Printwright's treasury. After delivery, your " \
+        "90% share is queued for payout to #{current_designer.hedera_account_id}."
     else
-      "#{base} Your Hedera account isn't ready to receive USDC yet — " \
-        "sales are held in marketplace custody until it verifies."
+      "#{base} Buyer payments settle to Printwright's treasury. Your 90% share remains " \
+        "owed until the payout destination in Payouts is proved and verified for USDC."
     end
   end
 
@@ -105,16 +226,24 @@ class Designer::ModelsController < Designer::BaseController
   end
 
   def queue_mesh_analysis
-    @model.update_columns(mesh_analysis_status: "pending", mesh_analysis_digest: nil,
-                          geometry_hash: nil, mesh_analysis: {}, updated_at: Time.current)
-    AnalyzeModelMeshJob.perform_later(@model.id)
+    Models::AnalysisQueue.call(@model)
+  end
+
+  def ensure_future_offer!
+    return unless @model.published?
+    return if @model.license_offers.reload.any?
+
+    @model.errors.add(:base,
+      "Keep at least one license available on a published listing. Pause or retire it to stop all new sales.")
+    raise ActiveRecord::RecordInvalid, @model
   end
 
   def model_params
     permitted = params.require(:model3d).permit(
-      :title, :slug, :description, :tags_text,
+      :title, :slug, :description, :tags_text, :category,
+      collections: [],
       printability: %i[supports materials_text est_print_minutes bed_min_mm],
-      license_offers_attributes: %i[id kind price_cents max_units terms_md _destroy]
+      license_offers_attributes: %i[id kind price_usdc price_cents currency max_units _destroy]
     )
     normalize(permitted)
   end
@@ -123,6 +252,9 @@ class Designer::ModelsController < Designer::BaseController
   def normalize(permitted)
     if (tags = permitted.delete(:tags_text))
       permitted[:tags] = tags.split(",").map(&:strip).reject(&:blank?)
+    end
+    if permitted.key?(:collections)
+      permitted[:collections] = Array(permitted[:collections]).reject(&:blank?).uniq
     end
     if (printability = permitted[:printability])
       materials = printability.delete(:materials_text)
@@ -141,7 +273,7 @@ class Designer::ModelsController < Designer::BaseController
     rejected = []
     printable_attached = false
     printable_uploads = Array(params.dig(:model3d, :printable_files)).reject(&:blank?)
-    if @model.published? && printable_uploads.any?
+    if !@model.draft? && printable_uploads.any?
       rejected << "the certified bundle is frozen; use Publish update"
       printable_uploads = []
     end
@@ -166,5 +298,6 @@ class Designer::ModelsController < Designer::BaseController
     end
     flash[:alert] = "Rejected: #{rejected.join('; ')}" if rejected.any?
     queue_mesh_analysis if printable_attached
+    rejected
   end
 end

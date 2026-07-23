@@ -23,6 +23,10 @@ const fakeHedera = {
     calls.push(["payout", tokenId, transfers, memo]);
     return { transactionId: "0.0.1@5.6" };
   },
+  verifyPayoutProof: async (args) => {
+    calls.push(["verifyPayoutProof", args]);
+    return args.signatureMap === "dmFsaWQ=";
+  },
   createLicenseCollection: async (args) => {
     calls.push(["createLicenseCollection", args]);
     return { tokenId: "0.0.777", transactionId: "0.0.1@7.7" };
@@ -255,6 +259,40 @@ test("payout without treasury key is 503", async () => {
   assert.equal(res.status, 503);
   assert.equal((await res.json()).error, "treasury_not_configured");
   bare.close();
+});
+
+test("payout proof requires auth and validates its bounded payload", async () => {
+  const unauthorized = await post("/verify-payout-proof", {
+    accountId: "0.0.7", message: "proof", signatureMap: "dmFsaWQ=",
+  }, {});
+  assert.equal(unauthorized.status, 401);
+
+  for (const body of [
+    { accountId: "bad", message: "proof", signatureMap: "dmFsaWQ=" },
+    { accountId: "0.0.7", message: "", signatureMap: "dmFsaWQ=" },
+    { accountId: "0.0.7", message: "x".repeat(1025), signatureMap: "dmFsaWQ=" },
+    { accountId: "0.0.7", message: "proof", signatureMap: "not base64!" },
+  ]) {
+    const res = await post("/verify-payout-proof", body);
+    assert.equal(res.status, 400, JSON.stringify(body));
+  }
+});
+
+test("payout proof returns only the account-key verification result", async () => {
+  const message = "Printwright payout destination verification";
+  const accepted = await post("/verify-payout-proof", {
+    accountId: "0.0.7", message, signatureMap: "dmFsaWQ=",
+  });
+  assert.equal(accepted.status, 200);
+  assert.deepEqual(await accepted.json(), { verified: true });
+  assert.deepEqual(calls.at(-1), ["verifyPayoutProof", {
+    accountId: "0.0.7", message, signatureMap: "dmFsaWQ=",
+  }]);
+
+  const rejected = await post("/verify-payout-proof", {
+    accountId: "0.0.7", message, signatureMap: "aW52YWxpZA==",
+  });
+  assert.deepEqual(await rejected.json(), { verified: false });
 });
 
 test("create-collection validates and passes through", async () => {
