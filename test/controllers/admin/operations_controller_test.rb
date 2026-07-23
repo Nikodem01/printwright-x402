@@ -24,19 +24,19 @@ class Admin::OperationsControllerTest < ActionDispatch::IntegrationTest
   end
 
 
-  test "failed money actions are audited without changing state" do
+  test "refused money actions are audited without changing state" do
     admin = designers(:one)
-    model = Model3d.create!(designer: admin, title: "No Refund", slug: "no-refund")
+    model = Model3d.create!(designer: admin, title: "Final State", slug: "final-state")
     offer = model.license_offers.create!(kind: "personal", price_cents: 250)
-    purchase = Purchase.create!(license_offer: offer, replay_key: SecureRandom.hex(32))
+    purchase = Purchase.create!(license_offer: offer, status: "delivered",
+      replay_key: SecureRandom.hex(32))
     sign_in_as admin
 
-    post refund_admin_purchase_path(purchase)
+    post reconcile_admin_purchase_path(purchase)
 
     assert_redirected_to admin_root_path
-    assert purchase.reload.pending?
-    assert_equal %w[purchase_refund_requested purchase_refund_failed],
-      AdminAuditLog.order(:id).last(2).map(&:action)
+    assert purchase.reload.delivered?
+    assert_equal "purchase_reconcile_refused", AdminAuditLog.order(:id).last.action
   end
 
   test "status filter is constrained to purchase states" do

@@ -393,7 +393,7 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert Purchase.sole.delivered?
   end
 
-  test "sold out after payment is an honest 410 with the tx id, not a 500" do
+  test "a capacity overrun at allocation is an honest 410 with the tx id, not a 500" do
     @offer.update!(max_units: 1)
     winner = Purchase.create!(license_offer: @offer, status: "settled", replay_key: SecureRandom.hex(32))
     License.allocate!(winner)
@@ -408,7 +408,7 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert_response :gone
     body = response.parsed_body
     assert_equal [ "sold_out", "0.0.7162784@999.888" ], [ body["error"], body["transaction_id"] ]
-    assert_equal "sold_out_after_payment", loser.reload.error_reason
+    assert_equal "capacity_overrun", loser.reload.error_reason
   end
 
   test "replaying a failed purchase gets 409 conflict" do

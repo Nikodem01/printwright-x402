@@ -83,7 +83,7 @@ and retry after the given number of seconds.
   bundle) or the newest additive version, both hashes, changelog, HCS position, and a download URL.
   Fetch /latest-version/file with the same Bearer token. Sandbox has no update capability.
 - /api/v1/stats: open-books snapshot separating the mirror-derived HCS message count from this
-  deployment's immutable per-asset settlement/split/refund ledger; includes raw proof URLs
+  deployment's immutable per-asset settlement/split ledger; includes raw proof URLs
 - /api/v1/sandbox/*: explicitly fake transaction, receipt, and local topic-message artifacts
 - /verify/{cert_id}: human-readable certificate verification page
 - /verify/{cert_id}/share-card: receipt-linked 1200x630 SVG certificate card

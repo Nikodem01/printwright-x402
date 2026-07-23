@@ -141,7 +141,7 @@
             ] } } }
           },
           "410": {
-            "description": "error: \"sold_out\" — the offer's max_units is exhausted; or error: \"listing_retired\" when the designer has retired the listing before a new reservation. sold_out includes transaction_id when the offer sold out to a concurrent buyer after this payment had already settled; that purchase is refundable on-chain (operator-run: see docs/OPERATIONS.md), and the transaction_id identifies it.",
+            "description": "error: \"sold_out\" — the offer's max_units is exhausted; or error: \"listing_retired\" when the designer has retired the listing before a new reservation. Capacity is decided under the offer lock before a payment is accepted, so a sold-out offer refuses instead of charging. A sold_out response carrying transaction_id is a defensive backstop that flags the payment for operator review.",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
           },
           "429": { "$ref": "#/components/responses/RateLimited" },
@@ -248,7 +248,7 @@
       "get": {
         "operationId": "getOpenBooks",
         "summary": "Public HCS certificate and immutable revenue-ledger metrics",
-        "description": "Separates the durable certificate-topic message count fetched from Hedera's mirror node from the settlement/refund totals retained in this deployment's immutable ledger. Amounts are exact asset base units; sandbox rehearsals are excluded.",
+        "description": "Separates the durable certificate-topic message count fetched from Hedera's mirror node from the settlement totals retained in this deployment's immutable ledger. Amounts are exact asset base units; sandbox rehearsals are excluded.",
         "security": [],
         "responses": {
           "200": { "description": "Current open-books snapshot; hcs.status=unavailable labels mirror outages without presenting a local count as on-chain", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OpenBooksStats" } } } },
@@ -497,15 +497,12 @@
           } },
           "ledger": { "type": "object", "properties": {
             "settlement_count": { "type": "integer" },
-            "refund_count": { "type": "integer" },
             "assets": { "type": "array", "items": { "type": "object", "properties": {
               "asset": { "type": "string" }, "symbol": { "type": "string" },
               "decimals": { "type": ["integer", "null"] },
               "gross_settled_base_units": { "type": "integer" },
               "designer_share_base_units": { "type": "integer" },
-              "platform_fee_base_units": { "type": "integer" },
-              "refunded_base_units": { "type": "integer" },
-              "net_after_refunds_base_units": { "type": "integer" }
+              "platform_fee_base_units": { "type": "integer" }
             } } }
           } },
           "recent_settlement_proofs": { "type": "array", "items": { "type": "object", "properties": {

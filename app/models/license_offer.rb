@@ -86,9 +86,8 @@ class LicenseOffer < ApplicationRecord
   end
 
   # These terminal attempts can no longer become licenses and release their
-  # reservation. A refund is possible only before delivery, so it has no
-  # issued license to keep in the cap.
-  FAILED_STATUSES = %w[failed_verification failed_settlement refunded].freeze
+  # reservation.
+  FAILED_STATUSES = %w[failed_verification failed_settlement].freeze
 
   before_save :compute_terms_hash,
     if: -> { new_record? || kind_changed? || terms_version_changed? || terms_md_changed? }

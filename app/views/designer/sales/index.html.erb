@@ -82,9 +82,6 @@
                   <% if row[:payout] %>
                     <dt>Designer payout</dt><dd><%= hashscan_tx_link(row[:payout].tx_id) %></dd>
                   <% end %>
-                  <% if row[:refund] %>
-                    <dt>Buyer refund</dt><dd><%= hashscan_tx_link(row[:refund].tx_id) %></dd>
-                  <% end %>
                   <% if purchase.license %>
                     <dt>Certificate</dt>
                     <dd><%= link_to purchase.license.cert_id, verify_path(purchase.license.verify_slug), class: "mono" %></dd>

@@ -64,7 +64,6 @@ Rails.application.routes.draw do
     resources :purchases, only: [] do
       member do
         post :reconcile
-        post :refund
       end
       collection { post :reap }
     end

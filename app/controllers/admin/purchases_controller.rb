@@ -3,9 +3,6 @@ class Admin::PurchasesController < Admin::BaseController
     by: -> { "#{Current.designer&.id}:#{request.remote_ip}" }, store: RateLimitStore,
     with: :admin_rate_limited
 
-  # Refunds move money — require a recent password entry (S3).
-  before_action -> { rodauth.require_password_authentication }, only: :refund
-
   before_action :set_purchase, except: :reap
 
   def reconcile
@@ -34,16 +31,6 @@ class Admin::PurchasesController < Admin::BaseController
   rescue StandardError => error
     audit_failure!("purchase_reap", nil, error)
     redirect_to admin_root_path, alert: "Reaper failed: #{error.message}"
-  end
-
-  def refund
-    audit!("purchase_refund_requested", subject: @purchase)
-    tx_id = Ledger::Refunder.call(@purchase)
-    audit!("purchase_refund_completed", subject: @purchase, details: { transaction_id: tx_id })
-    redirect_to admin_root_path, notice: "Purchase #{@purchase.id} refunded: #{tx_id}."
-  rescue StandardError => error
-    audit_failure!("purchase_refund", @purchase, error)
-    redirect_to admin_root_path, alert: "Refund failed: #{error.message}"
   end
 
   private

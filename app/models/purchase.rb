@@ -7,9 +7,8 @@ class Purchase < ApplicationRecord
   TRANSITIONS = {
     "pending"             => %w[verified failed_verification],
     "verified"            => %w[settled failed_settlement],
-    "settled"             => %w[delivered refunded],
+    "settled"             => %w[delivered],
     "delivered"           => [],
-    "refunded"            => [],
     "failed_verification" => [],
     "failed_settlement"   => []
   }.freeze

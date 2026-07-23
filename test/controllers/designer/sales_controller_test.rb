@@ -28,9 +28,6 @@ class Designer::SalesControllerTest < ActionDispatch::IntegrationTest
     paid = settled_purchase(pay_to: "0.0.9584959")
     LedgerEntry.create!(purchase: paid, designer: @designer, entry_kind: "designer_payout",
       asset: "0.0.429274", amount_base_units: "225000", held_by: "designer", tx_id: "0.0.9067781@9.9")
-    refunded = settled_purchase(pay_to: "0.0.9584959")
-    LedgerEntry.create!(purchase: refunded, entry_kind: "refund",
-      asset: "0.0.429274", amount_base_units: "250000", held_by: "treasury", tx_id: "0.0.9067781@8.8")
     License.allocate!(direct)
 
     get designer_sales_path
@@ -38,18 +35,16 @@ class Designer::SalesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "h1", text: "Sales"
     assert_select ".business-tabs a[aria-current='page']", text: "Sales"
-    assert_select ".home-metric", text: /Delivered sales.*4/m
-    assert_select ".home-metric", text: /Gross sales.*1\.00 USDC/m
-    assert_select ".home-metric", text: /Printwright fee \(10%\).*0\.10 USDC/m
-    assert_select ".home-metric", text: /Your share \(90%\).*0\.90 USDC/m
+    assert_select ".home-metric", text: /Delivered sales.*3/m
+    assert_select ".home-metric", text: /Gross sales.*0\.75 USDC/m
+    assert_select ".home-metric", text: /Printwright fee \(10%\).*0\.08 USDC/m
+    assert_select ".home-metric", text: /Your share \(90%\).*0\.68 USDC/m
     assert_select "td", text: "Paid at settlement (legacy)", count: 1
     assert_select "td", text: "Payout held", count: 1
     assert_select "td", text: "Payout paid", count: 1
-    assert_select "td", text: "Refunded to buyer", count: 1
-    assert_select "time", text: /\A\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC\z/, count: 4
-    assert_select "details.sale-proof", count: 4
+    assert_select "time", text: /\A\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC\z/, count: 3
+    assert_select "details.sale-proof", count: 3
     assert_select "details.sale-proof", text: /Buyer payment.*Designer payout/m, count: 1
-    assert_select "details.sale-proof", text: /Buyer payment.*Buyer refund/m, count: 1
     assert_select "details.sale-proof", text: /Certificate.*#{direct.license.cert_id}/m, count: 1
     assert_match "Buyer delivery, receipts, certificates, downloads, and license", response.body
     assert_equal [ owed.id ], LedgerEntry.owed.where(designer: @designer).pluck(:purchase_id)
@@ -164,7 +159,7 @@ class Designer::SalesControllerTest < ActionDispatch::IntegrationTest
     csv = CSV.parse(response.body, headers: true)
     assert_equal %w[sale_at_utc model license gross_base_units platform_fee_base_units
       designer_share_base_units asset payout_status payment_transaction payout_transaction
-      refund_transaction certificate_id], csv.headers
+      certificate_id], csv.headers
     assert_equal 1, csv.size
     assert_equal "'=HYPERLINK(\"bad\")", csv.first["model"]
     assert_equal purchase.payment_tx_id, csv.first["payment_transaction"]

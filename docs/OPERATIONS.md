@@ -1,14 +1,14 @@
 # Operations runbook
 
 Money moved on-chain is never rolled back — every procedure here moves state
-*forward* (deliver, pay out, refund) or marks it honestly failed. All commands
+*forward* (deliver, pay out) or marks it honestly failed. All commands
 run from the app root. The sidecar must be running (started **from `sidecar/`**,
 it reads `sidecar/.env` for its keys) — and restarted after any migration or
 topic change.
 
 ## Operator panel
 
-The application-state procedures in this runbook—stale-purchase reconciliation, refunds,
+The application-state procedures in this runbook—stale-purchase reconciliation,
 certificate retries, payout previews/runs, designer identity and payout verification, and
 ledger inspection—are also available at `/admin`. They call the same service objects as the
 commands below; there is no second recovery implementation. Every attempted mutation records
@@ -231,24 +231,19 @@ attribution needed by receipts and certificates. Existing licenses, certified
 bundles, grants, downloads, receipts, certificate verification, and version rights
 continue to work. Queued webhook jobs whose seller delivery was deleted safely no-op.
 
-## Refunds
+## Capacity overrun (defensive backstop)
 
-Panel: `/admin` → filter purchases to **Settled** → **Refund #…**.
-
-Qualifies: `settled` (paid, never delivered) purchases — typically
-`error_reason=sold_out_after_payment` from the pre-V5 window or a reaper
-`settled_sold_out_refund_candidate`. Delivered purchases keep their license;
-purchases whose designer share was already paid out need a manual clawback
-decision first (the task refuses them).
-
-```bash
-PURCHASE_ID=42 bin/rails ledger:refund
-```
-
-Sends the full gross treasury -> buyer with memo
-`printwright refund <replay_key[0,32]>`, records a `refund` ledger row (which
-also removes the share from the owed balance), and moves the purchase to
-`refunded`.
+All sales are final and availability is decided under the offer row lock
+*before* a payment is accepted, so a paid purchase always has a reserved
+unit. If license allocation ever still hits the cap
+(`error_reason=capacity_overrun`, reaper action
+`capacity_overrun_operator_review`), capacity accounting is broken — treat
+it as a bug, not a workflow. The buyer's settled payment and its
+transaction id are preserved on the purchase; investigate the offer's
+`capacity_used` versus `max_units`, fix the accounting, and re-run
+**Reconcile #…** so the purchase rolls forward to delivered. A settled
+purchase is always deliverable once the unit exists; nothing here returns
+money.
 
 ## Stale in-flight purchases (capacity holders)
 
@@ -350,7 +345,7 @@ Boot check without spending: start the app with `HEDERA_NETWORK=mainnet` and
 | key | lives in | used for |
 |---|---|---|
 | operator (`HEDERA_PRIVATE_KEY`) | `sidecar/.env` only | HCS submits, payout tx fees |
-| treasury (`TREASURY_PRIVATE_KEY`) | `sidecar/.env` only | payout/refund debits |
+| treasury (`TREASURY_PRIVATE_KEY`) | `sidecar/.env` only | payout debits |
 | buyer (`BUYER_PRIVATE_KEY`) | operator's shell env | demo purchases |
 
 The Rails process never loads a private key. Never add one to `.env`.

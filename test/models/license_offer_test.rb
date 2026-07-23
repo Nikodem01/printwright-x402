@@ -80,7 +80,7 @@ class LicenseOfferTest < ActiveSupport::TestCase
     %w[pending delivered failed_verification].each do |status|
       Purchase.create!(license_offer: offer, status: status, replay_key: SecureRandom.hex(32), sandbox: false)
     end
-    Purchase.create!(license_offer: offer, status: "refunded", replay_key: SecureRandom.hex(32), sandbox: false)
+    Purchase.create!(license_offer: offer, status: "failed_settlement", replay_key: SecureRandom.hex(32), sandbox: false)
     Purchase.create!(license_offer: offer, status: "delivered", replay_key: SecureRandom.hex(32), sandbox: true)
 
     assert_equal 2, offer.capacity_used

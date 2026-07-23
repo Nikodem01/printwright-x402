@@ -94,9 +94,6 @@
             <% if purchase.pending? || purchase.verified? %>
               <%= button_to "Reconcile ##{purchase.id}", reconcile_admin_purchase_path(purchase),
                     class: "linklike", form: { data: { turbo_confirm: "Check this payment against the mirror?" } } %>
-            <% elsif purchase.settled? %>
-              <%= button_to "Refund ##{purchase.id}", refund_admin_purchase_path(purchase),
-                    class: "linklike", form: { data: { turbo_confirm: "Refund the full gross on Hedera?" } } %>
             <% end %>
           </td>
         </tr>

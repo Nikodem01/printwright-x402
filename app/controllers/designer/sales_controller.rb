@@ -1,8 +1,8 @@
 require "csv"
 
 # The designer statement: every sale as its ledger share row, with where the
-# money is right now (paid direct / paid out / owed / refunded) and running
-# owed balances. Rows come from the immutable ledger, not from purchases —
+# money is right now (paid direct / paid out / owed) and running owed
+# balances. Rows come from the immutable ledger, not from purchases —
 # what the designer sees is exactly what the books say.
 class Designer::SalesController < Designer::BaseController
   class InvalidDateRange < StandardError; end
@@ -121,24 +121,21 @@ class Designer::SalesController < Designer::BaseController
 
   def build_sale_rows(shares)
     purchase_ids = shares.map(&:purchase_id)
-    related = LedgerEntry.where(purchase_id: purchase_ids)
-    payouts = related.where(entry_kind: "designer_payout").index_by(&:purchase_id)
-    refunds = related.where(entry_kind: "refund").index_by(&:purchase_id)
+    payouts = LedgerEntry.where(purchase_id: purchase_ids, entry_kind: "designer_payout")
+      .index_by(&:purchase_id)
     shares.map do |share|
       purchase = share.purchase
       gross = purchase.amount_base_units.to_i
       payout = payouts[share.purchase_id]
-      refund = refunds[share.purchase_id]
       {
         share: share, purchase: purchase, gross: gross,
-        fee: gross - share.amount_base_units, payout: payout, refund: refund,
-        status: sale_status(share, payout, refund)
+        fee: gross - share.amount_base_units, payout: payout,
+        status: sale_status(share, payout)
       }
     end
   end
 
-  def sale_status(share, payout, refund)
-    return "Refunded to buyer" if refund
+  def sale_status(share, payout)
     return "Paid at settlement (legacy)" if share.held_by == "designer"
     return "Payout paid" if payout
     return "Payout pending" if current_designer.payout_account_verified?
@@ -160,14 +157,14 @@ class Designer::SalesController < Designer::BaseController
   def sales_csv(rows)
     CSV.generate(headers: true) do |csv|
       csv << %w[sale_at_utc model license gross_base_units platform_fee_base_units designer_share_base_units
-        asset payout_status payment_transaction payout_transaction refund_transaction certificate_id]
+        asset payout_status payment_transaction payout_transaction certificate_id]
       rows.each do |row|
         purchase = row.fetch(:purchase)
         csv << [
           row.fetch(:share).created_at.utc.iso8601, csv_text(purchase.model3d.title),
           purchase.license_offer.kind, row.fetch(:gross), row.fetch(:fee),
           row.fetch(:share).amount_base_units, purchase.asset, row.fetch(:status),
-          purchase.payment_tx_id, row[:payout]&.tx_id, row[:refund]&.tx_id,
+          purchase.payment_tx_id, row[:payout]&.tx_id,
           purchase.license&.cert_id
         ]
       end

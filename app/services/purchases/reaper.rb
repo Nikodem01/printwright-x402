@@ -39,8 +39,10 @@ module Purchases
       CertMintJob.perform_later(license.id)
       Result.new(purchase_id: purchase.id, action: "rolled_forward")
     rescue License::SoldOut
-      purchase.update!(error_reason: "sold_out_after_payment")
-      Result.new(purchase_id: purchase.id, action: "settled_sold_out_refund_candidate")
+      # Defensive backstop: reservation counts capacity before payment, so
+      # allocation can only hit the cap if accounting broke — flag for review.
+      purchase.update!(error_reason: "capacity_overrun")
+      Result.new(purchase_id: purchase.id, action: "capacity_overrun_operator_review")
     end
 
     # One cheap probe: if the mirror itself is down, MirrorReconciler's nil

@@ -84,8 +84,8 @@ class Api::V1::DownloadsController < Api::V1::BaseController
   end
 
   # Capacity is decided HERE, inside the offer row lock, before any money
-  # moves — so two in-flight payments can't both reserve the last unit and
-  # leave one buyer in the refundless sold-out-after-payment path (A5/E6).
+  # moves — so two in-flight payments can't both reserve the last unit; a
+  # sold-out offer refuses before payment is ever accepted (A5/E6).
   # License.allocate! keeps its own max_units enforcement as the backstop.
   def create_purchase(offer, payload, matched, sandbox:)
     offer.with_lock do
@@ -205,9 +205,10 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     response.set_header("X-PAYMENT-RESPONSE", response.get_header("PAYMENT-RESPONSE"))
     render json: delivery_payload(purchase), status: :ok
   rescue License::SoldOut
-    # Money moved but the last unit went to a concurrent buyer. No refund
-    # rail in MVP: record it honestly and surface the tx id for support.
-    purchase.update!(error_reason: "sold_out_after_payment")
+    # Defensive backstop only: reservation already counted this purchase
+    # against the cap before payment, so allocation cannot legitimately hit
+    # it. Record honestly and surface the tx id for operator review.
+    purchase.update!(error_reason: "capacity_overrun")
     render json: { error: "sold_out", transaction_id: purchase.payment_tx_id }, status: :gone
   end
 

@@ -29,10 +29,8 @@ class Designer::AnalyticsController < Designer::BaseController
     @payout_attention_count = current_designer.payout_attempts.unresolved.count
 
     # Settled = money moved on-chain (reached settled), same ledger source, wider status.
-    # A later refund does not unhappen the settle: the Sales statement shows the same
-    # ledger row as settled + refunded, and this count must not contradict it.
     settled_shares = LedgerEntry.where(designer: current_designer, entry_kind: "designer_share")
-      .joins(:purchase).where(purchases: { status: %w[settled delivered refunded] })
+      .joins(:purchase).where(purchases: { status: %w[settled delivered] })
     settled_shares = settled_shares.where(created_at: period_start..) if period_start
     @settled_count = settled_shares.count
 

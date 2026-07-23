@@ -41,9 +41,8 @@ class OpenBooks::SnapshotTest < ActiveSupport::TestCase
 
     usdc = snapshot.dig(:ledger, :assets).sole
     assert_equal [ "0.0.429274", "USDC", 6 ], usdc.values_at(:asset, :symbol, :decimals)
-    assert_equal [ 250_000, 225_000, 25_000, 0, 250_000 ], usdc.values_at(
-      :gross_settled_base_units, :designer_share_base_units, :platform_fee_base_units,
-      :refunded_base_units, :net_after_refunds_base_units
+    assert_equal [ 250_000, 225_000, 25_000 ], usdc.values_at(
+      :gross_settled_base_units, :designer_share_base_units, :platform_fee_base_units
     )
     proof = snapshot[:recent_settlement_proofs].sole
     assert_equal 250_000, proof[:gross_base_units]

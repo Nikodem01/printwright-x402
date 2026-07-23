@@ -23,14 +23,6 @@ namespace :ledger do
       end
     end
   end
-
-  desc "Refund a settled, undelivered purchase on-chain (PURCHASE_ID=n)"
-  task refund: :environment do
-    purchase = Purchase.find(ENV.fetch("PURCHASE_ID"))
-    tx_id = Ledger::Refunder.call(purchase)
-    puts "refunded purchase #{purchase.id} -> #{purchase.buyer_hint}"
-    puts "  tx: https://hashscan.io/testnet/transaction/#{tx_id}"
-  end
 end
 
 namespace :purchases do

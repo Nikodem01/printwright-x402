@@ -4,7 +4,7 @@ class PurchaseStateMachinePropertyTest < ActiveSupport::TestCase
   SEED = 40_246
   SEQUENCES = 80
   STEPS_PER_SEQUENCE = 12
-  MONEY_MOVED_STATES = %w[settled delivered refunded].freeze
+  MONEY_MOVED_STATES = %w[settled delivered].freeze
 
   setup do
     model = Model3d.create!(

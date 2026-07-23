@@ -30,7 +30,6 @@ class AdminOperationsTest < RackSystemTestCase
       requirements_json: { "payTo" => "0.0.9584959", "amount" => "250000", "asset" => "0.0.429274" },
       created_at: 2.hours.ago
     )
-    @refundable = settled_purchase(offer)
     cert_purchase = settled_purchase(offer)
     @license = License.allocate!(cert_purchase)
     cert_purchase.transition_to!(:delivered)
@@ -67,10 +66,6 @@ class AdminOperationsTest < RackSystemTestCase
     assert_text "failed stale"
     assert @stuck.reload.failed_verification?
 
-    click_button "Refund ##{@refundable.id}"
-    assert_text "refunded"
-    assert @refundable.reload.refunded?
-
     click_button "Retry #{@license.cert_id}"
     assert_text "queued for retry"
     assert enqueued_jobs.any? { |job| job[:job] == CertMintJob && job[:args] == [ @license.id ] }
@@ -81,7 +76,6 @@ class AdminOperationsTest < RackSystemTestCase
 
     actions = AdminAuditLog.order(:id).pluck(:action)
     assert_includes actions, "purchase_reconcile_completed"
-    assert_includes actions, "purchase_refund_completed"
     assert_includes actions, "certificate_retry_enqueued"
     assert_includes actions, "designer_verification_revoked"
     assert AdminAuditLog.all.all?(&:readonly?)

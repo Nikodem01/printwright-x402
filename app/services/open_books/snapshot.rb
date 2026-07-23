@@ -76,21 +76,17 @@ module OpenBooks
       assets = totals.keys.map(&:first).uniq.sort.map do |asset|
         designer = totals.fetch([ asset, "designer_share" ], 0)
         platform = totals.fetch([ asset, "platform_fee" ], 0)
-        refunds = totals.fetch([ asset, "refund" ], 0)
         {
           asset: asset,
           symbol: asset_symbol(asset),
           decimals: asset_decimals(asset),
           gross_settled_base_units: designer + platform,
           designer_share_base_units: designer,
-          platform_fee_base_units: platform,
-          refunded_base_units: refunds,
-          net_after_refunds_base_units: designer + platform - refunds
+          platform_fee_base_units: platform
         }
       end
       {
         settlement_count: LedgerEntry.where(entry_kind: "platform_fee").count,
-        refund_count: LedgerEntry.where(entry_kind: "refund").count,
         assets: assets
       }
     end

@@ -143,15 +143,11 @@ class Designer::AnalyticsControllerTest < ActionDispatch::IntegrationTest
       text: /Settled on-chain.*1.*Certificates anchored.*1.*Files downloaded.*1.*Paid-holder print reports.*1/m
   end
 
-  test "a refunded sale still counts as settled on-chain but never as delivered fulfillment" do
+  test "a settled-but-not-yet-collected sale counts as settled without invented fulfillment" do
     purchase = Purchase.create!(license_offer: @model.license_offers.first, status: "verified",
       amount_base_units: "1000000", asset: X402::Requirements.usdc_asset,
       replay_key: SecureRandom.hex(32), requirements_json: { "payTo" => ENV.fetch("X402_PAY_TO") })
     purchase.transition_to!(:settled)
-    purchase.update!(refund_tx_id: "0.0.9067781@111.222")
-    purchase.transition_to!(:refunded)
-    LedgerEntry.create!(purchase: purchase, entry_kind: "refund", asset: purchase.asset,
-      amount_base_units: purchase.amount_base_units, held_by: "treasury", tx_id: "0.0.9067781@111.222")
 
     get designer_analytics_path
 
