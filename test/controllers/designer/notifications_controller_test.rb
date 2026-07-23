@@ -61,4 +61,29 @@ class Designer::NotificationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_no_match(/dash-nav/, response.body)
   end
+
+  test "email preferences update only the two notification booleans over a 303" do
+    original_name = @designer.display_name
+
+    patch email_preferences_designer_notifications_path,
+      params: { designer: { email_on_sale: "0", email_on_payout_issue: "1",
+                            display_name: "Forged Studio" } }
+
+    assert_response :see_other
+    @designer.reload
+    assert_not @designer.email_on_sale
+    assert @designer.email_on_payout_issue
+    assert_equal original_name, @designer.display_name
+  end
+
+  test "the notifications page shows preference controls and the mandatory-notice boundary" do
+    get designer_notifications_path
+
+    assert_response :success
+    assert_select "section#notification-email-preferences" do
+      assert_select "input[name='designer[email_on_sale]']"
+      assert_select "input[name='designer[email_on_payout_issue]']"
+    end
+    assert_includes response.body, "cannot be turned off"
+  end
 end

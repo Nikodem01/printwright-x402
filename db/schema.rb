@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_23_210000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_23_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -159,6 +159,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_210000) do
     t.datetime "created_at", null: false
     t.string "display_name", null: false
     t.citext "email_address", null: false
+    t.boolean "email_on_payout_issue", default: true, null: false
+    t.boolean "email_on_sale", default: true, null: false
     t.string "hedera_account_id"
     t.datetime "identity_verified_at"
     t.string "nft_collection_id"

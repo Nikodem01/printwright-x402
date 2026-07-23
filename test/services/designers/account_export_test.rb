@@ -18,4 +18,14 @@ class Designers::AccountExportTest < ActiveSupport::TestCase
     assert_equal %w[amount_base_units asset tx_id], row["payload"].keys.sort
     assert_not_includes row["payload"].keys, "buyer_hint"
   end
+
+  test "includes the notification email preferences" do
+    designer = designers(:one)
+    designer.update!(email_on_sale: false)
+
+    account = JSON.parse(Designers::AccountExport.new(designer).to_json).fetch("account")
+
+    assert_equal false, account.fetch("email_on_sale")
+    assert_equal true, account.fetch("email_on_payout_issue")
+  end
 end

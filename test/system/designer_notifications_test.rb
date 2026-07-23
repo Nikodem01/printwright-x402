@@ -39,6 +39,11 @@ class DesignerNotificationsTest < ApplicationSystemTestCase
     fill_in "password", with: "password"
     click_on "Login"
     Capybara.using_wait_time(10) { assert_current_path designer_root_path }
+
+    # A prior test in this shared browser may leave a phone-sized window, and
+    # the desktop-nav assertions need the desktop breakpoint. Safe here: this
+    # test performs no clicks after the resize.
+    page.driver.browser.manage.window.resize_to(1280, 900)
     visit designer_notifications_path
 
     assert_selector "h1", text: "Notifications"

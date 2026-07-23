@@ -37,6 +37,8 @@ module Designers
         payout_account_control_verified_at: designer.payout_account_control_verified_at&.iso8601,
         payout_change_requested_at: designer.payout_change_requested_at&.iso8601,
         payout_hold_until: designer.payout_hold_until&.iso8601,
+        email_on_sale: designer.email_on_sale,
+        email_on_payout_issue: designer.email_on_payout_issue,
         created_at: designer.created_at&.iso8601
       }
     end

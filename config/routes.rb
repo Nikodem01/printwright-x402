@@ -9,6 +9,7 @@ Rails.application.routes.draw do
     root "home#show"
     resource :notifications, only: :show do
       patch :mark_all_read
+      patch :email_preferences
     end
     resources :models, except: %i[destroy show] do
       member do

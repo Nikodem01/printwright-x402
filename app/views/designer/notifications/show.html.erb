@@ -43,3 +43,16 @@
       identity checks will appear here as they happen.</p>
   </div>
 <% end %>
+
+<section id="notification-email-preferences" class="section-block"
+  aria-labelledby="notification-email-preferences-title">
+  <h2 id="notification-email-preferences-title">Email preferences</h2>
+  <%= form_with model: current_designer, scope: :designer,
+        url: email_preferences_designer_notifications_path, method: :patch do |form| %>
+    <p><label><%= form.check_box :email_on_sale %> Email me each delivered sale</label></p>
+    <p><label><%= form.check_box :email_on_payout_issue %> Email me when a payout fails or needs reconciliation</label></p>
+    <p class="t-small muted">Security notices — payout destination changes and account access — always go to
+      your verified email and cannot be turned off. In-product notifications are always kept.</p>
+    <%= form.submit "Save email preferences", class: "btn" %>
+  <% end %>
+</section>

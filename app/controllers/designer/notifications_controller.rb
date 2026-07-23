@@ -14,4 +14,16 @@ class Designer::NotificationsController < Designer::BaseController
     # 303: the documented Turbo contract for successful non-GET submissions.
     redirect_to designer_notifications_path, status: :see_other
   end
+
+  def email_preferences
+    current_designer.update!(email_preference_params)
+    redirect_to designer_notifications_path, status: :see_other,
+      notice: "Email preferences saved."
+  end
+
+  private
+
+  def email_preference_params
+    params.require(:designer).permit(:email_on_sale, :email_on_payout_issue)
+  end
 end

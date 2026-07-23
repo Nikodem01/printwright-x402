@@ -1,0 +1,23 @@
+<p>A payout for <%= @designer.display_name %> needs your attention.</p>
+
+<% if @notification.kind == "payout_reconciliation_required" %>
+  <p>
+    <strong><%= format_base_units(@notification.payload["amount_base_units"].to_i, @notification.payload["asset"]) %></strong>
+    has an unconfirmed transfer result. No one will retry it automatically — marketplace operations
+    verifies the existing on-chain result first, so your share cannot be paid twice. Your buyer's
+    purchase and delivered license are unaffected.
+  </p>
+<% else %>
+  <p>
+    <strong><%= format_base_units(@notification.payload["amount_base_units"].to_i, @notification.payload["asset"]) %></strong>
+    could not be sent (<%= @notification.payload["error_code"] %>). The amount remains recorded as owed
+    to you in the immutable ledger. Your buyer's purchase and delivered license are unaffected.
+  </p>
+<% end %>
+
+<p><%= link_to "Review payouts", designer_payouts_url(anchor: "payout-attention") %></p>
+
+<p>
+  You can turn off payout-issue emails in <%= link_to "Notifications", designer_notifications_url %>.
+  In-product notifications and security notices are always kept.
+</p>

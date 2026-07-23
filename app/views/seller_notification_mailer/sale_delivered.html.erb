@@ -1,0 +1,14 @@
+<p>You made a sale<%= @model ? " — #{@model.title}" : "" %>.</p>
+
+<p>
+  <%= @notification.payload["license_type"].to_s.humanize %> license, unit <%= @notification.payload["serial"] %>,
+  sold for <strong><%= format_base_units(@notification.payload["amount_base_units"].to_i, @notification.payload["asset"]) %></strong> gross.
+  Your 90% share is recorded in the immutable ledger and pays out to your verified destination.
+</p>
+
+<p><%= link_to "Open your statement", designer_sales_url %></p>
+
+<p>
+  You can turn off sale emails in <%= link_to "Notifications", designer_notifications_url %>.
+  In-product notifications and security notices are always kept.
+</p>
