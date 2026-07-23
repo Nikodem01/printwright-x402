@@ -1,21 +1,86 @@
-<% content_for :title, "My models — Printwright" %>
-<h1>My models</h1>
-<% if @models.any? %>
-  <div class="table-scroll">
-  <table class="facts-table">
-    <tr><th>title</th><th>status</th><th>offers</th><th>hash</th><th></th></tr>
-    <% @models.each do |model| %>
-      <tr>
-        <td><%= link_to model.title, edit_designer_model_path(model) %></td>
-        <td><%= render "shared/state", state: model.published? ? "settled" : (model.retired? ? "void" : "pending"),
-                       label: model.status.humanize %></td>
-        <td><%= model.license_offers.map { |o| "#{o.kind} v#{o.revision} #{format_usdc_cents(o.price_cents)}" }.join(" · ") %></td>
-        <td class="mono"><%= model.file_hash&.truncate(18) || "—" %></td>
-        <td><%= link_to "view", model_page_path(model.slug) unless model.draft? %></td>
-      </tr>
-    <% end %>
-  </table>
+<% content_for :title, "Models — Printwright" %>
+
+<header class="page-heading-row">
+  <div>
+    <p class="card-taxonomy">Catalog</p>
+    <h1>Models</h1>
   </div>
+  <%= link_to "Add model", new_designer_model_path, class: "btn btn-primary" %>
+</header>
+
+<% has_any = @status_counts.fetch("all", 0).positive? %>
+<% if has_any %>
+  <nav class="catalog-tabs" aria-label="Filter by status">
+    <% Designer::ModelsController::STATUS_FILTERS.each do |status| %>
+      <% count = @status_counts.fetch(status, 0) %>
+      <%= link_to designer_models_path(status: status, q: @query.presence, sort: @sort),
+            class: ("is-current" if status == @status),
+            aria: { current: (status == @status ? "page" : nil) } do %>
+        <%= status.humanize %> <span class="catalog-tab-count"><%= count %></span>
+      <% end %>
+    <% end %>
+  </nav>
+
+  <%= form_with url: designer_models_path, method: :get, class: "catalog-toolbar" do %>
+    <%= hidden_field_tag :status, @status %>
+    <div class="field">
+      <%= label_tag :q, "Search titles", class: "sr-only" %>
+      <%= search_field_tag :q, @query, placeholder: "Search your models" %>
+    </div>
+    <div class="field">
+      <%= label_tag :sort, "Sort", class: "sr-only" %>
+      <%= select_tag :sort, options_for_select(
+            [ [ "Recently updated", "recent" ], [ "Title A–Z", "title" ], [ "Oldest first", "oldest" ] ], @sort) %>
+    </div>
+    <%= submit_tag "Apply", class: "btn" %>
+  <% end %>
+
+  <% if @models.any? %>
+    <ul class="catalog-list">
+      <% @models.each do |model| %>
+        <li class="catalog-row">
+          <div class="catalog-thumb">
+            <% if (render_file = model.render_file)&.file&.attached? %>
+              <%= image_tag render_file.file, alt: "", loading: "lazy", decoding: "async" %>
+            <% end %>
+          </div>
+          <div class="catalog-main">
+            <%= link_to model.title, edit_designer_model_path(model), class: "catalog-title" %>
+            <p class="t-small muted catalog-meta">
+              <%= render "shared/state", state: model.published? ? "settled" : (model.retired? ? "void" : "pending"),
+                    label: model.status.humanize %>
+              · Updated <%= time_ago_in_words(model.updated_at) %> ago
+              <% if model.draft? %>
+                <% readiness = Models::Readiness.new(model, current_designer) %>
+                · <%= readiness.ready_to_review? ? "Ready to publish" :
+                      "#{readiness.required_complete_count}/#{readiness.required_count} required steps" %>
+              <% end %>
+            </p>
+            <p class="t-small muted catalog-offers">
+              <% if model.license_offers.any? %>
+                <%= model.license_offers.map { |o| "#{o.kind.humanize} #{format_usdc_cents(o.price_cents)}" }.join(" · ") %>
+              <% else %>
+                No license offers yet
+              <% end %>
+            </p>
+          </div>
+          <div class="catalog-side">
+            <span class="catalog-sales"><strong><%= @sales_by_model.fetch(model.id, 0) %></strong> sold</span>
+            <span class="catalog-actions">
+              <%= link_to "Edit", edit_designer_model_path(model) %>
+              <%= link_to "View", model_page_path(model.slug) unless model.draft? %>
+            </span>
+          </div>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <div class="empty-state">
+      <h2>No models match</h2>
+      <p>No <%= @status == "all" ? "" : "#{@status} " %>models<%= " for “#{@query}”" if @query.present? %>.
+        <%= link_to "Clear filters", designer_models_path %>.</p>
+    </div>
+  <% end %>
 <% else %>
   <div class="empty-state">
     <h2>No models yet</h2>

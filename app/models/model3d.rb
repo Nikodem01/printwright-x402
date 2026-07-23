@@ -77,6 +77,9 @@ class Model3d < ApplicationRecord
   enum :status, %w[draft published retired paused].index_by(&:itself), default: "draft"
 
   scope :publicly_resolvable, -> { where(status: %w[published paused retired]) }
+  # Case-insensitive title search for the seller catalog manager; the escape
+  # keeps a literal % or _ in a query from acting as a wildcard.
+  scope :title_matching, ->(q) { where("title ILIKE ?", "%#{sanitize_sql_like(q)}%") }
 
   validates :mesh_analysis_status, inclusion: { in: %w[pending passed failed] }
 

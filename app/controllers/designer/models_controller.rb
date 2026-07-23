@@ -1,7 +1,31 @@
 class Designer::ModelsController < Designer::BaseController
   rate_limit to: 10, within: 1.minute, only: %i[create retry_analysis], store: RateLimitStore
+  STATUS_FILTERS = %w[all published draft paused retired].freeze
+  SORTS = {
+    "recent" => { updated_at: :desc },
+    "title" => { title: :asc },
+    "oldest" => { created_at: :asc }
+  }.freeze
+
   def index
-    @models = current_designer.models3d.order(created_at: :desc)
+    base = current_designer.models3d
+    @status_counts = base.group(:status).count
+    @status_counts["all"] = @status_counts.values.sum
+
+    @status = STATUS_FILTERS.include?(params[:status]) ? params[:status] : "all"
+    @query = params[:q].to_s.strip
+    @sort = SORTS.key?(params[:sort]) ? params[:sort] : "recent"
+
+    scope = @status == "all" ? base : base.where(status: @status)
+    scope = scope.title_matching(@query) if @query.present?
+    @models = scope.order(SORTS.fetch(@sort))
+      .includes(:license_offers, model_files: { file_attachment: :blob })
+
+    # One grouped query: delivered, non-sandbox sales per model over the
+    # immutable ledger. No buyer identity is read.
+    @sales_by_model = LedgerEntry.where(designer: current_designer, entry_kind: "designer_share")
+      .joins(purchase: { license_offer: :model3d }).where(purchases: { status: "delivered" })
+      .group("models3d.id").count
   end
 
   def new
