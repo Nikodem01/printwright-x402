@@ -28,6 +28,21 @@ class Designer::AnalyticsController < Designer::BaseController
       .group(:asset).sum(:amount_base_units)
     @payout_attention_count = current_designer.payout_attempts.unresolved.count
 
+    # Settled = money moved on-chain (reached settled), same ledger source, wider status.
+    # A later refund does not unhappen the settle: the Sales statement shows the same
+    # ledger row as settled + refunded, and this count must not contradict it.
+    settled_shares = LedgerEntry.where(designer: current_designer, entry_kind: "designer_share")
+      .joins(:purchase).where(purchases: { status: %w[settled delivered refunded] })
+    settled_shares = settled_shares.where(created_at: period_start..) if period_start
+    @settled_count = settled_shares.count
+
+    # Post-delivery fulfillment milestones over the same delivered population.
+    delivered_licenses = License.where(purchase_id: shares.select(:purchase_id))
+    @certificates_anchored = delivered_licenses.where.not(hcs_sequence_number: nil).count
+    @files_downloaded = delivered_licenses
+      .where(id: DownloadGrant.where("download_grants.uses > 0").select(:license_id)).count
+    @print_reports = PrintReport.where(license_id: delivered_licenses.select(:id)).count
+
     metric_totals = metrics.group(:model3d_id).pluck(
       :model3d_id, Arel.sql("SUM(impressions)"), Arel.sql("SUM(views)"),
       Arel.sql("SUM(payment_requests)")

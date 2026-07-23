@@ -14,8 +14,11 @@ class DesignerMoneyTest < ApplicationSystemTestCase
       asset: "0.0.429274", amount_base_units: "250000", payment_tx_id: "0.0.7162784@123.456",
       replay_key: SecureRandom.hex(32), requirements_json: { "payTo" => "0.0.9584959" })
     purchase.transition_to!(:settled)
-    License.allocate!(purchase)
+    license = License.allocate!(purchase)
     purchase.transition_to!(:delivered)
+    license.update!(hcs_sequence_number: 555)
+    DownloadGrant.issue!(license).update!(uses: 1)
+    PrintReport.create!(license: license)
     LedgerEntry.create!(purchase: purchase, designer: designer, entry_kind: "designer_payout",
       asset: "0.0.429274", amount_base_units: 225_000, held_by: "designer", tx_id: "0.0.9067781@789.012")
     failed_purchase = Purchase.create!(license_offer: offer, status: "verified",
@@ -72,6 +75,11 @@ class DesignerMoneyTest < ApplicationSystemTestCase
       assert_text "Responsive settlement organizer"
       assert_text "Listing impressions\n3"
       assert_text "x402 quote requests\n1"
+      assert_selector ".analytics-fulfillment"
+      assert_text "Settled on-chain\n2"
+      assert_text "Certificates anchored\n1"
+      assert_text "Files downloaded\n1"
+      assert_text "Paid-holder print reports\n1"
       assert_no_text "private-buyer@example.com"
       assert_no_text "another-private-buyer@example.com"
       assert_no_page_overflow(width, "Analytics")

@@ -72,6 +72,95 @@ class Designer::AnalyticsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, @model.model_metrics.count
   end
 
+  test "counts post-delivery fulfillment milestones from canonical per-purchase and per-license records" do
+    purchase = delivered_purchase(@model)
+    license = License.allocate!(purchase)
+    license.update!(hcs_sequence_number: 42, hcs_topic_id: "0.0.1234")
+    DownloadGrant.issue!(license).update!(uses: 1)
+    PrintReport.create!(license: license)
+
+    get designer_analytics_path
+
+    assert_response :success
+    assert_select ".analytics-fulfillment",
+      text: /Settled on-chain.*1.*Certificates anchored.*1.*Files downloaded.*1.*Paid-holder print reports.*1/m
+  end
+
+  test "delivered sale with no fulfillment milestones yet reports honest zeros, not assumed completion" do
+    purchase = delivered_purchase(@model)
+    License.allocate!(purchase)
+
+    get designer_analytics_path
+
+    assert_response :success
+    assert_select ".analytics-fulfillment",
+      text: /Settled on-chain.*1.*Certificates anchored.*0.*Files downloaded.*0.*Paid-holder print reports.*0/m
+  end
+
+  test "bare delivered purchase without a license allocation shows settled but zero fulfillment" do
+    delivered_purchase(@model)
+
+    get designer_analytics_path
+
+    assert_response :success
+    assert_select ".analytics-fulfillment",
+      text: /Settled on-chain.*1.*Certificates anchored.*0.*Files downloaded.*0.*Paid-holder print reports.*0/m
+  end
+
+  test "never exposes another designer's fulfillment milestones" do
+    other = designers(:one)
+    other_model = other.models3d.create!(
+      title: "Private rival fulfillment", slug: "private-rival-fulfillment-#{SecureRandom.hex(4)}", status: "published"
+    )
+    other_model.license_offers.create!(kind: "personal", price_cents: 900)
+    other_purchase = delivered_purchase(other_model, amount: "9000000")
+    other_license = License.allocate!(other_purchase)
+    other_license.update!(hcs_sequence_number: 99)
+    DownloadGrant.issue!(other_license).update!(uses: 1)
+    PrintReport.create!(license: other_license)
+
+    get designer_analytics_path(period: "all")
+
+    assert_response :success
+    assert_select ".analytics-fulfillment",
+      text: /Settled on-chain.*0.*Certificates anchored.*0.*Files downloaded.*0.*Paid-holder print reports.*0/m
+  end
+
+  test "period presets filter settled and fulfillment milestones without changing history" do
+    purchase = delivered_purchase(@model)
+    license = License.allocate!(purchase)
+    license.update!(hcs_sequence_number: 7)
+    DownloadGrant.issue!(license).update!(uses: 2)
+    PrintReport.create!(license: license)
+    LedgerEntry.where(purchase: purchase).update_all(created_at: 40.days.ago)
+
+    get designer_analytics_path(period: "30d")
+    assert_select ".analytics-fulfillment",
+      text: /Settled on-chain.*0.*Certificates anchored.*0.*Files downloaded.*0.*Paid-holder print reports.*0/m
+
+    get designer_analytics_path(period: "all")
+    assert_select ".analytics-fulfillment",
+      text: /Settled on-chain.*1.*Certificates anchored.*1.*Files downloaded.*1.*Paid-holder print reports.*1/m
+  end
+
+  test "a refunded sale still counts as settled on-chain but never as delivered fulfillment" do
+    purchase = Purchase.create!(license_offer: @model.license_offers.first, status: "verified",
+      amount_base_units: "1000000", asset: X402::Requirements.usdc_asset,
+      replay_key: SecureRandom.hex(32), requirements_json: { "payTo" => ENV.fetch("X402_PAY_TO") })
+    purchase.transition_to!(:settled)
+    purchase.update!(refund_tx_id: "0.0.9067781@111.222")
+    purchase.transition_to!(:refunded)
+    LedgerEntry.create!(purchase: purchase, entry_kind: "refund", asset: purchase.asset,
+      amount_base_units: purchase.amount_base_units, held_by: "treasury", tx_id: "0.0.9067781@111.222")
+
+    get designer_analytics_path
+
+    assert_response :success
+    assert_select ".analytics-fulfillment",
+      text: /Settled on-chain.*1.*Certificates anchored.*0.*Files downloaded.*0.*Paid-holder print reports.*0/m
+    assert_select ".home-metric", text: /Delivered sales.*0/m
+  end
+
   private
 
   def delivered_purchase(model, amount: "1000000")
