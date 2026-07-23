@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_24_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_24_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -305,9 +305,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_120000) do
     t.jsonb "event_json", default: {}, null: false
     t.string "file_hash", null: false
     t.string "file_kind", null: false
+    t.string "geometry_hash"
     t.bigint "hcs_sequence_number"
     t.string "hcs_topic_id"
     t.string "hcs_transaction_id"
+    t.jsonb "mesh_analysis", default: {}, null: false
+    t.string "mesh_analysis_status", default: "pending", null: false
     t.bigint "model3d_id", null: false
     t.integer "number", null: false
     t.datetime "published_at", null: false

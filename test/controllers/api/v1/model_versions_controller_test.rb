@@ -16,14 +16,8 @@ class Api::V1::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
     @token = @license.signed_id(purpose: "model-updates")
   end
 
-  test "paid receipt reports and downloads the latest published file" do
-    version = @model.model_versions.create!(number: 2, file_kind: "stl",
-      file_hash: "sha256:#{'b' * 64}", changelog: "Stronger hinge.",
-      changelog_hash: "sha256:#{Digest::SHA256.hexdigest('Stronger hinge.')}",
-      event_json: { "schema" => "pwv-1" }, hcs_topic_id: "0.0.9585069",
-      hcs_sequence_number: 61, published_at: Time.current)
-    version.file.attach(io: StringIO.new("solid latest\nendsolid latest\n"),
-      filename: "latest.stl", content_type: "model/stl")
+  test "paid receipt reports and downloads the latest deliverable file" do
+    version = deliverable_version(number: 2, changelog: "Stronger hinge.", sequence: 61)
 
     get api_v1_license_latest_version_path(@license.cert_id), headers: bearer(@token)
     assert_response :success
@@ -36,6 +30,39 @@ class Api::V1::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
     get api_v1_license_latest_version_file_path(@license.cert_id), headers: bearer(@token)
     assert_response :redirect
     assert_includes response.location, "/rails/active_storage/blobs/redirect/"
+  end
+
+  test "a pending or failed version is withheld; the buyer keeps the previous deliverable bundle" do
+    passed = deliverable_version(number: 2, changelog: "Good update.", sequence: 61)
+    %w[pending failed].each do |status|
+      newer = @model.model_versions.create!(number: 3, file_kind: "stl",
+        file_hash: "sha256:#{'d' * 64}", changelog: "Not ready.",
+        changelog_hash: "sha256:#{Digest::SHA256.hexdigest('Not ready.')}",
+        published_at: Time.current, mesh_analysis_status: status)
+      newer.file.attach(io: StringIO.new("solid pending\nendsolid pending\n"),
+        filename: "pending.stl", content_type: "model/stl")
+
+      get api_v1_license_latest_version_path(@license.cert_id), headers: bearer(@token)
+      assert_response :success
+      assert_equal passed.number, response.parsed_body["version"],
+        "buyer must keep v2 while v3 is #{status}"
+
+      newer.destroy
+    end
+  end
+
+  test "when the only version is not deliverable the buyer keeps the original certified bundle" do
+    pending = @model.model_versions.create!(number: 2, file_kind: "stl",
+      file_hash: "sha256:#{'d' * 64}", changelog: "Validating.",
+      changelog_hash: "sha256:#{Digest::SHA256.hexdigest('Validating.')}",
+      published_at: Time.current, mesh_analysis_status: "pending")
+    pending.file.attach(io: StringIO.new("solid pending\nendsolid pending\n"),
+      filename: "pending.stl", content_type: "model/stl")
+
+    get api_v1_license_latest_version_path(@license.cert_id), headers: bearer(@token)
+    assert_response :success
+    assert_equal 1, response.parsed_body["version"]
+    assert_equal @license.cert_json["model_hash"], response.parsed_body["file_hash"]
   end
 
   test "without an update, version 1 remains downloadable and matches the certificate" do
@@ -70,6 +97,18 @@ class Api::V1::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  def deliverable_version(number:, changelog:, sequence:)
+    version = @model.model_versions.create!(number: number, file_kind: "stl",
+      file_hash: "sha256:#{'b' * 64}", changelog: changelog,
+      changelog_hash: "sha256:#{Digest::SHA256.hexdigest(changelog)}",
+      event_json: { "schema" => "pwv-1" }, hcs_topic_id: "0.0.9585069",
+      hcs_sequence_number: sequence, published_at: Time.current,
+      mesh_analysis_status: "passed")
+    version.file.attach(io: StringIO.new("solid latest\nendsolid latest\n"),
+      filename: "latest.stl", content_type: "model/stl")
+    version
+  end
 
   def bearer(token)
     { "Authorization" => "Bearer #{token}" }

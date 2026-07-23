@@ -11,6 +11,19 @@ class ModelVersion < ApplicationRecord
   validates :file_hash, :changelog_hash, format: { with: HASH_FORMAT }
   validates :changelog, :published_at, presence: true
 
+  # Buyers receive a version only once it is deliverable: it passed mesh
+  # analysis, or its format cannot be mesh-validated (STEP) and was accepted
+  # as today. A pending or failed STL/3MF version is withheld until it passes.
+  scope :deliverable, -> { where(mesh_analysis_status: %w[passed skipped]) }
+
+  def deliverable? = mesh_analysis_status.in?(%w[passed skipped])
+  def mesh_failed? = mesh_analysis_status == "failed"
+  def mesh_analysis_errors = Array(mesh_analysis["errors"])
+
+  # Adapts this single-file version to the shape MeshAnalysis::Analyzer reads
+  # from a ModelFile (it keys on `kind` and `file`).
+  def analyzer_input = Struct.new(:kind, :file).new(file_kind, file)
+
   def anchored?
     hcs_sequence_number.present?
   end

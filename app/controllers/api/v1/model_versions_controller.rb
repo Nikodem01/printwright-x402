@@ -39,8 +39,12 @@ class Api::V1::ModelVersionsController < Api::V1::BaseController
     end
   end
 
+  # Newest deliverable version: gated on passed (or format-unvalidatable)
+  # analysis, so a buyer never receives a pending or failed update and keeps
+  # the previous deliverable bundle until the new one passes.
   def latest_version
-    @latest_version ||= @license.purchase.model3d.model_versions.order(number: :desc).detect { |version| version.file.attached? }
+    @latest_version ||= @license.purchase.model3d.model_versions
+      .order(number: :desc).detect { |version| version.file.attached? && version.deliverable? }
   end
 
   def original_file

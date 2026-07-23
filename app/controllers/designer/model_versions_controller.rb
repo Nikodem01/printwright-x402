@@ -33,8 +33,9 @@ class Designer::ModelVersionsController < Designer::BaseController
       )
       version.file.attach(upload)
     end
-    ModelVersionAnchorJob.perform_later(version.id)
-    redirect_to edit_designer_model_path(model), notice: "Version #{version.number} published; HCS anchoring queued."
+    AnalyzeModelVersionMeshJob.perform_later(version.id)
+    redirect_to edit_designer_model_path(model),
+      notice: "Version #{version.number} uploaded. It is validated before buyers receive it, then anchored on HCS."
   end
 
   private

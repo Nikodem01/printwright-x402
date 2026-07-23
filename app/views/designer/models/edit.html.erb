@@ -58,6 +58,15 @@
       <ul>
         <% @model.model_versions.reverse_each do |version| %>
           <li>v<%= version.number %> — <%= version.changelog %>
+            <% status = version.mesh_failed? ? "void" : (version.deliverable? ? "settled" : "pending") %>
+            <%= render "shared/state", state: status,
+                  label: case version.mesh_analysis_status
+                         when "passed", "skipped" then "Delivered to buyers"
+                         when "failed" then "Validation failed — buyers keep the previous version"
+                         else "Validating" end %>
+            <% if version.mesh_failed? && version.mesh_analysis_errors.any? %>
+              <span class="t-small muted"><%= version.mesh_analysis_errors.join("; ") %></span>
+            <% end %>
             <span class="mono t-small"><%= version.anchored? ? "HCS ##{version.hcs_sequence_number}" : "HCS pending" %></span>
           </li>
         <% end %>
