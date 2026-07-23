@@ -7,7 +7,11 @@ class DesignersController < ApplicationController
   def show
     @designer = Designer.find(params[:id])
     @models = (@designer.account_closed? ? Model3d.none : @designer.models3d.published)
-                        .includes(:license_offers, model_files: { file_attachment: :blob })
+                        .includes(:license_offers, model_files: { file_attachment: :blob }).to_a
+    # Featured is honored only while it is one of this designer's published
+    # models; a paused/retired/removed pick silently falls back.
+    @featured_model = @models.find { |model| model.id == @designer.featured_model_id }
+    @rest_models = @models - [ @featured_model ].compact
     @analytics_event = {
       model_ids: @models.map(&:id), event: "impression", channel: "human", source: "profile"
     }

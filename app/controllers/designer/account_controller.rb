@@ -33,6 +33,7 @@ class Designer::AccountController < Designer::BaseController
   end
 
   def profile_params
-    params.require(:designer).permit(:display_name, :bio)
+    params.require(:designer).permit(:display_name, :bio, :specialty, :location,
+      :profile_links_text, :featured_model_id)
   end
 end

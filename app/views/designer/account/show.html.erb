@@ -10,6 +10,18 @@
       <% end %>
       <div class="field"><%= f.label :display_name, "Studio / display name" %><%= f.text_field :display_name, required: true %></div>
       <div class="field"><%= f.label :bio, "Short bio" %><%= f.text_area :bio, rows: 3 %></div>
+      <div class="field"><%= f.label :specialty, "Specialty (optional)" %><%= f.text_field :specialty,
+            placeholder: "Print-in-place mechanisms, tabletop terrain, …" %></div>
+      <div class="field"><%= f.label :location, "Location (optional)" %><%= f.text_field :location,
+            placeholder: "City, country — shown publicly only if you fill it in" %></div>
+      <div class="field"><%= f.label :profile_links_text, "Public links (optional, up to 3 — one HTTPS URL per line)" %><%= f.text_area :profile_links_text, rows: 3 %></div>
+      <div class="field">
+        <%= f.label :featured_model_id, "Featured model (optional)" %>
+        <%= f.collection_select :featured_model_id, current_designer.models3d.published.order(:title),
+              :id, :title, include_blank: "None — newest first" %>
+      </div>
+      <p class="t-small muted">Everything above is optional and public only when filled in. Buyers see it on
+        your <%= link_to "public profile", designer_path(current_designer) %>.</p>
       <%= f.submit "Save profile", class: "btn btn-primary" %>
     <% end %>
     <p class="t-small">Payout settings have moved to <%= link_to "Payouts", designer_payouts_path(anchor: "payout-destination") %>.</p>

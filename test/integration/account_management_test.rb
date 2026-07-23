@@ -40,6 +40,64 @@ class AccountManagementTest < ActionDispatch::IntegrationTest
     assert designers(:two).reload.display_name.present?
   end
 
+  test "designer sets optional trust fields, links one per line, and an own featured model" do
+    designer = designers(:two)
+    featured = designer.models3d.create!(title: "Feature Me", slug: "feature-me-#{SecureRandom.hex(4)}",
+      status: "published")
+    sign_in_as designer
+
+    patch designer_account_path, params: { designer: {
+      display_name: designer.display_name, specialty: "Print-in-place mechanisms",
+      location: "Adelaide, Australia",
+      profile_links_text: "https://github.com/studio-two\n\nhttps://www.printables.com/@studio-two",
+      featured_model_id: featured.id
+    } }
+
+    assert_redirected_to designer_account_path
+    designer.reload
+    assert_equal "Print-in-place mechanisms", designer.specialty
+    assert_equal "Adelaide, Australia", designer.location
+    assert_equal %w[https://github.com/studio-two https://www.printables.com/@studio-two],
+      designer.profile_links
+    assert_equal featured.id, designer.featured_model_id
+  end
+
+  test "profile links refuse http, credentials, and more than three entries" do
+    sign_in_as designers(:two)
+
+    patch designer_account_path, params: { designer: {
+      display_name: designers(:two).display_name,
+      profile_links_text: "http://insecure.example/profile"
+    } }
+    assert_response :unprocessable_entity
+
+    patch designer_account_path, params: { designer: {
+      display_name: designers(:two).display_name,
+      profile_links_text: "https://user:pass@github.com/x"
+    } }
+    assert_response :unprocessable_entity
+
+    patch designer_account_path, params: { designer: {
+      display_name: designers(:two).display_name,
+      profile_links_text: (1..4).map { |i| "https://example.com/#{i}" }.join("\n")
+    } }
+    assert_response :unprocessable_entity
+    assert_empty Array(designers(:two).reload.profile_links)
+  end
+
+  test "featured model cannot point at another studio's listing" do
+    other_model = designers(:one).models3d.create!(title: "Not Yours",
+      slug: "not-yours-#{SecureRandom.hex(4)}", status: "published")
+    sign_in_as designers(:two)
+
+    patch designer_account_path, params: { designer: {
+      display_name: designers(:two).display_name, featured_model_id: other_model.id
+    } }
+
+    assert_response :unprocessable_entity
+    assert_nil designers(:two).reload.featured_model_id
+  end
+
   test "data export returns JSON without any credential material" do
     designer = designers(:two)
     model = designer.models3d.create!(title: "Export payout", slug: "export-payout-#{SecureRandom.hex(4)}")

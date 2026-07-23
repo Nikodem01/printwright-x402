@@ -12,10 +12,21 @@ class Designer < ApplicationRecord
   has_many :payout_attempts, dependent: :destroy
   has_many :seller_notifications, dependent: :destroy
   has_many :admin_audit_logs, foreign_key: :actor_designer_id
+  belongs_to :featured_model, class_name: "Model3d", optional: true
 
   normalizes :email_address, with: ->(e) { e.strip.downcase }
 
   validates :display_name, presence: true
+  validates :specialty, :location, length: { maximum: 120 }
+  validate :profile_links_are_bounded_https
+  validate :featured_model_is_own
+
+  # Textarea adapter: one public link per line.
+  def profile_links_text = Array(profile_links).join("\n")
+
+  def profile_links_text=(value)
+    self.profile_links = value.to_s.split("\n").map(&:strip).reject(&:blank?)
+  end
 
   # Direct/legacy writes can never carry verification to a different destination.
   before_save :reset_payout_verification, if: :hedera_account_id_changed?
@@ -62,5 +73,31 @@ class Designer < ApplicationRecord
   def reset_payout_verification
     self.payout_account_verified_at = nil
     self.payout_account_control_verified_at = nil
+  end
+
+  # Public links are designer-controlled disclosure: at most three, HTTPS
+  # only, no credentials, bounded length. They are rendered, never fetched.
+  def profile_links_are_bounded_https
+    links = Array(profile_links)
+    return errors.add(:profile_links, "allows at most 3 links") if links.size > 3
+
+    links.each do |link|
+      uri = begin
+        URI.parse(link.to_s)
+      rescue URI::InvalidURIError
+        nil
+      end
+      unless uri.is_a?(URI::HTTPS) && uri.host.present? && uri.userinfo.nil? && link.to_s.length <= 200
+        errors.add(:profile_links, "must be public HTTPS URLs (no credentials, 200 characters max)")
+        break
+      end
+    end
+  end
+
+  def featured_model_is_own
+    return if featured_model_id.blank?
+    return if models3d.exists?(id: featured_model_id)
+
+    errors.add(:featured_model_id, "must be one of your own models")
   end
 end

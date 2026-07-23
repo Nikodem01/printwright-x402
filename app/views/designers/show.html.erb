@@ -10,12 +10,24 @@
     </div>
   <% else %>
   <h1><%= @designer.display_name %><% if @designer.identity_verified? %> <%= render "designers/verified_mark" %><% end %></h1>
+  <% if @designer.specialty.present? %>
+    <p class="muted"><%= @designer.specialty %></p>
+  <% end %>
   <% if @designer.identity_verified? %>
     <p class="t-small"><%= link_to "Verified public profile", verified_profile_designer_path(@designer),
           target: "_blank", rel: "noopener" %></p>
   <% end %>
   <% if @designer.bio.present? %>
     <div class="prose"><%= simple_format(@designer.bio) %></div>
+  <% end %>
+  <% if @designer.location.present? || Array(@designer.profile_links).any? %>
+    <p class="t-small muted">
+      <% if @designer.location.present? %><span><%= @designer.location %></span><% end %>
+      <% Array(@designer.profile_links).each do |link| %>
+        <%= link_to URI.parse(link).host.delete_prefix("www."), link,
+              target: "_blank", rel: "nofollow noopener ugc" %>
+      <% end %>
+    </p>
   <% end %>
   <%# Payment readiness is a platform state; the destination account id is
       the studio's private financial detail, never published here. %>
@@ -24,10 +36,18 @@
   <% end %>
 
   <% if @models.any? %>
-    <h2 style="margin-top: var(--s6)"><%= pluralize(@models.size, "published model") %></h2>
-    <div class="card-grid">
-      <%= render partial: "storefront/model_card", collection: @models, as: :model %>
-    </div>
+    <% if @featured_model %>
+      <h2 style="margin-top: var(--s6)">Featured</h2>
+      <div class="card-grid">
+        <%= render partial: "storefront/model_card", locals: { model: @featured_model } %>
+      </div>
+    <% end %>
+    <% if @rest_models.any? %>
+      <h2 style="margin-top: var(--s6)"><%= pluralize(@models.size, "published model") %></h2>
+      <div class="card-grid">
+        <%= render partial: "storefront/model_card", collection: @rest_models, as: :model %>
+      </div>
+    <% end %>
   <% else %>
     <div class="empty-state">
       <h2>No published models yet</h2>

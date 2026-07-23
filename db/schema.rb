@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_23_220000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_24_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -161,8 +161,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_220000) do
     t.citext "email_address", null: false
     t.boolean "email_on_payout_issue", default: true, null: false
     t.boolean "email_on_sale", default: true, null: false
+    t.bigint "featured_model_id"
     t.string "hedera_account_id"
     t.datetime "identity_verified_at"
+    t.string "location"
     t.string "nft_collection_id"
     t.string "password_digest"
     t.datetime "payout_account_control_verified_at"
@@ -174,12 +176,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_220000) do
     t.datetime "payout_hold_until"
     t.string "payout_pending_account_id"
     t.datetime "payout_proof_verified_at"
+    t.jsonb "profile_links", default: [], null: false
+    t.string "specialty"
     t.integer "status", default: 1, null: false
     t.datetime "updated_at", null: false
     t.boolean "verified", default: false, null: false
     t.string "verified_profile_url"
     t.index ["admin"], name: "index_designers_on_admin"
     t.index ["email_address"], name: "index_designers_on_email_address", unique: true
+    t.index ["featured_model_id"], name: "index_designers_on_featured_model_id"
   end
 
   create_table "download_grants", force: :cascade do |t|
@@ -505,6 +510,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_23_220000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "admin_audit_logs", "designers", column: "actor_designer_id", on_delete: :nullify
   add_foreign_key "catalog_imports", "designers"
+  add_foreign_key "designers", "models3d", column: "featured_model_id", on_delete: :nullify
   add_foreign_key "download_grants", "licenses"
   add_foreign_key "ledger_entries", "designers"
   add_foreign_key "ledger_entries", "purchases"
