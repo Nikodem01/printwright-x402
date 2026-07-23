@@ -13,6 +13,16 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
     Model3d.create!(designer: designers(:one), title: "Hidden Draft", slug: "hidden-draft", status: "draft")
   end
 
+  test "a verified designer's model-page byline carries an accessible mark, never a bare glyph" do
+    designers(:one).update!(verified: true, identity_verified_at: Time.current,
+      verified_profile_url: "https://github.com/studio-one")
+
+    get model_page_path(@beaver.slug)
+
+    assert_response :success
+    assert_select ".badge[role='img'][aria-label='Identity verified']", text: "✓"
+  end
+
   test "browse lists published models with price and printability facts" do
     get root_path
     assert_response :success

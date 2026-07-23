@@ -40,7 +40,7 @@
       <p class="card-taxonomy"><%= Model3d.category_definition(@model.category).fetch(:name) %></p>
     <% end %>
     <h1><%= @model.title %></h1>
-    <p class="t-small muted">by <%= link_to @model.designer.display_name, designer_path(@model.designer) %><%= " ✓" if @model.designer.identity_verified? %></p>
+    <p class="t-small muted">by <%= link_to @model.designer.display_name, designer_path(@model.designer) %><% if @model.designer.identity_verified? %> <%= render "designers/verified_mark", compact: true %><% end %></p>
     <% unless @model.published? %>
       <div class="flash flash-bad" data-listing-status="<%= @model.status %>">
         <% if @model.paused? %>

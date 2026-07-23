@@ -1,0 +1,7 @@
+<%# Identity-verified mark. Badges always carry a word (application.css);
+    the compact byline variant carries it accessibly via aria-label. %>
+<% if local_assigns.fetch(:compact, false) %>
+  <span class="badge badge-ok" role="img" aria-label="Identity verified" title="Identity verified">✓</span>
+<% else %>
+  <span class="badge badge-ok" title="This studio proved control of an established public profile"><span aria-hidden="true">✓</span> Identity verified</span>
+<% end %>

@@ -86,7 +86,11 @@ class Api::V1::ModelsController < Api::V1::BaseController
       designer: {
         name: model.designer.display_name,
         verified: model.designer.identity_verified?,
-        hedera_account_id: model.designer.hedera_account_id
+        payout_destination_verified: model.designer.payout_account_verified?,
+        # Deprecated, always null: the current payout destination is the
+        # studio's private financial detail. Each license certificate still
+        # records the sale-time designer account immutably.
+        hedera_account_id: nil
       }
     )
   end

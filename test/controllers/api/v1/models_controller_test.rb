@@ -98,6 +98,21 @@ class Api::V1::ModelsControllerTest < ActionDispatch::IntegrationTest
     assert_equal @designer.display_name, body.dig("designer", "name")
   end
 
+  test "show reports payout readiness as a platform state and never the private account id" do
+    # Two steps: the DX-05 guard clears verification whenever the account changes.
+    @designer.update!(hedera_account_id: "0.0.9604186")
+    @designer.update!(payout_account_verified_at: Time.current)
+
+    get api_v1_model_url(@beaver)
+
+    assert_response :success
+    designer = response.parsed_body.fetch("designer")
+    assert_equal true, designer.fetch("payout_destination_verified")
+    assert designer.key?("hedera_account_id"), "deprecated key stays for schema compatibility"
+    assert_nil designer.fetch("hedera_account_id")
+    refute_includes response.body, "0.0.9604186"
+  end
+
   test "show 404s for drafts and unknown ids" do
     clear_enqueued_jobs
     draft = Model3d.find_by(slug: "secret-draft")

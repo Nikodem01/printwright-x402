@@ -388,7 +388,8 @@
             } } },
             "designer": { "type": "object", "properties": {
               "name": { "type": "string" }, "verified": { "type": "boolean" },
-              "hedera_account_id": { "type": ["string", "null"] } } },
+              "payout_destination_verified": { "type": "boolean", "description": "Platform-verified payout destination state. The destination account id itself is private; each license certificate records the sale-time designer account immutably." },
+              "hedera_account_id": { "type": ["string", "null"], "deprecated": true, "description": "Always null. The current payout destination is the studio's private financial detail; use the license certificate's designer field for the sale-time account." } } },
             "download_url": { "type": "string" } } }
         ]
       },

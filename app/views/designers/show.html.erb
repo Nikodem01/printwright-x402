@@ -9,7 +9,7 @@
         receipts, certificates, downloads, and model-version rights remain valid.</p>
     </div>
   <% else %>
-  <h1><%= @designer.display_name %><%= " ✓" if @designer.identity_verified? %></h1>
+  <h1><%= @designer.display_name %><% if @designer.identity_verified? %> <%= render "designers/verified_mark" %><% end %></h1>
   <% if @designer.identity_verified? %>
     <p class="t-small"><%= link_to "Verified public profile", verified_profile_designer_path(@designer),
           target: "_blank", rel: "noopener" %></p>
@@ -17,8 +17,10 @@
   <% if @designer.bio.present? %>
     <div class="prose"><%= simple_format(@designer.bio) %></div>
   <% end %>
-  <% if @designer.hedera_account_id.present? %>
-    <p class="t-small muted">On-chain payout account: <span class="mono"><%= @designer.hedera_account_id %></span></p>
+  <%# Payment readiness is a platform state; the destination account id is
+      the studio's private financial detail, never published here. %>
+  <% if @designer.payout_account_verified? %>
+    <p class="t-small muted">Verified Hedera payout destination — the account id stays private to the studio.</p>
   <% end %>
 
   <% if @models.any? %>
