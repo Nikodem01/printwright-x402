@@ -216,7 +216,7 @@
       "get": {
         "operationId": "getLatestModelVersion",
         "summary": "Check the latest printable file for a paid x402 license",
-        "description": "Requires the private model_updates.receipt_token returned by the real non-sandbox delivery as an Authorization: Bearer header. Version 1 is the original certified bundle. Later versions are additive: the original PWC-1 model_hash never changes, while each changelog hash and replacement file hash are anchored in a PWV-1 HCS event.",
+        "description": "Requires the private model_updates.receipt_token returned by the real non-sandbox delivery as an Authorization: Bearer header. Version 1 is the original certified bundle. Later versions are additive: the original PWC-1 model_hash never changes, while each changelog hash and replacement file hash are anchored in a PWV-1 HCS event. `files` lists every part of a multi-file bundle in order; `file_kind`/`file_hash` always describe the primary (first) part.",
         "security": [{ "PaidReceipt": [] }],
         "parameters": [{ "name": "cert_id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "pw-000059" }],
         "responses": {
@@ -232,9 +232,12 @@
       "get": {
         "operationId": "downloadLatestModelVersion",
         "summary": "Download the latest printable file for a paid x402 license",
-        "description": "Send the same model_updates.receipt_token as an Authorization: Bearer header. Redirects to version 1's original file when no update exists, otherwise to the highest published version file.",
+        "description": "Send the same model_updates.receipt_token as an Authorization: Bearer header. Redirects to version 1's original file when no update exists, otherwise to the highest published version file. Pass `f` to download a specific part of a multi-file bundle instead of the primary file.",
         "security": [{ "PaidReceipt": [] }],
-        "parameters": [{ "name": "cert_id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "pw-000059" }],
+        "parameters": [
+          { "name": "cert_id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "pw-000059" },
+          { "name": "f", "in": "query", "schema": { "type": "integer", "minimum": 0 }, "description": "0-based index into the version's file bundle; omitted serves the primary file" }
+        ],
         "responses": {
           "302": { "description": "Redirect to the latest printable file blob" },
           "401": { "description": "receipt_required", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
@@ -464,7 +467,12 @@
           "hcs_sequence_number": { "type": ["integer", "null"] },
           "hcs_transaction_id": { "type": ["string", "null"] },
           "hcs_mirror_url": { "type": ["string", "null"], "format": "uri" },
-          "download_url": { "type": "string", "format": "uri" }
+          "download_url": { "type": "string", "format": "uri" },
+          "files": { "type": "array", "description": "The version's ordered file bundle. file_hash may be absent for a part whose individual hash was never recorded (e.g. a pre-bundle original file beyond the primary).", "items": { "type": "object", "properties": {
+            "kind": { "type": "string", "enum": ["stl", "3mf", "step"] },
+            "file_hash": { "type": "string" },
+            "download_url": { "type": "string", "format": "uri" }
+          } } }
         }
       },
       "PrintReportReceipt": {

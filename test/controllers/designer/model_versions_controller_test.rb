@@ -31,6 +31,12 @@ class Designer::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
       [ version.number, version.file_kind, version.changelog ]
     assert_match(/\Asha256:[0-9a-f]{64}\z/, version.file_hash)
     assert_predicate version.file, :attached?
+    # A single-file upload still creates exactly one version_file mirroring
+    # the primary — the same invariant a migration backfills for versions
+    # that predate multi-file bundles.
+    assert_equal 1, version.version_files.count
+    assert_equal [ version.file_kind, version.file_hash ],
+      [ version.version_files.sole.kind, version.version_files.sole.file_hash ]
     assert_equal "pending", version.mesh_analysis_status
     assert_not version.deliverable?
     assert_equal original_hash, @model.reload.file_hash
@@ -88,6 +94,115 @@ class Designer::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal "skipped", version.reload.mesh_analysis_status
     assert_predicate version, :deliverable?
+  end
+
+  test "a multi-file bundle creates ordered version files with per-file hashes and a shared primary" do
+    @model.update!(status: "paused")
+    original_hash = @model.file_hash
+    cube = fixture_file_upload(Rails.root.join("db/seed_assets/calibration-cube.stl"), "model/stl")
+    step = Rack::Test::UploadedFile.new(StringIO.new("ISO-10303-21;\nHEADER;"), "model/step",
+      original_filename: "source.step")
+
+    assert_enqueued_with(job: AnalyzeModelVersionMeshJob) do
+      post designer_model_versions_path(@model), params: {
+        model_version: { changelog: "STL print file plus CAD source.", files: [ cube, step ] }
+      }
+    end
+
+    assert_redirected_to edit_designer_model_path(@model)
+    version = @model.model_versions.sole
+    files = version.version_files.ordered
+    assert_equal 2, files.size
+    assert_equal [ 0, 1 ], files.map(&:position)
+    assert_equal %w[stl step], files.map(&:kind)
+    assert_equal [ version.file_kind, version.file_hash ], [ files.first.kind, files.first.file_hash ]
+    files.each { |f| assert_predicate f.file, :attached? }
+    assert_predicate version.file, :attached?
+    assert_equal version.file.blob, files.first.file.blob
+    assert_equal original_hash, @model.reload.file_hash
+  end
+
+  test "an invalid file anywhere in the bundle rejects the whole submission" do
+    @model.update!(status: "published")
+    good = fixture_file_upload(Rails.root.join("db/seed_assets/calibration-cube.stl"), "model/stl")
+    bad = Rack::Test::UploadedFile.new(StringIO.new("not an stl"), "model/stl", original_filename: "bad.stl")
+
+    post designer_model_versions_path(@model), params: {
+      model_version: { changelog: "Bundle with a bad part.", files: [ good, bad ] }
+    }
+
+    assert_redirected_to edit_designer_model_path(@model)
+    assert_empty @model.model_versions
+    follow_redirect!
+    assert_match(/Rejected:/, response.body)
+  end
+
+  test "an all-STL bundle is analyzed as a whole and anchors once every file passes" do
+    @model.update!(status: "paused")
+    first = fixture_file_upload(Rails.root.join("db/seed_assets/calibration-cube.stl"), "model/stl")
+    second = fixture_file_upload(Rails.root.join("db/seed_assets/calibration-cube.stl"), "model/stl")
+
+    assert_enqueued_with(job: AnalyzeModelVersionMeshJob) do
+      post designer_model_versions_path(@model), params: {
+        model_version: { changelog: "Two-part bundle.", files: [ first, second ] }
+      }
+    end
+    version = @model.model_versions.sole
+
+    assert_enqueued_with(job: ModelVersionAnchorJob) do
+      perform_enqueued_jobs(only: AnalyzeModelVersionMeshJob) do
+        AnalyzeModelVersionMeshJob.perform_now(version.id)
+      end
+    end
+    assert_equal "passed", version.reload.mesh_analysis_status
+    assert_predicate version, :deliverable?
+  end
+
+  test "a bundle containing a STEP file cannot be validated as a whole so it is skipped and still delivered" do
+    @model.update!(status: "paused")
+    stl = fixture_file_upload(Rails.root.join("db/seed_assets/calibration-cube.stl"), "model/stl")
+    step = Rack::Test::UploadedFile.new(StringIO.new("ISO-10303-21;\nHEADER;"), "model/step",
+      original_filename: "source.step")
+
+    post designer_model_versions_path(@model), params: {
+      model_version: { changelog: "STL print file plus CAD source.", files: [ stl, step ] }
+    }
+    version = @model.model_versions.sole
+
+    assert_enqueued_with(job: ModelVersionAnchorJob) do
+      AnalyzeModelVersionMeshJob.perform_now(version.id)
+    end
+
+    assert_equal "skipped", version.reload.mesh_analysis_status
+    assert_predicate version, :deliverable?
+    assert_equal %w[stl step], version.version_files.ordered.map(&:kind)
+  end
+
+  test "a failing analyzer withholds a multi-file bundle and never anchors it" do
+    @model.update!(status: "published")
+    first = fixture_file_upload(Rails.root.join("db/seed_assets/calibration-cube.stl"), "model/stl")
+    second = fixture_file_upload(Rails.root.join("db/seed_assets/calibration-cube.stl"), "model/stl")
+    post designer_model_versions_path(@model), params: {
+      model_version: { changelog: "Broke the bundle.", files: [ first, second ] }
+    }
+    version = @model.model_versions.sole
+
+    singleton = MeshAnalysis::Analyzer.singleton_class
+    original = MeshAnalysis::Analyzer.method(:call)
+    singleton.define_method(:call) do |_files|
+      MeshAnalysis::Analyzer::Result.new(digest: "sha256:#{'e' * 64}", geometry_hash: nil,
+        errors: [ "wall too thin" ], files: [])
+    end
+
+    assert_no_enqueued_jobs(only: ModelVersionAnchorJob) do
+      AnalyzeModelVersionMeshJob.perform_now(version.id)
+    end
+
+    assert_equal "failed", version.reload.mesh_analysis_status
+    assert_not version.deliverable?
+    assert_not version.anchored?
+  ensure
+    singleton&.define_method(:call, original) if original
   end
 
   test "published bundle cannot be replaced through the original upload flow" do

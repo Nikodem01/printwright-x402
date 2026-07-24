@@ -70,9 +70,48 @@ class Api::V1::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal [ 1, @license.cert_json["model_hash"], @license.cert_json["model_hash"] ],
       response.parsed_body.values_at("version", "file_hash", "original_certificate_hash")
+    assert_equal [ { "kind" => "stl", "file_hash" => @license.cert_json["model_hash"],
+      "download_url" => api_v1_license_latest_version_file_url(@license.cert_id, f: 0) } ],
+      response.parsed_body["files"]
 
     get api_v1_license_latest_version_file_path(@license.cert_id), headers: bearer(@token)
     assert_response :redirect
+    assert_includes response.location, "original.stl"
+
+    get api_v1_license_latest_version_file_path(@license.cert_id, f: 5), headers: bearer(@token)
+    assert_response :not_found
+  end
+
+  test "a multi-file version reports its bundle and serves each file by index" do
+    version = deliverable_version(number: 2, changelog: "Two-part bundle.", sequence: 61)
+    second = version.version_files.create!(position: 1, kind: "stl", file_hash: "sha256:#{'c' * 64}")
+    second.file.attach(io: StringIO.new("solid part-b\nendsolid part-b\n"),
+      filename: "part-b.stl", content_type: "model/stl")
+
+    get api_v1_license_latest_version_path(@license.cert_id), headers: bearer(@token)
+    assert_response :success
+    body = response.parsed_body
+    assert_equal [ version.file_hash, version.file_kind, 2 ],
+      [ body["file_hash"], body["file_kind"], body["files"].length ]
+    assert_not_includes body["download_url"], "f="
+    assert_equal %w[stl stl], body["files"].map { |f| f["kind"] }
+    assert_equal [ version.file_hash, "sha256:#{'c' * 64}" ], body["files"].map { |f| f["file_hash"] }
+    assert_includes body["files"][0]["download_url"], "f=0"
+    assert_includes body["files"][1]["download_url"], "f=1"
+
+    get api_v1_license_latest_version_file_path(@license.cert_id), headers: bearer(@token)
+    assert_includes response.location, "latest.stl"
+
+    get api_v1_license_latest_version_file_path(@license.cert_id, f: 0), headers: bearer(@token)
+    assert_includes response.location, "latest.stl"
+
+    get api_v1_license_latest_version_file_path(@license.cert_id, f: 1), headers: bearer(@token)
+    assert_includes response.location, "part-b.stl"
+
+    %w[5 -1 abc].each do |bad|
+      get api_v1_license_latest_version_file_path(@license.cert_id, f: bad), headers: bearer(@token)
+      assert_response :not_found
+    end
   end
 
   test "receipt is required, license-scoped, delivered, and never available to sandbox" do
@@ -107,6 +146,10 @@ class Api::V1::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
       mesh_analysis_status: "passed")
     version.file.attach(io: StringIO.new("solid latest\nendsolid latest\n"),
       filename: "latest.stl", content_type: "model/stl")
+    # Mirrors the primary file as a version_file, exactly as the controller
+    # and the backfill migration do for every real version.
+    version_file = version.version_files.create!(position: 0, kind: version.file_kind, file_hash: version.file_hash)
+    version_file.file.attach(version.file.blob)
     version
   end
 

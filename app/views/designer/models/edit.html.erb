@@ -42,8 +42,9 @@
     <% unless @model.retired? %>
       <%= form_with url: designer_model_versions_path(@model), scope: :model_version, multipart: true do |form| %>
         <div class="field">
-          <%= form.label :file, "Printable file (STL, 3MF, or STEP)" %>
-          <%= form.file_field :file, accept: ".stl,.3mf,.step", required: true %>
+          <%= form.label :files, "Printable files (STL, 3MF, or STEP) — the first is the primary file" %>
+          <%= form.file_field :files, multiple: true, accept: ".stl,.3mf,.step", required: true,
+                name: "model_version[files][]" %>
         </div>
         <div class="field">
           <%= form.label :changelog %>
@@ -58,6 +59,9 @@
       <ul>
         <% @model.model_versions.reverse_each do |version| %>
           <li>v<%= version.number %> — <%= version.changelog %>
+            <% if version.version_files.size > 1 %>
+              <span class="t-small muted">(<%= version.version_files.size %> files)</span>
+            <% end %>
             <% status = version.mesh_failed? ? "void" : (version.deliverable? ? "settled" : "pending") %>
             <%= render "shared/state", state: status,
                   label: case version.mesh_analysis_status

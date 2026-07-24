@@ -8,16 +8,23 @@ class AnalyzeModelVersionMeshJob < ApplicationJob
     version = ModelVersion.find_by(id: model_version_id)
     return unless version&.file&.attached?
 
-    if MeshAnalysis::Analyzer::SUPPORTED_KINDS.include?(version.file_kind)
-      result = MeshAnalysis::Analyzer.call([ version.analyzer_input ])
+    # Analyze the whole bundle. A version predating multi-file bundles has no
+    # version_files yet, so it falls back to its single `file` — the exact
+    # behavior this job had before bundles existed.
+    files = version.version_files.any? ? version.analyzer_inputs : [ version.analyzer_input ]
+
+    if files.all? { |file| MeshAnalysis::Analyzer::SUPPORTED_KINDS.include?(file.kind) }
+      result = MeshAnalysis::Analyzer.call(files)
       version.update!(
         mesh_analysis_status: result.errors.empty? ? "passed" : "failed",
         geometry_hash: result.geometry_hash,
         mesh_analysis: { "errors" => result.errors, "files" => result.files }
       )
     else
-      # STEP and other formats the analyzer cannot inspect: accepted without
-      # mesh validation, exactly as before, and delivered to buyers.
+      # STEP and any other format the analyzer cannot inspect: a bundle
+      # containing one cannot be validated as a whole, so it is accepted
+      # without mesh validation, exactly as a lone STEP file was before, and
+      # delivered to buyers.
       version.update!(mesh_analysis_status: "skipped")
     end
 

@@ -122,6 +122,7 @@ export interface ModelVersionReceipt {
   hcs_transaction_id?: string | null;
   hcs_mirror_url?: string | null;
   download_url: string;
+  files?: { kind: string; file_hash?: string; download_url: string }[];
 }
 
 export interface PrintReportReceipt {

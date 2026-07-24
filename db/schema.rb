@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_24_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_24_140000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -298,6 +298,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_130000) do
     t.index ["model3d_id"], name: "index_model_metrics_on_model3d_id"
   end
 
+  create_table "model_version_files", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "file_hash", null: false
+    t.string "kind", null: false
+    t.bigint "model_version_id", null: false
+    t.integer "position", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["model_version_id"], name: "index_model_version_files_on_model_version_id"
+  end
+
   create_table "model_versions", force: :cascade do |t|
     t.text "changelog", null: false
     t.string "changelog_hash", null: false
@@ -522,6 +532,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_130000) do
   add_foreign_key "licenses", "purchases"
   add_foreign_key "model_files", "models3d"
   add_foreign_key "model_metrics", "models3d"
+  add_foreign_key "model_version_files", "model_versions"
   add_foreign_key "model_versions", "models3d"
   add_foreign_key "models3d", "catalog_imports"
   add_foreign_key "models3d", "designers"

@@ -17,13 +17,22 @@ class Api::V1::ModelVersionsController < Api::V1::BaseController
       hcs_sequence_number: version&.hcs_sequence_number,
       hcs_transaction_id: version&.hcs_transaction_id,
       hcs_mirror_url: mirror_url(version),
-      download_url: api_v1_license_latest_version_file_url(@license.cert_id)
+      download_url: api_v1_license_latest_version_file_url(@license.cert_id),
+      files: bundle_files
     }
   end
 
   def file
-    attachment = latest_version&.file || original_file.file
-    redirect_to rails_blob_path(attachment, disposition: "attachment"), allow_other_host: false
+    if params.key?(:f)
+      index = Integer(params[:f], exception: false)
+      bundle = index && index >= 0 ? bundle_file(index) : nil
+      raise ActiveRecord::RecordNotFound if bundle.nil? || !bundle.file.attached?
+
+      return redirect_to rails_blob_path(bundle.file, disposition: "attachment"), allow_other_host: false
+    end
+
+    redirect_to rails_blob_path(latest_version&.file || original_file.file, disposition: "attachment"),
+      allow_other_host: false
   end
 
   private
@@ -60,5 +69,27 @@ class Api::V1::ModelVersionsController < Api::V1::BaseController
     return unless version&.anchored?
 
     "#{Hedera::Network.mirror_base}/api/v1/topics/#{version.hcs_topic_id}/messages/#{version.hcs_sequence_number}"
+  end
+
+  # The resolved version's ordered file bundle, or the original certified
+  # bundle's printable files when no update has been published. `show` and
+  # `file` index into this the same way, so a `files[i].download_url` from
+  # `show` always resolves to the same file via `file?f=i`.
+  def bundle_collection
+    latest_version ? latest_version.version_files.ordered : @license.purchase.model3d.printable_files
+  end
+
+  def bundle_file(index)
+    bundle_collection[index]
+  end
+
+  def bundle_files
+    bundle_collection.each_with_index.map do |entry, index|
+      {
+        kind: entry.kind,
+        file_hash: latest_version ? entry.file_hash : (index.zero? ? original_hash : nil),
+        download_url: api_v1_license_latest_version_file_url(@license.cert_id, f: index)
+      }.compact
+    end
   end
 end
