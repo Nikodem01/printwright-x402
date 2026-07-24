@@ -48,4 +48,43 @@ class Api::V1::FilesControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal 0, @grant.reload.uses
   end
+
+  test "a multi-part bundle serves each file by its index; no index still serves the first" do
+    grant = multi_file_grant
+
+    get api_v1_file_url(grant.token) # backward compatible: first file
+    assert_includes response.location, "part-a.stl"
+
+    get api_v1_file_url(grant.token, f: 0)
+    assert_includes response.location, "part-a.stl"
+
+    get api_v1_file_url(grant.token, f: 1)
+    assert_includes response.location, "part-b.stl"
+  end
+
+  test "an out-of-range or malformed file index is a 404 and never consumes the grant" do
+    grant, = multi_file_grant
+
+    %w[5 -1 abc].each do |bad|
+      get api_v1_file_url(grant.token, f: bad)
+      assert_response :not_found
+    end
+    assert_equal 0, grant.reload.uses
+  end
+
+  private
+
+  def multi_file_grant
+    model = Model3d.create!(designer: designers(:one), title: "Multi", slug: "multi-#{SecureRandom.hex(4)}",
+      status: "published")
+    a = model.model_files.create!(kind: "stl", position: 0)
+    a.file.attach(io: StringIO.new("solid a\nendsolid a\n"), filename: "part-a.stl", content_type: "model/stl")
+    b = model.model_files.create!(kind: "stl", position: 1)
+    b.file.attach(io: StringIO.new("solid b\nendsolid b\n"), filename: "part-b.stl", content_type: "model/stl")
+    offer = model.license_offers.create!(kind: "personal", price_cents: 100)
+    purchase = Purchase.create!(license_offer: offer, status: "settled", replay_key: SecureRandom.hex(32))
+    license = License.allocate!(purchase)
+    purchase.transition_to!(:delivered)
+    DownloadGrant.issue!(license)
+  end
 end

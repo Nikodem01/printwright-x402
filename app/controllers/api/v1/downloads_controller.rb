@@ -219,8 +219,8 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     grant = license.download_grants.detect(&:usable?) || DownloadGrant.issue!(license)
     model = purchase.model3d
     {
-      files: model.printable_files.map do |f|
-        { kind: f.kind, url: api_v1_file_url(grant.token), expires_at: grant.expires_at.iso8601 }
+      files: model.printable_files.each_with_index.map do |f, i|
+        { kind: f.kind, url: api_v1_file_url(grant.token, f: i), expires_at: grant.expires_at.iso8601 }
       end,
       license: license_summary(license),
       certificate: license.cert_json.presence,

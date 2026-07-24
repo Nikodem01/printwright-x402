@@ -188,6 +188,7 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
       License.find_signed(receipt["token"], purpose: "purchase-receipt").cert_id
     assert_equal 1, body["files"].length
     assert_includes body["files"].first["url"], "/api/v1/files/"
+    assert_includes body["files"].first["url"], "f=0" # per-file index for multi-part bundles
     feedback = body.fetch("print_feedback")
     assert_includes feedback["url"], "/api/v1/licenses/#{body.dig('license', 'cert_id')}/print_reports"
     assert_equal body.dig("license", "cert_id"),

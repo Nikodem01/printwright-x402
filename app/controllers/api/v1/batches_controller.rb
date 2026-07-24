@@ -306,8 +306,8 @@ class Api::V1::BatchesController < Api::V1::BaseController
       [ { kind: "sandbox_receipt", url: api_v1_sandbox_file_url(license.cert_id), expires_at: nil } ]
     else
       grant = license.download_grants.detect(&:usable?) || DownloadGrant.issue!(license)
-      purchase.model3d.printable_files.map do |file|
-        { kind: file.kind, url: api_v1_file_url(grant.token), expires_at: grant.expires_at.iso8601 }
+      purchase.model3d.printable_files.each_with_index.map do |file, i|
+        { kind: file.kind, url: api_v1_file_url(grant.token, f: i), expires_at: grant.expires_at.iso8601 }
       end
     end
     payload = {
