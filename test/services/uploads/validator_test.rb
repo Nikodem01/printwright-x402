@@ -1,6 +1,9 @@
 require "test_helper"
+require_relative "../../test_helpers/image_test_helper"
 
 class Uploads::ValidatorTest < ActiveSupport::TestCase
+  include ImageTestHelper
+
   def upload_for(bytes, name: "f.bin")
     Rack::Test::UploadedFile.new(StringIO.new(bytes), "application/octet-stream", original_filename: name)
   end
@@ -41,14 +44,66 @@ class Uploads::ValidatorTest < ActiveSupport::TestCase
   end
 
   test "renders accept png/jpeg only; step needs its header; size and empty caps hold" do
-    assert_nil Uploads::Validator.reason_to_reject(upload_for("\x89PNG\r\n\x1a\n".b + "x", name: "r.png"), kind: "render")
-    assert_nil Uploads::Validator.reason_to_reject(upload_for("\xFF\xD8\xFF".b + "x", name: "r.jpg"), kind: "render")
+    assert_nil Uploads::Validator.reason_to_reject(upload_for(png_bytes, name: "r.png"), kind: "render")
+    assert_nil Uploads::Validator.reason_to_reject(upload_for(jpeg_bytes, name: "r.jpg"), kind: "render")
     assert_match(/PNG or JPEG/, Uploads::Validator.reason_to_reject(upload_for("GIF89a", name: "r.gif"), kind: "render"))
 
     assert_nil Uploads::Validator.reason_to_reject(upload_for("ISO-10303-21;\nHEADER;", name: "p.step"), kind: "step")
     assert_match(/not a STEP/, Uploads::Validator.reason_to_reject(upload_for("hello", name: "p.step"), kind: "step"))
 
     assert_match(/empty/, Uploads::Validator.reason_to_reject(upload_for("", name: "e.stl"), kind: "stl"))
+  end
+
+  # The buyer decides from this image, so it has to be big enough to look at.
+  # Magic bytes alone let a 1x1 pixel through as a product preview.
+  test "a render too small to show a buyer anything is refused" do
+    reason = Uploads::Validator.reason_to_reject(upload_for(png_bytes(width: 1, height: 1), name: "tiny.png"), kind: "render")
+
+    assert_match(/1×1/, reason)
+    assert_match(/640×480/, reason)
+  end
+
+  test "an image with one small side is refused" do
+    reason = Uploads::Validator.reason_to_reject(upload_for(png_bytes(width: 1200, height: 200), name: "strip.png"), kind: "render")
+
+    assert_match(/1200×200/, reason)
+  end
+
+  test "an absurdly large image is refused before it reaches a catalog card" do
+    reason = Uploads::Validator.reason_to_reject(upload_for(png_bytes(width: 20_000, height: 20_000), name: "huge.png"), kind: "render")
+
+    assert_match(/20000×20000/, reason)
+  end
+
+  test "jpeg dimensions are read past an EXIF block" do
+    bytes = jpeg_bytes(width: 1920, height: 1080, exif_padding: 4_000)
+
+    assert_nil Uploads::Validator.reason_to_reject(upload_for(bytes, name: "photo.jpg"), kind: "render")
+  end
+
+  test "a small jpeg behind EXIF is still caught" do
+    bytes = jpeg_bytes(width: 32, height: 32, exif_padding: 4_000)
+
+    assert_match(/32×32/, Uploads::Validator.reason_to_reject(upload_for(bytes, name: "small.jpg"), kind: "render"))
+  end
+
+  test "an image whose header cannot be read is refused rather than assumed fine" do
+    reason = Uploads::Validator.reason_to_reject(upload_for("\x89PNG\r\n\x1a\n".b + "junk", name: "broken.png"), kind: "render")
+
+    assert_match(/broken\.png/, reason)
+  end
+
+  test "an over-weight image is refused on its own terms" do
+    was = Uploads::Validator.max_render_bytes
+    Uploads::Validator.max_render_bytes = 1.kilobyte
+    reason = Uploads::Validator.reason_to_reject(
+      upload_for(png_bytes(padding: 4.kilobytes), name: "heavy.png"), kind: "render"
+    )
+
+    assert_match(/heavy\.png/, reason)
+    assert_match(/larger than/, reason)
+  ensure
+    Uploads::Validator.max_render_bytes = was
   end
 
   # A kind with no branch used to fall out of the case statement as nil, which
