@@ -282,12 +282,16 @@ each one transacts per print rather than per session.
 
 ## Status / usage so far
 
-Built solo during the Hedera x402 bounty week. Testnet receipts to date: 47 settled x402
-purchases (HBAR and USDC), 59 messages on
-[topic 0.0.9585069](https://hashscan.io/testnet/topic/0.0.9585069) covering license commitments
-and model-version provenance, plus a fresh-clone
-reproducibility rehearsal that reached a real settlement using only this README. Feedback
-and issues welcome.
+Built solo during the Hedera x402 bounty week. Testnet activity to date, all of it checkable on the
+public mirror rather than taken on trust: **23 x402 settles** into the treasury across **8 separate
+days** from **two independently keyed buyer accounts**, in both USDC and HBAR; **59 messages** on
+[topic 0.0.9585069](https://hashscan.io/testnet/topic/0.0.9585069) covering license commitments and
+model-version provenance; six designer payouts executed; and a fresh-clone reproducibility rehearsal
+that reached a real settlement using only this README.
+
+[`docs/VALIDATION.md`](docs/VALIDATION.md) has the full record, the commands to re-derive every
+number, and an explicit account of what has *not* been validated — no outside party has bought on a
+public deployment yet, and no user feedback has been collected. Feedback and issues welcome.
 
 ## License
 
