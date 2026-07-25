@@ -13,16 +13,16 @@ module Models
     end
 
     def items
-      @items ||= required_items + recommended_items
+      @items ||= [
+        email_item, title_item, printable_item, offer_item, analysis_item,
+        description_item, render_item, discovery_item, guidance_item, payout_item
+      ]
     end
 
-    def required_items
-      [ email_item, title_item, printable_item, offer_item, analysis_item ]
-    end
-
-    def recommended_items
-      [ description_item, render_item, discovery_item, guidance_item, payout_item ]
-    end
+    # Whether an item blocks publishing is a property of the item — the preview
+    # image is only the designer's job when we cannot render one for them.
+    def required_items = items.select(&:required?)
+    def recommended_items = items.reject(&:required?)
 
     def required_complete_count = required_items.count(&:complete?)
     def required_count = required_items.size
@@ -36,6 +36,9 @@ module Models
       return "Mesh analysis is running for this exact file bundle. Review again after it passes." if model.mesh_analysis_status == "pending"
       if model.mesh_analysis_status == "failed"
         return "Publish blocked: #{model.mesh_analysis_errors.join('; ')}"
+      end
+      unless render_files? || auto_renderable?
+        return "Add a preview image before publishing — buyers decide from it, and we can only render one automatically from an STL."
       end
 
       nil
@@ -100,10 +103,21 @@ module Models
     end
 
     def render_item
-      complete = model.render_files.any? { |file| file.file.attached? }
-      item(:render, "Preview image", complete ? :complete : :recommended,
-        complete ? "A storefront render is available." : "Recommended: add a clear render for catalog cards.",
-        required: false, anchor: "images")
+      complete = render_files?
+      needed = !complete && printable_files? && !auto_renderable?
+      status = if complete
+        :complete
+      else
+        needed ? :blocked : :recommended
+      end
+      detail = if complete
+        "A storefront render is available."
+      elsif needed
+        "Add a preview image — buyers decide from it, and we can only render one automatically from an STL."
+      else
+        "Recommended: add a clear render for catalog cards. We will render one from your STL if you do not."
+      end
+      item(:render, "Preview image", status, detail, required: needed, anchor: "images")
     end
 
     def discovery_item
@@ -130,6 +144,16 @@ module Models
 
     def printable_files?
       model.printable_files.any? { |file| file.file.attached? }
+    end
+
+    def render_files?
+      model.render_files.any? { |file| file.file.attached? }
+    end
+
+    # A cover can only be rendered from an STL; without one the designer's own
+    # image is the only thing a buyer will ever see.
+    def auto_renderable?
+      model.printable_files.any? { |file| file.kind == "stl" && file.file.attached? }
     end
 
     # Companion-only: the bundle must carry something the analyzer can read, or

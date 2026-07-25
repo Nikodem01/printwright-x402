@@ -5,8 +5,8 @@
       "note": "json_escape into a script tag is Rails' JSON-LD escaping boundary; the storefront controller test proves a designer-supplied </script><script> string remains inert while the JSON round-trips."
     },
     {
-      "fingerprint": "b3fc99a9fa75aaf3c0abed39ad8d439190289664f00f9d2cca5259bb58ec5c88",
-      "note": "OpenSCAD runs through Open3.capture3 with an argument array, never a shell; executable and angles are server-owned constants/configuration, while request data is written only as validated STL bytes."
+      "fingerprint": "e9b4851d1f7ee81875f579b68fcbeb4f8e55d55464777c9ec71d1c252027e35a",
+      "note": "OpenSCAD runs through Open3.capture3 with an argument array, never a shell; executable, angles and the timeout are server-owned constants/configuration, while request data is written only as validated STL bytes."
     }
   ],
   "brakeman_version": "8.0.5"

@@ -142,6 +142,13 @@ class Designer::ModelsController < Designer::BaseController
         alert: "Publish blocked: matches existing published model “#{duplicate.title}”. Contact support if you are authorized to republish it."
     end
 
+    # The listing must never go live with a blank card, so the cover is settled
+    # before the status flips rather than by the job queued after it.
+    unless Models::CoverImage.ensure!(@model)
+      return redirect_to edit_designer_model_path(@model, anchor: "images"),
+        alert: "Add a preview image before publishing — buyers decide from it, and we could not render one from this bundle."
+    end
+
     PreviewMeshes::Attacher.call(@model)
     @model.update!(file_hash: digest, status: "published",
                    warranty_accepted_at: Time.current)

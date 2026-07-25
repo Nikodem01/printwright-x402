@@ -68,6 +68,50 @@ class Models::ReadinessTest < ActiveSupport::TestCase
     assert_nil readiness.review_blocker_message
   end
 
+  # A preview image is what a buyer decides from. An STL bundle can have one
+  # rendered for it, so asking the designer is only fair when it cannot.
+  test "an image stays a recommendation while we can render one from the bundle" do
+    attach_stl(@model, box_stl)
+    @model.license_offers.create!(kind: "personal", price_cents: 250)
+    @model.update!(mesh_analysis_status: "passed")
+
+    readiness = Models::Readiness.new(@model.reload, @designer)
+
+    assert_equal :recommended, readiness.items.find { |item| item.key == :render }.status
+    assert readiness.ready_to_review?
+  end
+
+  test "an image is required when the bundle cannot be rendered for the designer" do
+    file = @model.model_files.create!(kind: "3mf", position: 0)
+    file.file.attach(io: StringIO.new("PK\x03\x04"), filename: "part.3mf", content_type: "model/3mf")
+    @model.license_offers.create!(kind: "personal", price_cents: 250)
+    @model.update!(mesh_analysis_status: "passed")
+
+    readiness = Models::Readiness.new(@model.reload, @designer)
+
+    render = readiness.items.find { |item| item.key == :render }
+    assert_equal :blocked, render.status
+    assert_predicate render, :required?
+    assert_includes readiness.required_items, render
+    assert_match(/preview image/i, readiness.review_blocker_message)
+    assert_not readiness.ready_to_review?
+  end
+
+  test "a supplied image satisfies the requirement for an unrenderable bundle" do
+    file = @model.model_files.create!(kind: "3mf", position: 0)
+    file.file.attach(io: StringIO.new("PK\x03\x04"), filename: "part.3mf", content_type: "model/3mf")
+    render = @model.model_files.create!(kind: "render", position: 1)
+    render.file.attach(io: Rails.root.join("db/seed_assets/calibration-cube.png").open,
+                       filename: "cover.png", content_type: "image/png")
+    @model.license_offers.create!(kind: "personal", price_cents: 250)
+    @model.update!(mesh_analysis_status: "passed")
+
+    readiness = Models::Readiness.new(@model.reload, @designer)
+
+    assert_equal :complete, readiness.items.find { |item| item.key == :render }.status
+    assert readiness.ready_to_review?
+  end
+
   test "analysis states retain the secure review blocker messages" do
     attach_stl(@model, box_stl)
     @model.license_offers.create!(kind: "personal", price_cents: 250)

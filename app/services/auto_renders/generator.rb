@@ -13,18 +13,26 @@ module AutoRenders
       [ format("angle-%03d", angle), angle + 45 ]
     end.freeze
     PNG_SIGNATURE = "\x89PNG\r\n\x1a\n".b.freeze
+    DEFAULT_TIMEOUT = "90s"
+    # One representative angle, for the cover a listing needs before it is live.
+    COVER_VIEW = { "angle-045" => 45 }.freeze
+    COVER_TIMEOUT = "20s"
 
     class << self
-      def call(bytes:, executable: ENV.fetch("OPENSCAD_BIN", "openscad"))
+      # `views` narrows the set so a caller that needs a single frame — the
+      # cover image rendered inside a publish request — does not wait for all
+      # twelve, and can hold a shorter timeout while it does.
+      def call(bytes:, views: VIEWS, timeout: DEFAULT_TIMEOUT,
+               executable: ENV.fetch("OPENSCAD_BIN", "openscad"))
         Dir.mktmpdir("printwright-render-") do |directory|
           source = File.join(directory, "source.stl")
           scene = File.join(directory, "scene.scad")
           File.binwrite(source, bytes)
           File.write(scene, "import(\"source.stl\", convexity=10);\n")
 
-          VIEWS.map do |name, angle|
+          views.map do |name, angle|
             output = File.join(directory, "#{name}.png")
-            render(executable, scene, output, angle)
+            render(executable, scene, output, angle, timeout)
             image = File.binread(output)
             validate_png!(image)
             Frame.new(name: name, bytes: image)
@@ -34,10 +42,10 @@ module AutoRenders
 
       private
 
-      def render(executable, scene, output, angle)
+      def render(executable, scene, output, angle, timeout)
         _stdout, stderr, status = Open3.capture3(
           { "QT_QPA_PLATFORM" => "offscreen" },
-          "timeout", "90s", executable, "-q", "--imgsize=#{WIDTH},#{HEIGHT}",
+          "timeout", timeout, executable, "-q", "--imgsize=#{WIDTH},#{HEIGHT}",
           "--autocenter", "--viewall", "--render", "--projection=o",
           "--camera=0,0,0,65,0,#{angle},0", "--colorscheme=Tomorrow",
           "-o", output, scene

@@ -59,6 +59,10 @@ class DesignerPublishTest < RackSystemTestCase
     assert_current_path model_page_path("form-flow-clip")
     assert_text "Form Flow Clip"
     assert_text "Buy a license"
+    # The buyer's first look exists the moment the listing is live — the cover
+    # is rendered during publish, not by the job queued behind it.
+    assert model.reload.render_files.any? { |file| file.file.attached? }
+    assert_selector ".gallery img"
     model.reload
     assert model.published?
     assert_match(/\Asha256:[0-9a-f]{64}\z/, model.file_hash)
