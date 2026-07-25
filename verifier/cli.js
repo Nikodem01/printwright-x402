@@ -1,17 +1,34 @@
 #!/usr/bin/env node
 
-import { VerificationError, verify } from "./index.js";
+import { readFile } from "node:fs/promises";
+import { VerificationError, verifyBundle } from "./index.js";
 
-const usage = `Usage: printwright-verify <cert_id|url> [options]
+const usage = `Usage: printwright-verify <bundle.json | url | ->  [--json]
 
-Verify a PWC-1 certificate directly against a Hedera mirror node.
+Verify a Printwright license certificate from its proof bundle. The bundle is
+the reveal of an opaque on-chain commitment; this tool recomputes the commitment
+locally (RFC 8785 JCS + SHA-256) and confirms it matches the message anchored on
+a public Hedera mirror node — trusting neither Printwright's servers nor verdict.
+
+Input:
+  <bundle.json>   a proof-bundle file (from your paid delivery)
+  <https url>     a bundle_url to fetch (e.g. the certificates API)
+  -               read the bundle from stdin
 
 Options:
-  --network testnet|mainnet  Hedera network (default: testnet)
-  --topic 0.0.N             Override the certificate topic
-  --mirror https://...      Override the mirror-node base URL
-  --json                    Print the result as JSON
-  --help                    Show this help`;
+  --json          print the full result as JSON
+  --help          show this help
+
+Note: Hedera proves the certificate bytes were committed no later than the
+consensus timestamp — not that every assertion inside them is true.`;
+
+const LABELS = {
+  bundle_integrity: "bundle integrity",
+  certificate_schema: "certificate schema",
+  terms_integrity: "terms integrity",
+  hedera_anchoring: "Hedera anchoring",
+  issuer_assertions: "issuer assertions",
+};
 
 try {
   const options = parseArguments(process.argv.slice(2));
@@ -19,41 +36,99 @@ try {
     console.log(usage);
     process.exit(0);
   }
-  const result = await verify(options.input, options);
+  const bundle = await loadBundle(options.input);
+  const result = await verifyBundle(bundle, options);
+
   if (options.json) {
     console.log(JSON.stringify(result, null, 2));
   } else {
-    console.log(`✓ ${result.certificate.cert_id} verified as PWC-1 on Hedera`);
-    console.log(`  topic ${result.topic_id} · sequence ${result.sequence_number}`);
-    console.log(`  consensus ${result.consensus_timestamp}`);
-    console.log(`  ${result.certificate.license_type} · model ${result.certificate.model_id} · unit ${result.certificate.unit_serial}`);
+    printResult(result);
   }
+  process.exit(result.verified ? 0 : 2);
 } catch (error) {
   const code = error instanceof VerificationError ? error.code : "unexpected_error";
   console.error(`✗ ${code}: ${error.message}`);
   process.exit(1);
 }
 
+function printResult(result) {
+  console.log(`Certificate ${result.cert_id}`);
+  for (const [ key, label ] of Object.entries(LABELS)) {
+    console.log(`  ${label.padEnd(19)} ${describe(key, result)}`);
+  }
+  console.log(result.verified ? "\n=> VERIFIED" : "\n=> NOT VERIFIED");
+}
+
+function describe(key, result) {
+  const state = result.checks[key];
+  if (key === "issuer_assertions") {
+    return "not independently proven — the ledger proves commitment timing, not truth";
+  }
+  if (key === "hedera_anchoring") {
+    if (state === "verified") {
+      return `VERIFIED  (topic ${result.topic_id} seq ${result.sequence_number}, consensus ${result.consensus_timestamp})`;
+    }
+    if (state === "pending") return "PENDING  (commitment not yet anchored — retry shortly)";
+  }
+  if (key === "certificate_schema" && state === "failed") {
+    return `FAILED  (${result.certificate_errors.join("; ")})`;
+  }
+  return state.toUpperCase();
+}
+
+async function loadBundle(input) {
+  let text;
+  if (input === "-") {
+    text = await readStdin();
+  } else if (/^https?:\/\//.test(input)) {
+    const response = await fetch(input, {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(10_000),
+    }).catch((error) => {
+      throw new VerificationError(`could not fetch bundle: ${error.message}`, "mirror_unavailable");
+    });
+    if (!response.ok) throw new VerificationError(`bundle URL returned HTTP ${response.status}`, "invalid_input");
+    text = await response.text();
+  } else {
+    text = await readFile(input, "utf8").catch((error) => {
+      throw new VerificationError(`could not read ${input}: ${error.message}`, "invalid_input");
+    });
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new VerificationError("input is not valid JSON", "invalid_input");
+  }
+}
+
+function readStdin() {
+  return new Promise((resolve, reject) => {
+    let data = "";
+    process.stdin.setEncoding("utf8");
+    process.stdin.on("data", (chunk) => { data += chunk; });
+    process.stdin.on("end", () => resolve(data));
+    process.stdin.on("error", reject);
+  });
+}
+
 function parseArguments(args) {
   if (args.includes("--help") || args.includes("-h")) return { help: true };
-  const options = { network: "testnet", json: false };
+  const options = { json: false };
   const positional = [];
-  for (let index = 0; index < args.length; index += 1) {
-    const argument = args[index];
+  for (const argument of args) {
     if (argument === "--json") {
       options.json = true;
-    } else if ([ "--network", "--topic", "--mirror" ].includes(argument)) {
-      const value = args[index + 1];
-      if (!value || value.startsWith("--")) throw new VerificationError(`${argument} needs a value`, "invalid_input");
-      options[argument.slice(2)] = value;
-      index += 1;
-    } else if (argument.startsWith("-")) {
+    } else if (argument === "-") {
+      positional.push(argument);
+    } else if (argument.startsWith("--")) {
       throw new VerificationError(`unknown option ${argument}`, "invalid_input");
     } else {
       positional.push(argument);
     }
   }
-  if (positional.length !== 1) throw new VerificationError("provide exactly one certificate id or URL", "invalid_input");
+  if (positional.length !== 1) {
+    throw new VerificationError("provide exactly one bundle file, url, or - for stdin", "invalid_input");
+  }
   options.input = positional[0];
   return options;
 }

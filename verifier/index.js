@@ -1,13 +1,17 @@
-const DEFAULTS = Object.freeze({
-  testnet: Object.freeze({
-    mirror: "https://testnet.mirrornode.hedera.com",
-    topic: "0.0.9585069",
-  }),
-  mainnet: Object.freeze({
-    mirror: "https://mainnet-public.mirrornode.hedera.com",
-    topic: null,
-  }),
-});
+import { createHash } from "node:crypto";
+
+// Printwright certificate verifier. Certificates are anchored to Hedera as an
+// opaque commitment — SHA-256( DOMAIN || nonce || JCS(certificate) ) — so the
+// public topic reveals nothing. A holder proves a certificate by presenting a
+// self-contained proof bundle (the certificate + blinding nonce + terms + where
+// it is anchored); this library recomputes the commitment locally and confirms
+// it equals the on-chain envelope, trusting neither Printwright's servers nor
+// its verdict. What Hedera proves is timing + integrity of the committed bytes,
+// NOT that every assertion inside the certificate is true — see `checks`.
+
+const ALGORITHM = "sha256-jcs-v1";
+const ENVELOPE_TYPE = "printwright-license-commitment";
+const DOMAIN = Buffer.from("printwright:license-certificate:v1\0", "utf8");
 
 const CERTIFICATE_KEYS = Object.freeze([
   "v", "cert_id", "model_id", "model_hash", "designer", "license_type",
@@ -22,51 +26,37 @@ export class VerificationError extends Error {
   }
 }
 
-export async function verify(input, {
-  network = "testnet",
-  mirror,
-  topic,
-  fetch: fetchImplementation = globalThis.fetch,
-  timeoutMs = 10_000,
-} = {}) {
-  if (!DEFAULTS[network]) throw new VerificationError("network must be testnet or mainnet", "invalid_input");
-  if (typeof fetchImplementation !== "function") {
-    throw new VerificationError("a fetch implementation is required", "invalid_input");
+// RFC 8785 JSON Canonicalization Scheme — the reference implementation by the
+// spec author (github.com/cyberphone/json-canonicalization). Vendored so this
+// verifier keeps zero runtime dependencies. Must produce byte-identical output
+// to the Ruby anchoring side; the shared test vector in test/ guarantees it.
+export function canonicalize(object) {
+  if (object === null || typeof object !== "object" || object.toJSON != null) {
+    return JSON.stringify(object);
   }
-
-  const parsed = parseInput(input);
-  if (parsed.messageUrl) {
-    const expected = messageLocation(parsed.messageUrl);
-    const envelope = await fetchJson(parsed.messageUrl, { fetchImplementation, timeoutMs });
-    return verifiedResult(envelope, expected);
+  if (Array.isArray(object)) {
+    return `[${object.map(canonicalize).join(",")}]`;
   }
+  const members = Object.keys(object).sort().map(
+    (key) => `${JSON.stringify(key)}:${canonicalize(object[key])}`,
+  );
+  return `{${members.join(",")}}`;
+}
 
-  const mirrorBase = normalizedMirror(mirror || DEFAULTS[network].mirror);
-  const topicId = topic || DEFAULTS[network].topic;
-  if (!topicId) throw new VerificationError("--topic is required for this network", "invalid_input");
-  requireEntityId(topicId, "topic");
-
-  let pageUrl = new URL(`/api/v1/topics/${topicId}/messages?limit=100&order=desc`, mirrorBase);
-  const visitedPages = new Set();
-  while (pageUrl) {
-    if (visitedPages.has(pageUrl.href)) {
-      throw new VerificationError("mirror pagination repeated a page", "invalid_mirror_response");
-    }
-    visitedPages.add(pageUrl.href);
-    const body = await fetchJson(pageUrl, { fetchImplementation, timeoutMs });
-    if (!Array.isArray(body.messages)) {
-      throw new VerificationError("mirror response has no messages array", "invalid_mirror_response");
-    }
-
-    for (const envelope of body.messages) {
-      const decoded = decodePayload(envelope.message);
-      if (decoded?.cert_id !== parsed.certId) continue;
-      return verifiedResult(envelope, { topicId, certId: parsed.certId });
-    }
-    pageUrl = nextPage(body.links?.next, mirrorBase);
+export function computeCommitment(certificate, nonceHex) {
+  if (!/^[0-9a-f]+$/i.test(String(nonceHex)) || nonceHex.length % 2 !== 0) {
+    throw new VerificationError("blinding_nonce must be hex", "invalid_input");
   }
+  const preimage = Buffer.concat([
+    DOMAIN,
+    Buffer.from(nonceHex, "hex"),
+    Buffer.from(canonicalize(certificate), "utf8"),
+  ]);
+  return createHash("sha256").update(preimage).digest("hex");
+}
 
-  throw new VerificationError(`${parsed.certId} was not found on topic ${topicId}`, "certificate_not_found");
+export function sha256Prefixed(text) {
+  return `sha256:${createHash("sha256").update(Buffer.from(String(text), "utf8")).digest("hex")}`;
 }
 
 export function validateCertificate(certificate) {
@@ -78,18 +68,22 @@ export function validateCertificate(certificate) {
   if (missing.length) errors.push(`missing fields: ${missing.join(", ")}`);
   if (extra.length) errors.push(`unknown fields: ${extra.join(", ")}`);
   if (certificate.v !== 1) errors.push("v must equal 1");
-  if (!/^pw-[0-9]{6,}$/.test(certificate.cert_id)) errors.push("cert_id must match pw-NNNNNN");
+  if (!/^(sandbox-)?pw-[0-9a-f]{16,}$/.test(String(certificate.cert_id))) {
+    errors.push("cert_id must be an unguessable pw- token");
+  }
   if (!positiveInteger(certificate.model_id)) errors.push("model_id must be a positive integer");
   if (!sha256(certificate.model_hash)) errors.push("model_hash must be sha256:<64 lowercase hex>");
-  if (!entityId(certificate.designer)) errors.push("designer must be a Hedera account id");
+  // A stable studio id — never a wallet (privacy: the payout account is not published).
+  if (!positiveInteger(certificate.designer)) errors.push("designer must be a positive integer studio id");
   if (![ "personal", "commercial_unit" ].includes(certificate.license_type)) {
     errors.push("license_type must be personal or commercial_unit");
   }
   if (!positiveInteger(certificate.unit_serial)) errors.push("unit_serial must be a positive integer");
-  if (!(certificate.buyer_hint === "bearer" || entityId(certificate.buyer_hint))) {
+  if (!(certificate.buyer_hint === "bearer" || entityId(certificate.buyer_hint) ||
+        /^sandbox-buyer$/.test(String(certificate.buyer_hint)))) {
     errors.push("buyer_hint must be bearer or a Hedera account id");
   }
-  if (!/^[0-9]+\.[0-9]+\.[0-9]+@[0-9]+\.[0-9]{1,9}$/.test(certificate.payment_tx)) {
+  if (!/^(sandbox-tx-[0-9a-f]+|[0-9]+\.[0-9]+\.[0-9]+@[0-9]+\.[0-9]{1,9})$/.test(String(certificate.payment_tx))) {
     errors.push("payment_tx must be a Hedera transaction id");
   }
   if (typeof certificate.issued_at !== "string" ||
@@ -101,67 +95,92 @@ export function validateCertificate(certificate) {
   return errors;
 }
 
-function parseInput(input) {
-  const value = String(input || "").trim();
-  if (/^pw-[0-9]{6,}$/.test(value)) return { certId: value };
-
-  let url;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new VerificationError("input must be a pw-NNNNNN certificate id or URL", "invalid_input");
+// Verify a proof bundle. Returns a frozen result whose `checks` separate what
+// the ledger genuinely proves from what it does not.
+export async function verifyBundle(bundle, {
+  fetch: fetchImplementation = globalThis.fetch,
+  timeoutMs = 10_000,
+} = {}) {
+  if (!plainObject(bundle)) throw new VerificationError("proof bundle must be a JSON object", "invalid_input");
+  if (bundle.algorithm !== ALGORITHM) {
+    throw new VerificationError(`unsupported algorithm: ${bundle.algorithm}`, "invalid_input");
   }
-  requireSafeProtocol(url);
-  if (messageLocation(url)) return { messageUrl: url };
-
-  const certId = url.pathname.split("/").find((part) => /^pw-[0-9]{6,}$/.test(part));
-  if (certId) return { certId };
-  throw new VerificationError("URL contains neither a certificate id nor an exact mirror message", "invalid_input");
-}
-
-function messageLocation(url) {
-  const match = url.pathname.match(/^\/api\/v1\/topics\/(\d+\.\d+\.\d+)\/messages\/(\d+)\/?$/);
-  if (!match) return null;
-  return { topicId: match[1], sequenceNumber: Number(match[2]) };
-}
-
-function verifiedResult(envelope, expected) {
-  if (!plainObject(envelope)) {
-    throw new VerificationError("mirror message must be a JSON object", "invalid_mirror_response");
-  }
-  if (envelope.topic_id !== expected.topicId) {
-    throw new VerificationError("mirror topic does not match the requested topic", "location_mismatch");
-  }
-  if (expected.sequenceNumber !== undefined && envelope.sequence_number !== expected.sequenceNumber) {
-    throw new VerificationError("mirror sequence does not match the requested sequence", "location_mismatch");
-  }
-  if (!positiveInteger(envelope.sequence_number)) {
-    throw new VerificationError("mirror sequence_number must be a positive integer", "invalid_mirror_response");
-  }
-  if (!/^\d+\.\d{9}$/.test(envelope.consensus_timestamp)) {
-    throw new VerificationError("mirror consensus_timestamp is invalid", "invalid_mirror_response");
+  const certificate = bundle.certificate;
+  const nonce = bundle.blinding_nonce;
+  if (!plainObject(certificate) || typeof nonce !== "string") {
+    throw new VerificationError("bundle must carry a certificate and blinding_nonce", "invalid_input");
   }
 
-  const certificate = decodePayload(envelope.message);
-  if (!certificate) throw new VerificationError("mirror message is not base64 PWC-1 JSON", "invalid_certificate");
-  const errors = validateCertificate(certificate);
-  if (errors.length) throw new VerificationError(errors.join("; "), "invalid_certificate");
-  if (expected.certId && certificate.cert_id !== expected.certId) {
-    throw new VerificationError("certificate id does not match the requested id", "location_mismatch");
+  const checks = {};
+
+  // 1. The bundle is internally consistent: its own commitment recomputes.
+  const recomputed = computeCommitment(certificate, nonce);
+  checks.bundle_integrity = recomputed === bundle.commitment ? "verified" : "failed";
+
+  // 2. The certificate has the expected shape.
+  const certErrors = validateCertificate(certificate);
+  checks.certificate_schema = certErrors.length === 0 ? "verified" : "failed";
+
+  // 3. The terms bytes in the bundle are exactly what the certificate commits to.
+  const terms = plainObject(bundle.terms) ? bundle.terms : null;
+  if (terms && typeof terms.text === "string") {
+    const termsOk = sha256Prefixed(terms.text) === terms.hash && terms.hash === certificate.terms_hash;
+    checks.terms_integrity = termsOk ? "verified" : "failed";
+  } else {
+    checks.terms_integrity = "unchecked";
   }
+
+  // 4. The commitment is anchored on Hedera: fetch the on-chain envelope and
+  //    confirm it is our commitment type and equals the recomputed value.
+  const hedera = plainObject(bundle.hedera) ? bundle.hedera : {};
+  let consensusTimestamp = null;
+  if (!hedera.mirror_url || hedera.status === "minting") {
+    checks.hedera_anchoring = "pending";
+  } else {
+    const envelope = await fetchMirrorMessage(hedera.mirror_url, { fetchImplementation, timeoutMs });
+    const onchain = decodeMessage(envelope.message);
+    if (!onchain || onchain.type !== ENVELOPE_TYPE) {
+      checks.hedera_anchoring = "failed";
+    } else {
+      checks.hedera_anchoring = onchain.commitment === recomputed ? "verified" : "failed";
+      consensusTimestamp = envelope.consensus_timestamp ?? null;
+    }
+  }
+
+  // 5. Hedera cannot vouch for the truth of the assertions inside the cert
+  //    (issuer authority, physical print) — only that these bytes were
+  //    committed no later than the consensus timestamp.
+  checks.issuer_assertions = "not_independently_proven";
+
+  const verified = checks.bundle_integrity === "verified" &&
+    checks.certificate_schema === "verified" &&
+    checks.hedera_anchoring === "verified" &&
+    checks.terms_integrity !== "failed";
 
   return Object.freeze({
-    verified: true,
-    standard: "PWC-1",
-    certificate: Object.freeze(certificate),
-    topic_id: envelope.topic_id,
-    sequence_number: envelope.sequence_number,
-    consensus_timestamp: envelope.consensus_timestamp,
+    verified,
+    cert_id: certificate.cert_id,
+    commitment: recomputed,
+    checks: Object.freeze(checks),
+    certificate_errors: Object.freeze(certErrors),
+    topic_id: hedera.topic_id ?? null,
+    sequence_number: hedera.sequence_number ?? null,
+    consensus_timestamp: consensusTimestamp,
   });
 }
 
-function decodePayload(encoded) {
-  if (typeof encoded !== "string" || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) {
+async function fetchMirrorMessage(url, { fetchImplementation, timeoutMs }) {
+  const parsed = safeUrl(url);
+  const envelope = await fetchJson(parsed, { fetchImplementation, timeoutMs });
+  if (!plainObject(envelope)) {
+    throw new VerificationError("mirror message must be a JSON object", "invalid_mirror_response");
+  }
+  return envelope;
+}
+
+function decodeMessage(encoded) {
+  if (typeof encoded !== "string" ||
+      !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) {
     return null;
   }
   try {
@@ -175,15 +194,24 @@ function decodePayload(encoded) {
 }
 
 async function fetchJson(url, { fetchImplementation, timeoutMs }) {
+  if (typeof fetchImplementation !== "function") {
+    throw new VerificationError("a fetch implementation is required", "invalid_input");
+  }
+  // Own the timeout timer so it is always cleared — a dangling AbortSignal
+  // timer would keep the process alive after the request resolves.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   let response;
   try {
     response = await fetchImplementation(url, {
       headers: { accept: "application/json" },
       redirect: "error",
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: controller.signal,
     });
   } catch (error) {
     throw new VerificationError(`mirror request failed: ${error.message}`, "mirror_unavailable");
+  } finally {
+    clearTimeout(timer);
   }
   if (!response.ok) throw new VerificationError(`mirror returned HTTP ${response.status}`, "mirror_unavailable");
   const text = await response.text();
@@ -195,38 +223,18 @@ async function fetchJson(url, { fetchImplementation, timeoutMs }) {
   }
 }
 
-function normalizedMirror(value) {
+function safeUrl(value) {
   let url;
   try {
     url = new URL(value);
   } catch {
-    throw new VerificationError("mirror must be an absolute URL", "invalid_input");
+    throw new VerificationError("mirror URL is invalid", "invalid_input");
   }
-  requireSafeProtocol(url);
-  url.pathname = "/";
-  url.search = "";
-  url.hash = "";
-  return url;
-}
-
-function nextPage(next, mirrorBase) {
-  if (!next) return null;
-  const url = new URL(next, mirrorBase);
-  if (url.origin !== mirrorBase.origin || !url.pathname.startsWith("/api/v1/topics/")) {
-    throw new VerificationError("mirror pagination link left the mirror origin", "invalid_mirror_response");
-  }
-  return url;
-}
-
-function requireSafeProtocol(url) {
   const loopback = [ "localhost", "127.0.0.1", "::1" ].includes(url.hostname);
   if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {
     throw new VerificationError("mirror URLs must use HTTPS", "invalid_input");
   }
-}
-
-function requireEntityId(value, label) {
-  if (!entityId(value)) throw new VerificationError(`${label} must be a Hedera entity id`, "invalid_input");
+  return url;
 }
 
 function plainObject(value) {
