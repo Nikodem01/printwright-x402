@@ -197,15 +197,19 @@ class Designer::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
       AnalyzeModelVersionMeshJob.perform_now(version.id)
     end
 
-    assert_equal "skipped", version.reload.mesh_analysis_status
+    # The STL is inspected on its own merits and the verdict is a real one —
+    # the STEP file no longer sends the whole bundle down the skipped branch.
+    assert_equal "passed", version.reload.mesh_analysis_status
     assert_predicate version, :deliverable?
     assert_equal %w[stl step], version.version_files.ordered.map(&:kind)
+    assert_equal [ "calibration-cube.stl" ],
+      version.mesh_analysis.fetch("files").map { |report| report.fetch("filename") }
   end
 
   test "a failing analyzer withholds a multi-file bundle and never anchors it" do
     @model.update!(status: "published")
     first = fixture_file_upload(Rails.root.join("db/seed_assets/calibration-cube.stl"), "model/stl")
-    second = fixture_file_upload(Rails.root.join("db/seed_assets/calibration-cube.stl"), "model/stl")
+    second = fixture_file_upload(Rails.root.join("db/seed_assets/cable-clip.stl"), "model/stl")
     post designer_model_versions_path(@model), params: {
       model_version: { changelog: "Broke the bundle.", files: [ first, second ] }
     }

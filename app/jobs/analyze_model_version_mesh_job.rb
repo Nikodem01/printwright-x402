@@ -13,18 +13,22 @@ class AnalyzeModelVersionMeshJob < ApplicationJob
     # behavior this job had before bundles existed.
     files = version.version_files.any? ? version.analyzer_inputs : [ version.analyzer_input ]
 
-    if files.all? { |file| MeshAnalysis::Analyzer::SUPPORTED_KINDS.include?(file.kind) }
-      result = MeshAnalysis::Analyzer.call(files)
+    # A file the analyzer cannot read speaks only for itself. Every STL and 3MF
+    # in the bundle is inspected regardless of what sits beside it, so a STEP
+    # companion can no longer suppress the verdict on the files it ships with.
+    analyzable = files.select { |file| MeshAnalysis::Analyzer::SUPPORTED_KINDS.include?(file.kind) }
+
+    if analyzable.any?
+      result = MeshAnalysis::Analyzer.call(analyzable)
       version.update!(
         mesh_analysis_status: result.errors.empty? ? "passed" : "failed",
         geometry_hash: result.geometry_hash,
         mesh_analysis: { "errors" => result.errors, "files" => result.files }
       )
     else
-      # STEP and any other format the analyzer cannot inspect: a bundle
-      # containing one cannot be validated as a whole, so it is accepted
-      # without mesh validation, exactly as a lone STEP file was before, and
-      # delivered to buyers.
+      # Nothing in the bundle can be inspected, so there is no geometry verdict
+      # to give and it is accepted as a lone STEP file always was. New uploads
+      # of this shape are refused at the door instead.
       version.update!(mesh_analysis_status: "skipped")
     end
 
