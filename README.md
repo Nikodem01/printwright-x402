@@ -150,9 +150,14 @@ for the parameterized Kamal/pgvector/sidecar deployment, required storage and SM
 Sentry smoke checks, on-demand backup, and guarded restore rehearsal steps.
 
 The x402 facilitator is hosted ([Blocky402 testnet](https://blocky402.com), open access) —
-nothing to run. It is not a single point of dependency: [`selfhost-facilitator/`](selfhost-facilitator/)
-is a working fallback you can run yourself, and switching is one env var
-(`X402_FACILITATOR_URL`). `docker-compose up` starts pgvector/Postgres + sidecar if you prefer
+nothing to run. It is not a single point of dependency, and reproducing this repo does not depend
+on that service staying up: [`selfhost-facilitator/`](selfhost-facilitator/) is a working fallback
+you can run yourself — the Hedera slice of the x402-foundation reference facilitator, on the
+published `@x402/core` + `@x402/hedera` packages. `cd selfhost-facilitator && npm install`, copy
+`.env.example` and give it a funded testnet account as fee payer, `node server.mjs`, then point the
+app at it with the one env var `X402_FACILITATOR_URL=http://localhost:4023`. Nothing else changes:
+the same 402, the same signed transfer, the same settle. For a run with no funds and no facilitator
+at all, send `X-Sandbox: true`. `docker-compose up` starts pgvector/Postgres + sidecar if you prefer
 containers; Compose reads the operator key only from `sidecar/.env`.
 
 **Browser checkout:** set the public `WALLETCONNECT_PROJECT_ID` from Reown and register the exact
@@ -244,6 +249,29 @@ every license a tamper-evident anchor no Web2 service can match — one whose pr
 choice, not a compromise, because the ledger holds a commitment rather than the certificate. Every
 purchase generates a settlement transaction plus a consensus message; every buyer and designer is a
 Hedera account.
+
+## Hedera services used, and why each one
+
+| Service | Where it is used | Why this service |
+|---|---|---|
+| **Consensus Service (HCS)** | one global topic (`0.0.9585069`) holds a license commitment per purchase and a `pwv-1` provenance event per model version | A license needs an ordered, timestamped, tamper-evident record that outlives us. The topic was created **without an admin key**, so nobody — including Printwright — can rewrite or delete it. Each record is one message, one sequence number: a provenance event that spanned chunks would not be a single atomic fact. |
+| **Token Service (HTS)** | USDC settlement (`0.0.429274` testnet, `0.0.456858` mainnet) and designer payouts | Buyers pay a stable price in a real token rather than an amount that drifts between quote and settle, and payouts move the same asset back out. |
+| **HBAR (native)** | the second accepted asset on every 402 | Some agents hold only HBAR; quotes are priced live from the mirror's exchange rate with a 3% match tolerance so a quote that drifts still verifies. |
+| **Mirror node REST** | certificate verification, settle reconciliation, exchange rate, payout receivability | Every read goes to the public mirror, never to a consensus node — including the reads a *third party* makes, which is what makes verification independent of us. |
+| **x402 `exact` scheme** | the paywall itself | The buyer signs a `TransferTransaction`; the facilitator verifies, sponsors the network fee, and settles. One HTTP round-trip, no account on our side. |
+| **Wallet signatures** (`hedera_signMessage`) | proving a designer controls their payout account | Ownership is proved against the account's on-chain key, so Printwright never holds or needs a designer's key. |
+
+Not used, deliberately: **an NFT license**. A transferable, royalty-bearing token contradicts a
+license the terms make non-transferable and certificate-bound, and it gated nothing — see the
+license terms and the removal in the history.
+
+**Network impact per purchase.** One x402 settle (`CryptoTransfer`), one HCS message, and — when a
+designer's payout is due — one further `TransferTransaction`, plus a one-time `TokenAssociate` the
+first time a designer receives USDC. So a purchase is **2–3 mainnet-shaped transactions**, all
+initiated by software rather than by a person clicking. Publishing a model version adds one more
+HCS message. The audience is the part that compounds: print farms, procurement agents, and
+OctoPrint servers that pay per job are transaction sources that do not exist on Hedera today, and
+each one transacts per print rather than per session.
 
 ## Post-bounty roadmap
 
