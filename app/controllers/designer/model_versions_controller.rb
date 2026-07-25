@@ -62,7 +62,7 @@ class Designer::ModelVersionsController < Designer::BaseController
     end
     if oversize
       return reject(model, "That bundle has too many files to anchor as one provenance record. " \
-        "Split it into fewer files (about eight is the limit) and upload again.")
+        "Six files fit; upload fewer and try again.")
     end
 
     AnalyzeModelVersionMeshJob.perform_later(version.id)

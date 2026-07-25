@@ -6,8 +6,10 @@ class ModelVersion < ApplicationRecord
   # spanned chunks would not be a single atomic event. The sidecar enforces the
   # same 1024 bytes and returns a 422 that is never retried, so an oversize
   # bundle would upload happily and then never anchor — the check belongs here,
-  # where the designer can still do something about it. The payload grows with
-  # the file list, so in practice this caps a bundle at roughly eight files.
+  # where the designer can still do something about it. The payload grows by
+  # ~96 bytes per file over a ~360-byte base, so in practice a bundle fits six
+  # files and the seventh does not. The check measures the real payload rather
+  # than counting files, because the base varies with the timestamp and ids.
   MAX_ANCHOR_BYTES = 1024
 
   belongs_to :model3d
