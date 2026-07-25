@@ -24,6 +24,7 @@ module Uploads
       when "3mf"    then check_3mf(upload, head)
       when "step"   then check_step(head)
       when "render" then check_render(head)
+      else "#{upload.original_filename}: unsupported file kind #{kind}"
       end
     end
 

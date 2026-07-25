@@ -114,6 +114,11 @@ class Designer::ModelsController < Designer::BaseController
     return already_published if @model.published?
     files = attached_printable_files
     return redirect_to edit_designer_model_path(@model), alert: "Attach at least one printable file first." if files.empty?
+    if (reason = Uploads::Bundle.missing_analyzable_reason(
+      files.map { |file| { kind: file.kind, filename: file.file.filename.to_s } }
+    ))
+      return redirect_to edit_designer_model_path(@model), alert: reason
+    end
     return redirect_to edit_designer_model_path(@model), alert: "Add at least one license offer first." if @model.license_offers.none?
     unless params[:warranty] == "1"
       return redirect_to edit_designer_model_path(@model),
@@ -296,32 +301,67 @@ class Designer::ModelsController < Designer::BaseController
   def attach_uploads
     rejected = []
     printable_attached = false
+    bundle = attached_bundle_entries
     printable_uploads = Array(params.dig(:model3d, :printable_files)).reject(&:blank?)
     if !@model.draft? && printable_uploads.any?
       rejected << "the certified bundle is frozen; use Publish update"
       printable_uploads = []
     end
     printable_uploads.each do |upload|
-      ext = upload.original_filename.split(".").last.to_s.downcase
-      kind = ModelFile::KINDS.include?(ext) ? ext : "stl"
-      if (reason = Uploads::Validator.reason_to_reject(upload, kind: kind))
+      # The kind comes from the extension, so it may only name a printable
+      # format. An unknown extension is refused under its own name instead of
+      # being checked as an STL, and an internal kind such as `preview` can no
+      # longer be claimed by filename.
+      kind = File.extname(upload.original_filename).delete_prefix(".").downcase
+      unless ModelFile::PRINTABLE_KINDS.include?(kind)
+        rejected << "#{upload.original_filename}: printable files must be STL, 3MF or STEP"
+        next
+      end
+      if (reason = Uploads::Validator.reason_to_reject(upload, kind: kind) ||
+                   duplicate_of_bundle(bundle, upload, kind))
         rejected << reason
         next
       end
       file = @model.model_files.create!(kind: kind, position: @model.model_files.count)
       file.file.attach(upload)
+      bundle << bundle_entry(upload, kind)
       printable_attached = true
     end
     Array(params.dig(:model3d, :render_files)).reject(&:blank?).each do |upload|
-      if (reason = Uploads::Validator.reason_to_reject(upload, kind: "render"))
+      if (reason = Uploads::Validator.reason_to_reject(upload, kind: "render") ||
+                   duplicate_of_bundle(bundle, upload, "render"))
         rejected << reason
         next
       end
       file = @model.model_files.create!(kind: "render", position: @model.model_files.count)
       file.file.attach(upload)
+      bundle << bundle_entry(upload, "render")
     end
     flash[:alert] = "Rejected: #{rejected.join('; ')}" if rejected.any?
     queue_mesh_analysis if printable_attached
     rejected
+  end
+
+  # A duplicate is judged against the bundle the buyer would receive: the files
+  # already attached plus the ones accepted earlier in this same submission.
+  # Active Storage already holds an MD5 for every attached blob, so this needs
+  # no downloads — the digests are only ever compared with each other.
+  def attached_bundle_entries
+    @model.model_files.filter_map do |file|
+      next unless file.file.attached?
+
+      { kind: file.kind, filename: file.file.filename.to_s, digest: file.file.blob.checksum }
+    end
+  end
+
+  def bundle_entry(upload, kind)
+    upload.rewind
+    digest = Digest::MD5.base64digest(upload.read)
+    upload.rewind
+    { kind: kind, filename: upload.original_filename, digest: digest }
+  end
+
+  def duplicate_of_bundle(bundle, upload, kind)
+    Uploads::Bundle.duplicate_reason(bundle + [ bundle_entry(upload, kind) ])
   end
 end

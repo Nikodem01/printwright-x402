@@ -50,4 +50,12 @@ class Uploads::ValidatorTest < ActiveSupport::TestCase
 
     assert_match(/empty/, Uploads::Validator.reason_to_reject(upload_for("", name: "e.stl"), kind: "stl"))
   end
+
+  # A kind with no branch used to fall out of the case statement as nil, which
+  # reads as "acceptable". Anything unrecognised is refused instead.
+  test "an unrecognised kind is refused rather than silently accepted" do
+    reason = Uploads::Validator.reason_to_reject(upload_for("anything", name: "x.preview"), kind: "preview")
+
+    assert_match(/x\.preview/, reason)
+  end
 end

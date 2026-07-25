@@ -44,6 +44,39 @@ class CatalogImports::ImporterTest < ActiveJob::TestCase
     assert_predicate catalog_import, :active?
   end
 
+  # Companion-only: a buyer is promised geometry-checked printable files, so a
+  # bundle we cannot read anywhere is refused at the import door too.
+  test "a model whose files are all unreadable formats is refused" do
+    before_models = Model3d.count
+
+    error = assert_raises(CatalogImports::Error) do
+      CatalogImports::Importer.call(designers(:one), step_only_archive)
+    end
+
+    assert_includes error.message, "STL or 3MF"
+    assert_equal before_models, Model3d.count
+    assert_equal 0, CatalogImport.count
+  end
+
+  test "one file listed twice under different paths is refused" do
+    before_models = Model3d.count
+
+    error = assert_raises(CatalogImports::Error) do
+      CatalogImports::Importer.call(designers(:one), duplicate_file_archive)
+    end
+
+    assert_includes error.message, "part-copy.stl"
+    assert_equal before_models, Model3d.count
+    assert_equal 0, CatalogImport.count
+  end
+
+  test "a CAD companion imports fine beside a printable file" do
+    catalog_import = CatalogImports::Importer.call(designers(:one), step_companion_archive)
+
+    model = catalog_import.models3d.sole
+    assert_equal %w[stl step], model.printable_files.map(&:kind)
+  end
+
   test "a missing referenced file leaves no partial batch or models" do
     before_models = Model3d.count
 

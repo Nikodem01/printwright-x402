@@ -124,7 +124,10 @@ class Designer::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
 
   test "a large bundle publishes and anchors — the file count is the designer's call" do
     @model.update!(status: "paused")
-    files = Array.new(12) do |index|
+    # A twelve-part assembly: the print file plus eleven CAD sources. The count
+    # is not capped; the bundle only has to carry something we can check.
+    files = [ fixture_file_upload(Rails.root.join("db/seed_assets/calibration-cube.stl"), "model/stl") ]
+    files += Array.new(11) do |index|
       Rack::Test::UploadedFile.new(
         StringIO.new("ISO-10303-21;\nHEADER;part #{index}"), "model/step",
         original_filename: "part-#{index}.step"
@@ -164,7 +167,7 @@ class Designer::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
   test "an all-STL bundle is analyzed as a whole and anchors once every file passes" do
     @model.update!(status: "paused")
     first = fixture_file_upload(Rails.root.join("db/seed_assets/calibration-cube.stl"), "model/stl")
-    second = fixture_file_upload(Rails.root.join("db/seed_assets/calibration-cube.stl"), "model/stl")
+    second = fixture_file_upload(Rails.root.join("db/seed_assets/cable-clip.stl"), "model/stl")
 
     assert_enqueued_with(job: AnalyzeModelVersionMeshJob) do
       post designer_model_versions_path(@model), params: {
@@ -182,7 +185,41 @@ class Designer::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
     assert_predicate version, :deliverable?
   end
 
-  test "a bundle containing a STEP file cannot be validated as a whole so it is skipped and still delivered" do
+  # Companion-only: buyers receive a version as their model update, so it must
+  # carry at least one file we can actually geometry-check.
+  test "a version cannot ship the same file twice under different names" do
+    @model.update!(status: "paused")
+    bytes = Rails.root.join("db/seed_assets/calibration-cube.stl").binread
+    first = fixture_file_upload(Rails.root.join("db/seed_assets/calibration-cube.stl"), "model/stl")
+    copy = Rack::Test::UploadedFile.new(StringIO.new(bytes), "model/stl", original_filename: "cube-copy.stl")
+
+    post designer_model_versions_path(@model), params: {
+      model_version: { changelog: "Duplicated part.", files: [ first, copy ] }
+    }
+
+    assert_redirected_to edit_designer_model_path(@model)
+    assert_empty @model.model_versions
+    follow_redirect!
+    assert_match(/cube-copy\.stl/, response.body)
+  end
+
+  test "a version made only of unreadable formats is refused at the door" do
+    @model.update!(status: "paused")
+    step = Rack::Test::UploadedFile.new(StringIO.new("ISO-10303-21;\nHEADER;"), "model/step",
+      original_filename: "source.step")
+
+    post designer_model_versions_path(@model), params: {
+      model_version: { changelog: "CAD source only.", files: [ step ] }
+    }
+
+    assert_redirected_to edit_designer_model_path(@model)
+    assert_empty @model.model_versions
+    follow_redirect!
+    assert_match(/STL or 3MF/, response.body)
+    assert_match(/source\.step/, response.body)
+  end
+
+  test "a CAD companion file does not exempt the printable files shipping beside it" do
     @model.update!(status: "paused")
     stl = fixture_file_upload(Rails.root.join("db/seed_assets/calibration-cube.stl"), "model/stl")
     step = Rack::Test::UploadedFile.new(StringIO.new("ISO-10303-21;\nHEADER;"), "model/step",

@@ -49,6 +49,66 @@ module CatalogImportTestHelper
     ArchiveUpload.new("catalog.zip", bytes)
   end
 
+  # A bundle made only of formats the analyzer cannot read, and the same bundle
+  # with a printable file added — the companion-only rule either side of its line.
+  def step_only_archive = companion_archive(with_stl: false)
+  def step_companion_archive = companion_archive(with_stl: true)
+
+  def companion_archive(with_stl:)
+    stl = Rails.root.join("db/seed_assets/calibration-cube.stl").binread
+    step = "ISO-10303-21;\nHEADER;\nENDSEC;\nEND-ISO-10303-21;\n"
+    files = [ { path: "models/part.step", kind: "step" } ]
+    files.unshift({ path: "models/part.stl", kind: "stl" }) if with_stl
+    manifest = {
+      version: 1,
+      models: [ {
+        title: "Companion model", slug: "companion-model",
+        description: "CAD source alongside a print file.",
+        files: files,
+        offers: [ { kind: "personal", price_cents: 250, currency: "USDC" } ]
+      } ]
+    }
+
+    bytes = Zip::OutputStream.write_buffer do |zip|
+      zip.put_next_entry("manifest.json")
+      zip.write(JSON.generate(manifest))
+      if with_stl
+        zip.put_next_entry("models/part.stl")
+        zip.write(stl)
+      end
+      zip.put_next_entry("models/part.step")
+      zip.write(step)
+    end.string
+    ArchiveUpload.new("companion.zip", bytes)
+  end
+
+  # The same bytes at two paths — a buyer would be sold "two files" and receive
+  # one object twice.
+  def duplicate_file_archive
+    stl = Rails.root.join("db/seed_assets/calibration-cube.stl").binread
+    manifest = {
+      version: 1,
+      models: [ {
+        title: "Doubled model", slug: "doubled-model",
+        files: [
+          { path: "models/part.stl", kind: "stl" },
+          { path: "models/part-copy.stl", kind: "stl" }
+        ],
+        offers: [ { kind: "personal", price_cents: 250, currency: "USDC" } ]
+      } ]
+    }
+
+    bytes = Zip::OutputStream.write_buffer do |zip|
+      zip.put_next_entry("manifest.json")
+      zip.write(JSON.generate(manifest))
+      zip.put_next_entry("models/part.stl")
+      zip.write(stl)
+      zip.put_next_entry("models/part-copy.stl")
+      zip.write(stl)
+    end.string
+    ArchiveUpload.new("doubled.zip", bytes)
+  end
+
   def external_profile_document(allowed_license: "all-rights-reserved")
     stl = Rails.root.join("db/seed_assets/calibration-cube.stl").binread
     digest = "sha256:#{Digest::SHA256.hexdigest(stl)}"

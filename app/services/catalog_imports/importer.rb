@@ -156,6 +156,14 @@ module CatalogImports
         { path: path, kind: kind, bytes: bytes }
       end
       raise Error, "#{slug}: needs at least one printable file" unless normalized.any? { |file| file.fetch(:kind) != "render" }
+      bundle = normalized.map do |file|
+        { kind: file.fetch(:kind), filename: File.basename(file.fetch(:path)),
+          digest: Digest::SHA256.hexdigest(file.fetch(:bytes)) }
+      end
+      printable = bundle.reject { |file| file.fetch(:kind) == "render" }
+      reason = Uploads::Bundle.missing_analyzable_reason(printable) ||
+        Uploads::Bundle.duplicate_reason(bundle)
+      raise Error, "#{slug}: #{reason}" if reason
       normalized
     end
 

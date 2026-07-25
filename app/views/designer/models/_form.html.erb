@@ -177,11 +177,12 @@
 
         <% if model.draft? %>
           <div class="editor-upload-zone">
-            <label>Printable files (STL/3MF/STEP)
+            <label>Printable files (STL/3MF, plus optional STEP source)
               <%= file_field_tag "model3d[printable_files][]", multiple: true,
-                    accept: ".stl,.3mf,.step,.zip" %>
+                    accept: ".stl,.3mf,.step" %>
             </label>
-            <p>New files are content-checked, attached to this draft, then analyzed after an explicit save.</p>
+            <p>New files are content-checked, attached to this draft, then analyzed after an explicit save.
+               A bundle needs at least one STL or 3MF — those are the formats we can check for you.</p>
           </div>
         <% else %>
           <p class="editor-frozen-note">The certified printable bundle is frozen. Use “Publish a file update” below so historical buyer certificates and downloads remain intact.</p>

@@ -26,7 +26,8 @@ class DesignerPublishTest < RackSystemTestCase
     assert_text "Canonical personal license (#{Licensing::Documents::CURRENT_VERSION})"
     assert_text "Personal Print License"
     assert_no_field "Terms"
-    attach_file "Printable files (STL/3MF/STEP)", Rails.root.join("db/seed_assets/calibration-cube.stl")
+    attach_file "Printable files (STL/3MF, plus optional STEP source)",
+      Rails.root.join("db/seed_assets/calibration-cube.stl")
     click_button "Save draft"
     assert_text "Saved as draft."
 

@@ -31,6 +31,7 @@ module Models
     def review_blocker_message
       return "Verify your email before publishing." unless designer.email_verified?
       return "Attach at least one printable file first." unless printable_files?
+      return analyzable_blocker if analyzable_blocker
       return "Add at least one license offer first." unless offers?
       return "Mesh analysis is running for this exact file bundle. Review again after it passes." if model.mesh_analysis_status == "pending"
       if model.mesh_analysis_status == "failed"
@@ -61,9 +62,13 @@ module Models
     end
 
     def printable_item
-      complete = printable_files?
-      item(:printable, "Printable bundle", complete ? :complete : :blocked,
-        complete ? "At least one attached STL, 3MF, or STEP file." : "Attach an STL, 3MF, or STEP file.",
+      detail = if !printable_files?
+        "Attach an STL or 3MF file. CAD sources such as STEP can ship alongside it."
+      elsif analyzable_blocker
+        analyzable_blocker
+      end
+      item(:printable, "Printable bundle", detail ? :blocked : :complete,
+        detail || "At least one attached STL or 3MF file.",
         required: true, anchor: "files")
     end
 
@@ -125,6 +130,17 @@ module Models
 
     def printable_files?
       model.printable_files.any? { |file| file.file.attached? }
+    end
+
+    # Companion-only: the bundle must carry something the analyzer can read, or
+    # the buyer receives files that were never geometry-checked.
+    def analyzable_blocker
+      return @analyzable_blocker if defined?(@analyzable_blocker)
+
+      @analyzable_blocker = Uploads::Bundle.missing_analyzable_reason(
+        model.printable_files.select { |file| file.file.attached? }
+             .map { |file| { kind: file.kind, filename: file.file.filename.to_s } }
+      )
     end
 
     def offers?

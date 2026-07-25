@@ -33,6 +33,15 @@ class Designer::ModelVersionsController < Designer::BaseController
       prepared << { upload: upload, kind: kind, file_hash: file_hash }
     end
 
+    # Buyers receive a version as their model update, so the bundle must carry
+    # at least one file whose geometry we can actually check.
+    bundle = prepared.map do |part|
+      { kind: part[:kind], filename: part[:upload].original_filename, digest: part[:file_hash] }
+    end
+    if (reason = Uploads::Bundle.missing_analyzable_reason(bundle) || Uploads::Bundle.duplicate_reason(bundle))
+      return reject(model, reason)
+    end
+
     version = nil
     model.with_lock do
       version = model.model_versions.create!(
