@@ -13,7 +13,6 @@ class PagesController < ApplicationController
   end
 
   def chaos_log
-    @heartbeat = Heartbeat::Snapshot.call
     @chaos_runs = [
       {
         date: "19 July 2026",

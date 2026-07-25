@@ -62,12 +62,15 @@ module OpenBooks
     end
 
     def valid_latest_sequence(message)
-      certificate = JSON.parse(Base64.strict_decode64(message.fetch("message")))
+      payload = JSON.parse(Base64.strict_decode64(message.fetch("message")))
       sequence = Integer(message.fetch("sequence_number"))
-      unless message.fetch("topic_id") == ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") &&
-          sequence.positive? && certificate["v"] == 1 && certificate["cert_id"].to_s.match?(/\Apw-\d{6,}\z/)
-        raise ArgumentError, "latest message is not a PWC-1 certificate"
-      end
+      # The topic carries opaque license commitments and model-version events;
+      # either is a genuine Printwright record. Nothing readable is asserted —
+      # the commitment reveals no certificate content by design.
+      valid = message.fetch("topic_id") == ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") &&
+        sequence.positive? &&
+        (Certificates::Commitment.envelope?(payload) || payload["schema"] == "pwv-1")
+      raise ArgumentError, "latest message is not a Printwright HCS record" unless valid
       sequence
     end
 

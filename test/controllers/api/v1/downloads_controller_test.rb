@@ -180,7 +180,17 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "0.0.7162784@1784125705.137810120", body["transaction_id"]
     assert_includes body["hashscan_url"], body["transaction_id"]
     assert_equal 1, body.dig("license", "serial")
-    assert_match(/\Apw-\d{6}\z/, body.dig("license", "cert_id"))
+    assert_match(/\Apw-[0-9a-f]{24}\z/, body.dig("license", "cert_id"))
+
+    # The agent receives a portable proof bundle it can verify against Hedera
+    # without us, plus a URL to re-fetch it once the commitment anchors.
+    bundle = body.fetch("proof_bundle")
+    assert_equal "sha256-jcs-v1", bundle["algorithm"]
+    assert_equal body.dig("license", "cert_id"), bundle.dig("certificate", "cert_id")
+    assert bundle["blinding_nonce"].present?
+    assert_equal Certificates::Commitment.digest(bundle["certificate"], bundle["blinding_nonce"]),
+                 bundle["commitment"]
+    assert_includes body["bundle_url"], "/api/v1/certificates/#{body.dig('license', 'cert_id')}"
     assert_includes body["share_card_url"], "/share-card"
     receipt = body.fetch("receipt")
     assert_includes receipt["url"], "/receipts/#{body.dig('license', 'cert_id')}"

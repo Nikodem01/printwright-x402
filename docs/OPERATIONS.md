@@ -64,7 +64,7 @@ curl --fail "https://$APP_HOST/up"
 Production SMTP raises delivery errors. After configuring the sender, request a designer password
 reset and a buyer-library link through the public UI, then confirm both arrive and open the expected
 HTTPS origin. Configure an external uptime monitor against `https://$APP_HOST/up`; `/up` is process
-health only, so retain the paid smoke and HCS heartbeat checks below.
+health only, so retain the paid smoke check below.
 
 ## Error monitoring
 
@@ -132,24 +132,6 @@ Never use `--clean` or point a rehearsal at the production database. On 2026-07-
 custom-format rehearsal restored schema version `20260719235500`, 36 model rows and the expected
 zero local license rows, then removed only the named scratch database and temporary dump. The
 provider upload/download rehearsal remains pending until V20's owner-created bucket exists.
-
-## Public HCS heartbeat
-
-The production scheduler submits one compact PWH-1 liveness statement every six hours to a
-dedicated, submit-key-protected topic. Create it once through the local sidecar, then set the
-returned public topic id as `HEDERA_HEARTBEAT_TOPIC_ID` for both app and sidecar and restart them:
-
-```bash
-curl -X POST localhost:4021/create-heartbeat-topic \
-  -H "Authorization: Bearer $SIDECAR_TOKEN" -H "Content-Type: application/json" -d '{}'
-bin/rails runner 'HeartbeatJob.perform_now'
-```
-
-`/chaos-log` reads the latest message directly from the mirror. The topic has the operator as
-admin, submit, and auto-renew account; the private key stays in the sidecar. A missing/invalid
-mirror message is shown as unavailable, never replaced by `/up`. The heartbeat proves the Rails
-scheduler and sidecar reached HCS at that instant—not end-to-end checkout health. The paid smoke
-above remains the stronger operational test.
 
 ## Designer payouts
 

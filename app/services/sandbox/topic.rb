@@ -24,7 +24,9 @@ module Sandbox
         topic_id: ID,
         sequence_number: license.hcs_sequence_number,
         consensus_timestamp: format("%.9f", license.updated_at.to_r),
-        message: Base64.strict_encode64(JSON.generate(license.cert_json))
+        message: Base64.strict_encode64(
+          JSON.generate(Certificates::Commitment.envelope(license.cert_json, license.cert_salt))
+        )
       }
     end
   end

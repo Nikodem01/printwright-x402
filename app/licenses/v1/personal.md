@@ -7,10 +7,11 @@ lawyer for anything that matters more than a shelf bracket.
 
 ## 1. Parties and subject
 
-This license is granted by the **designer** (the account named as `designer`
-in the license certificate) to the **licensee** (the holder of the license
-certificate identified by `cert_id`), for the 3D model whose file bundle hash
-is recorded as `model_hash` in that certificate.
+This license is granted by the **designer** (identified by the stable
+`designer` id in the license certificate — an identity, never a wallet) to the
+**licensee** (the holder of the license certificate identified by `cert_id`),
+for the 3D model whose file bundle hash is recorded as `model_hash` in that
+certificate.
 
 ## 2. Grant
 
@@ -44,17 +45,21 @@ when publishing the model.
 
 The files carry no copy protection, watermarking, or usage tracking, and none
 will be added later. This license works on honesty: the price of a license is
-set low enough to pay, and every licensed unit is publicly certified. If you
-share the files anyway, no mechanism stops you — you are simply breaking a
-promise this document records you made.
+set low enough to pay, and every licensed unit carries a certificate you can
+verify. If you share the files anyway, no mechanism stops you — you are simply
+breaking a promise this document records you made.
 
 ## 6. The certificate
 
-Each purchase mints a public certificate on the Hedera Consensus Service
-recording the model hash, license type, unit serial, payment transaction, and
-a hash of this exact text (`terms_hash`). Anyone can verify a certificate
-against the public mirror node without trusting Printwright. The certificate
-is the durable proof of this grant; keep your `cert_id`.
+Each purchase anchors a certificate to the Hedera Consensus Service as an
+**opaque commitment** — a salted hash of the certificate, and nothing else.
+The certificate itself (model hash, license type, unit serial, payment
+transaction, and a hash of this exact text, `terms_hash`) is held off-chain
+and revealed by you: anyone you show it to can recompute the hash and verify
+it against the public mirror node without trusting Printwright. Because only
+the commitment is public, no buyer, designer wallet, or per-model sales count
+is ever broadcast. The certificate is the durable proof of this grant; keep
+your `cert_id`.
 
 ## 7. Termination
 

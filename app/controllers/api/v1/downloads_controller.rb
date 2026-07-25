@@ -216,6 +216,10 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     license = purchase.license
     return sandbox_delivery_payload(purchase, license) if purchase.sandbox?
 
+    # Build the certificate now (not in the async CertMintJob) so the delivered
+    # proof bundle is complete and independently verifiable the instant the
+    # agent receives it; CertMintJob then just anchors the commitment.
+    license.update!(cert_json: Certificates::Builder.call(license)) if license.cert_json.blank?
     grant = license.download_grants.detect(&:usable?) || DownloadGrant.issue!(license)
     model = purchase.model3d
     {
@@ -224,6 +228,11 @@ class Api::V1::DownloadsController < Api::V1::BaseController
       end,
       license: license_summary(license),
       certificate: license.cert_json.presence,
+      # Portable, self-contained proof the agent can verify against Hedera even
+      # if Printwright is unreachable; re-fetch bundle_url once anchored to pick
+      # up the consensus coordinates (delivery precedes the async HCS anchor).
+      proof_bundle: Certificates::Bundle.for(license),
+      bundle_url: api_v1_certificate_url(license.cert_id),
       verify_url: "#{request.base_url}/verify/#{license.verify_slug}",
       share_card_url: verify_share_card_url(license.verify_slug),
       receipt: receipt_capability(license),
@@ -253,6 +262,8 @@ class Api::V1::DownloadsController < Api::V1::BaseController
       } ],
       license: { cert_id: license.cert_id, serial: license.serial, kind: purchase.license_offer.kind },
       certificate: license.cert_json,
+      proof_bundle: Certificates::Bundle.for(license),
+      bundle_url: api_v1_certificate_url(license.cert_id),
       verify_url: "#{request.base_url}/verify/#{license.verify_slug}",
       transaction_id: purchase.payment_tx_id,
       hashscan_url: nil,

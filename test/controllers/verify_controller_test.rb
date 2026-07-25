@@ -31,12 +31,17 @@ class VerifyControllerTest < ActionDispatch::IntegrationTest
   # Status is shape-first and never green: green marks issuance only, so a
   # settled certificate takes the ink state mark, and the accent is spent on
   # the on-chain facts instead.
-  test "anchored matching cert renders the settled state with consensus time" do
+  def commitment_message(cert = @cert)
+    Base64.strict_encode64(JSON.generate(Certificates::Commitment.envelope(cert, @license.cert_salt)))
+  end
+
+  test "revealed cert that hashes to the on-chain commitment renders settled" do
     anchor!
-    stub_mirror({ message: Base64.strict_encode64(JSON.generate(@cert)), consensus_timestamp: "1784141018.086938437" })
-    get verify_path(@license.cert_id)
+    stub_mirror({ message: commitment_message, consensus_timestamp: "1784141018.086938437" })
+    get verify_path(@license.verify_slug)
     assert_response :success
     assert_select ".banner-ok .st-settled", text: /Verified on Hedera/
+    assert_select ".cert-facts dt", text: "Commitment"
     assert_select ".cert-facts dd.chain", text: /1784141018\.086938437/
     assert_select ".cert-facts dd.mono", text: /1 of/
     assert_select ".evidence-footer a", minimum: 3
@@ -44,7 +49,7 @@ class VerifyControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "unanchored cert shows minting with auto-refresh" do
-    get verify_path(@license.cert_id)
+    get verify_path(@license.verify_slug)
     assert_response :success
     assert_select ".banner-pending", text: /Minting/
     assert_select 'meta[http-equiv="refresh"]', count: 1
@@ -53,17 +58,24 @@ class VerifyControllerTest < ActionDispatch::IntegrationTest
   test "anchored but mirror 404 still shows minting (propagation)" do
     anchor!
     stub_mirror({ error: "not found" }, status: 404)
-    get verify_path(@license.cert_id)
+    get verify_path(@license.verify_slug)
     assert_select ".banner-pending"
   end
 
-  test "tampered on-chain copy renders mismatch with both copies" do
+  test "revealed cert that does not hash to the commitment renders mismatch" do
     anchor!
-    stub_mirror({ message: Base64.strict_encode64(JSON.generate(@cert.merge("unit_serial" => 999))),
-                  consensus_timestamp: "1.2" })
-    get verify_path(@license.cert_id)
+    # on-chain commits to a different cert than the marketplace copy we reveal
+    stub_mirror({ message: commitment_message(@cert.merge("unit_serial" => 999)), consensus_timestamp: "1.2" })
+    get verify_path(@license.verify_slug)
     assert_select ".banner-bad", text: /Mismatch/
-    assert_select ".mismatch-row", minimum: 1
+    assert_select "h3", text: /Recorded commitment vs the revealed certificate/
+  end
+
+  test "legacy full-cert on-chain message still verifies field-by-field" do
+    anchor!
+    stub_mirror({ message: Base64.strict_encode64(JSON.generate(@cert)), consensus_timestamp: "1.2" })
+    get verify_path(@license.verify_slug)
+    assert_select ".banner-ok"
   end
 
   test "unknown cert id is 404" do
@@ -75,7 +87,7 @@ class VerifyControllerTest < ActionDispatch::IntegrationTest
   test "certificate social metadata escapes a hostile model title" do
     @license.purchase.model3d.update!(title: 'Part"><script>alert(1)</script>')
 
-    get verify_path(@license.cert_id)
+    get verify_path(@license.verify_slug)
 
     assert_response :success
     assert_select 'meta[property="og:image"][content$="/share-card"]'
@@ -90,7 +102,7 @@ class VerifyControllerTest < ActionDispatch::IntegrationTest
     WebMock.allow_net_connect!
     real = License.find_by(cert_id: "pw-000002")
     skip "no real cert in this database" unless real
-    get verify_path(real.cert_id)
+    get verify_path(real.verify_slug)
     assert_select ".banner-ok"
   ensure
     WebMock.disable_net_connect!(allow_localhost: true)

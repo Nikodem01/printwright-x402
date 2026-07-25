@@ -5,7 +5,7 @@ class VerifyController < ApplicationController
 
     @model = @license.purchase.license_offer.model3d
     @check = Certificates::MirrorCheck.call(@license)
-    @cert = @check.onchain.presence || @license.cert_json # render on-chain values when we have them
+    @cert = @check.cert.presence || @license.cert_json.presence # revealed cert; our copy while minting
   end
 
   # Self-contained SVG badge for embedding anywhere (designer sites, listings).

@@ -12,13 +12,17 @@ class LicenseTest < ActiveSupport::TestCase
     Purchase.create!(license_offer: offer, status: "settled", replay_key: SecureRandom.hex(32))
   end
 
-  test "serials count up per offer and cert_id is the global pw-sequence" do
+  test "serials count up per offer; cert_id and verify_slug are unguessable" do
     first = License.allocate!(settled_purchase)
     second = License.allocate!(settled_purchase)
     assert_equal [ 1, 2 ], [ first.serial, second.serial ]
-    assert_match(/\Apw-\d{6}\z/, first.cert_id)
-    assert_equal first.cert_id, first.verify_slug
+    # Random, non-sequential handles — a scraper cannot walk /verify or the API.
+    assert_match(/\Apw-[0-9a-f]{24}\z/, first.cert_id)
+    assert_not_equal first.cert_id, first.verify_slug # independent tokens
+    assert first.verify_slug.present?
+    assert first.cert_salt.present?
     assert_not_equal first.cert_id, second.cert_id
+    assert_not_equal first.verify_slug, second.verify_slug
   end
 
   test "serials are independent between offers" do

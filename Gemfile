@@ -87,6 +87,13 @@ gem "dotenv-rails", "~> 3.2", groups: [ :development, :test ]
 gem "webmock", "~> 3.26", group: :test
 
 gem "rqrcode", "~> 3.2"
+# Server-side PDF license certificate in the paid deliverable (pure Ruby — no
+# headless browser dependency); chunky_png backs rqrcode's PNG QR output.
+gem "prawn", "~> 2.5"
+gem "chunky_png", "~> 1.4"
+# RFC 8785 JSON Canonicalization Scheme — deterministic bytes for the license
+# certificate commitment, so Ruby (anchoring) and the JS verifier agree exactly.
+gem "json-canonicalization", "~> 1.0"
 # Enables Sequel to use Active Record's database connection
 gem "sequel-activerecord_connection", "~> 2.0", require: false
 # Used by Rodauth for rendering built-in view and email templates

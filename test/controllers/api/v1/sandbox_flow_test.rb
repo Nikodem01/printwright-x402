@@ -42,7 +42,7 @@ class Api::V1::SandboxFlowTest < ActionDispatch::IntegrationTest
     assert_equal [ true, Sandbox::Requirements::WARNING, nil ],
       [ delivery["sandbox"], delivery["warning"], delivery["hashscan_url"] ]
     assert_match(/\Asandbox-tx-[0-9a-f]{20}\z/, delivery["transaction_id"])
-    assert_match(/\Asandbox-pw-\d{6}\z/, delivery.dig("license", "cert_id"))
+    assert_match(/\Asandbox-pw-[0-9a-f]{24}\z/, delivery.dig("license", "cert_id"))
     assert_equal [ "sandbox_receipt" ], delivery["files"].pluck("kind")
     assert delivery["files"].all? { |entry| entry["sandbox"] }
     assert_includes delivery.dig("files", 0, "url"), "/api/v1/sandbox/files/"
@@ -69,14 +69,15 @@ class Api::V1::SandboxFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
     certificate = response.parsed_body
     assert_equal "sandbox", certificate["status"]
-    assert_nil certificate["nft"]
-    assert_equal [ true, nil ], [ certificate.dig("hcs", "sandbox"), certificate.dig("hcs", "hashscan_url") ]
+    assert_equal [ true, nil ], [ certificate.dig("hedera", "sandbox"), certificate.dig("hedera", "hashscan_url") ]
 
-    get URI(certificate.dig("hcs", "mirror_url")).request_uri
+    get certificate.dig("hedera", "mirror_url")
     assert_response :success
     message = response.parsed_body
     assert_equal true, message["sandbox"]
-    assert_equal license.cert_json, JSON.parse(Base64.strict_decode64(message["message"]))
+    # The sandbox publishes the same opaque commitment envelope as the real topic.
+    assert_equal Certificates::Commitment.envelope(license.cert_json, license.cert_salt),
+      JSON.parse(Base64.strict_decode64(message["message"]))
 
     get URI(delivery["sandbox_url"]).request_uri
     assert_response :success
@@ -95,7 +96,7 @@ class Api::V1::SandboxFlowTest < ActionDispatch::IntegrationTest
     get verify_certificate_path(license.verify_slug)
     assert_response :success
     # The serial is the sheet's h1 now; the kind moved to the eyebrow above it.
-    assert_select "h1", text: /sandbox-pw-\d+/
+    assert_select "h1", text: /sandbox-pw-[0-9a-f]+/
     assert_select ".eyebrow", text: /Sandbox rehearsal certificate/
     assert_includes response.body, "grants no rights"
     assert_not_includes response.body, "Publicly anchored on Hedera"

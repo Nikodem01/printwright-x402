@@ -5,11 +5,13 @@ class OpenBooksTest < ActionDispatch::IntegrationTest
   setup do
     Rails.cache.clear
     topic = "0.0.9585069"
-    certificate = Base64.strict_encode64({ v: 1, cert_id: "pw-000050" }.to_json)
+    commitment = Base64.strict_encode64(
+      { type: "printwright-license-commitment", version: 1, algorithm: "sha256-jcs-v1", commitment: "a" * 64 }.to_json
+    )
     stub_request(:get, "https://testnet.mirrornode.hedera.com/api/v1/topics/#{topic}/messages?limit=1&order=desc")
       .to_return(body: {
         messages: [ { topic_id: topic, sequence_number: 50,
-                      consensus_timestamp: "1784449779.736670002", message: certificate } ]
+                      consensus_timestamp: "1784449779.736670002", message: commitment } ]
       }.to_json)
   end
 
@@ -31,7 +33,7 @@ class OpenBooksTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "Open books", response.body
-    assert_match "PWC-1 messages on HCS", response.body
+    assert_match "License commitments on HCS", response.body
     assert_match "90.0%", response.body
     assert_match "Raw latest-message query", response.body
     assert_match api_v1_stats_path, response.body

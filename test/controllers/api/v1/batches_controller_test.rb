@@ -111,8 +111,11 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
     body = response.parsed_body
     assert_equal 3, body.fetch("licenses").length
     assert_equal 3, body.fetch("licenses").map { |item| item["cert_id"] }.uniq.length
-    assert(body.fetch("licenses").all? { |item| item["verify_url"].include?(item["cert_id"]) })
-    assert(body.fetch("licenses").all? { |item| item["share_card_url"].include?(item["cert_id"]) })
+    # verify_url / share_card_url carry the unguessable verify_slug, not cert_id.
+    assert(body.fetch("licenses").all? do |item|
+      slug = License.find_by!(cert_id: item["cert_id"]).verify_slug
+      item["verify_url"].include?(slug) && item["share_card_url"].include?(slug)
+    end)
     assert(body.fetch("licenses").all? do |item|
       License.find_signed(item.dig("receipt", "token"), purpose: "purchase-receipt").cert_id == item["cert_id"]
     end)

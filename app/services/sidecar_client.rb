@@ -29,13 +29,6 @@ class SidecarClient
     end
   end
 
-  # => { "topicId" => ..., "sequenceNumber" => ..., "transactionId" => ... }
-  def submit_heartbeat(heartbeat)
-    post("/submit-heartbeat", { heartbeat: heartbeat }) do |body|
-      raise Unavailable, body["error"] if body["error"] == "no_heartbeat_topic_configured"
-    end
-  end
-
   # => { "transactionId" => ... } — a batched treasury -> designers transfer.
   # Money moves on 200; the CALLER records it (nothing here is retried).
   def payout(token_id:, transfers:, memo: nil)
@@ -52,17 +45,6 @@ class SidecarClient
     post("/verify-payout-proof", {
       accountId: account_id, message: message, signatureMap: signature_map
     })
-  end
-
-  # => { "tokenId" => ..., "transactionId" => ... }
-  def create_collection(name:, symbol:, royalty_collector:, royalty_percent:)
-    post("/create-collection", { name: name, symbol: symbol,
-      royaltyCollector: royalty_collector, royaltyPercent: royalty_percent })
-  end
-
-  # => { "serial" => ..., "airdropTransactionId" => ..., "pending" => bool }
-  def mint_airdrop(token_id:, metadata:, recipient:)
-    post("/mint-airdrop", { tokenId: token_id, metadata: metadata, recipient: recipient })
   end
 
   private

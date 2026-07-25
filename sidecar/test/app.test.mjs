@@ -11,10 +11,6 @@ const fakeHedera = {
     calls.push(["createTopic", memo]);
     return { topicId: "0.0.111", transactionId: "0.0.1@1.2" };
   },
-  createHeartbeatTopic: async () => {
-    calls.push(["createHeartbeatTopic"]);
-    return { topicId: "0.0.222", transactionId: "0.0.1@2.2" };
-  },
   submitMessage: async (topicId, message) => {
     calls.push(["submitMessage", topicId, message]);
     return { topicId, sequenceNumber: 7, transactionId: "0.0.1@3.4" };
@@ -27,27 +23,17 @@ const fakeHedera = {
     calls.push(["verifyPayoutProof", args]);
     return args.signatureMap === "dmFsaWQ=";
   },
-  createLicenseCollection: async (args) => {
-    calls.push(["createLicenseCollection", args]);
-    return { tokenId: "0.0.777", transactionId: "0.0.1@7.7" };
-  },
-  mintAndAirdrop: async (args) => {
-    calls.push(["mintAndAirdrop", args]);
-    return { serial: 1, mintTransactionId: "0.0.1@8.8", airdropTransactionId: "0.0.1@9.9", pending: true };
-  },
 };
 
 let server;
 let base;
 let configuredTopic = "0.0.111";
-let configuredHeartbeatTopic = "0.0.222";
 
 before(async () => {
   server = createApp({
     hedera: fakeHedera,
     token: TOKEN,
     topicId: () => configuredTopic,
-    heartbeatTopicId: () => configuredHeartbeatTopic,
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   base = `http://127.0.0.1:${server.address().port}`;
@@ -82,53 +68,6 @@ test("create-topic uses the default memo", async () => {
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), { topicId: "0.0.111", transactionId: "0.0.1@1.2" });
   assert.deepEqual(calls.at(-1), ["createTopic", "printwright license certificates v1"]);
-});
-
-test("creates a dedicated heartbeat topic with fixed policy", async () => {
-  const res = await post("/create-heartbeat-topic", {});
-  assert.equal(res.status, 200);
-  assert.deepEqual(await res.json(), { topicId: "0.0.222", transactionId: "0.0.1@2.2" });
-  assert.deepEqual(calls.at(-1), ["createHeartbeatTopic"]);
-});
-
-test("submit-heartbeat accepts only the bounded pwh-1 schema", async () => {
-  const heartbeat = {
-    schema: "pwh-1",
-    service: "printwright",
-    status: "alive",
-    network: "hedera:testnet",
-    observed_at: "2026-07-19T12:00:00Z",
-  };
-  const res = await post("/submit-heartbeat", { heartbeat });
-  assert.equal(res.status, 200);
-  assert.deepEqual(calls.at(-1), ["submitMessage", "0.0.222", JSON.stringify(heartbeat)]);
-
-  for (const invalid of [
-    {},
-    { ...heartbeat, schema: "pwc-1" },
-    { ...heartbeat, service: "other" },
-    { ...heartbeat, status: "healthy" },
-    { ...heartbeat, network: "hedera:mainnet" },
-    { ...heartbeat, observed_at: "today" },
-    { ...heartbeat, extra: "not part of pwh-1" },
-  ]) {
-    const rejected = await post("/submit-heartbeat", { heartbeat: invalid });
-    assert.equal(rejected.status, 400, JSON.stringify(invalid));
-    assert.deepEqual(await rejected.json(), { error: "invalid_heartbeat" });
-  }
-});
-
-test("submit-heartbeat refuses without its dedicated topic", async () => {
-  configuredHeartbeatTopic = undefined;
-  const res = await post("/submit-heartbeat", {
-    heartbeat: {
-      schema: "pwh-1", service: "printwright", status: "alive",
-      network: "hedera:testnet", observed_at: "2026-07-19T12:00:00Z",
-    },
-  });
-  assert.equal(res.status, 400);
-  assert.deepEqual(await res.json(), { error: "no_heartbeat_topic_configured" });
-  configuredHeartbeatTopic = "0.0.222";
 });
 
 test("submit-cert serializes compactly and returns sequence number", async () => {
@@ -293,34 +232,4 @@ test("payout proof returns only the account-key verification result", async () =
     accountId: "0.0.7", message, signatureMap: "aW52YWxpZA==",
   });
   assert.deepEqual(await rejected.json(), { verified: false });
-});
-
-test("create-collection validates and passes through", async () => {
-  for (const body of [
-    { name: "", royaltyCollector: "0.0.5", royaltyPercent: 10 },
-    { name: "X", royaltyCollector: "eve", royaltyPercent: 10 },
-    { name: "X", royaltyCollector: "0.0.5", royaltyPercent: 99 },
-  ]) {
-    assert.equal((await post("/create-collection", body)).status, 400, JSON.stringify(body));
-  }
-  const res = await post("/create-collection", { name: "Printwright Licenses — A", royaltyCollector: "0.0.9604185", royaltyPercent: 10 });
-  assert.equal(res.status, 200);
-  assert.deepEqual(await res.json(), { tokenId: "0.0.777", transactionId: "0.0.1@7.7" });
-  assert.equal(calls.at(-1)[0], "createLicenseCollection");
-});
-
-test("mint-airdrop validates and returns pending state", async () => {
-  for (const body of [
-    { tokenId: "bad", metadata: "pw-1", recipient: "0.0.5" },
-    { tokenId: "0.0.777", metadata: "", recipient: "0.0.5" },
-    { tokenId: "0.0.777", metadata: "x".repeat(101), recipient: "0.0.5" },
-    { tokenId: "0.0.777", metadata: "pw-1", recipient: "nope" },
-  ]) {
-    assert.equal((await post("/mint-airdrop", body)).status, 400, JSON.stringify(body));
-  }
-  const res = await post("/mint-airdrop", { tokenId: "0.0.777", metadata: "pw-000001", recipient: "0.0.9067781" });
-  assert.equal(res.status, 200);
-  const out = await res.json();
-  assert.equal(out.serial, 1);
-  assert.equal(out.pending, true);
 });

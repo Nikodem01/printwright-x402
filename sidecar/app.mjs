@@ -4,7 +4,7 @@ import http from "node:http";
 const MAX_MESSAGE_BYTES = 1024; // keep provenance records in one HCS message
 
 export function createApp({
-  hedera, token, topicId, heartbeatTopicId = () => undefined,
+  hedera, token, topicId,
   captureException = () => undefined,
 }) {
   async function handle(req, res) {
@@ -18,8 +18,8 @@ export function createApp({
     }
 
     const routes = [
-      "/create-topic", "/create-heartbeat-topic", "/submit-cert", "/submit-version",
-      "/submit-heartbeat", "/payout", "/verify-payout-proof", "/create-collection", "/mint-airdrop",
+      "/create-topic", "/submit-cert", "/submit-version",
+      "/payout", "/verify-payout-proof",
     ];
     if (req.method !== "POST" || !routes.includes(req.url)) {
       return send(404, { error: "not_found" });
@@ -43,60 +43,6 @@ export function createApp({
       if (req.url === "/create-topic") {
         const memo = body.memo || "printwright license certificates v1";
         return send(200, await hedera.createTopic(memo));
-      }
-
-      if (req.url === "/create-heartbeat-topic") {
-        return send(200, await hedera.createHeartbeatTopic());
-      }
-
-      if (req.url === "/submit-heartbeat") {
-        if (!validHeartbeat(body.heartbeat, hedera.network)) {
-          return send(400, { error: "invalid_heartbeat" });
-        }
-        const target = heartbeatTopicId();
-        if (!target) return send(400, { error: "no_heartbeat_topic_configured" });
-
-        const message = JSON.stringify(body.heartbeat);
-        if (Buffer.byteLength(message, "utf8") > MAX_MESSAGE_BYTES) {
-          return send(422, { error: "heartbeat_too_large", limit: MAX_MESSAGE_BYTES });
-        }
-        return send(200, await hedera.submitMessage(target, message));
-      }
-
-      if (req.url === "/create-collection") {
-        if (typeof body.name !== "string" || body.name.length === 0 || body.name.length > 100) {
-          return send(400, { error: "invalid_name" });
-        }
-        if (typeof body.royaltyCollector !== "string" || !/^0\.0\.\d+$/.test(body.royaltyCollector)) {
-          return send(400, { error: "invalid_royalty_collector" });
-        }
-        const pct = Number(body.royaltyPercent);
-        if (!Number.isInteger(pct) || pct < 0 || pct > 50) {
-          return send(400, { error: "invalid_royalty_percent" });
-        }
-        return send(200, await hedera.createLicenseCollection({
-          name: body.name,
-          symbol: (body.symbol || "PWL").slice(0, 10),
-          royaltyCollector: body.royaltyCollector,
-          royaltyPercent: pct,
-        }));
-      }
-
-      if (req.url === "/mint-airdrop") {
-        if (typeof body.tokenId !== "string" || !/^0\.0\.\d+$/.test(body.tokenId)) {
-          return send(400, { error: "invalid_token_id" });
-        }
-        if (typeof body.recipient !== "string" || !/^0\.0\.\d+$/.test(body.recipient)) {
-          return send(400, { error: "invalid_recipient" });
-        }
-        if (typeof body.metadata !== "string" || body.metadata.length === 0 || Buffer.byteLength(body.metadata) > 100) {
-          return send(400, { error: "invalid_metadata" }); // HTS metadata cap
-        }
-        return send(200, await hedera.mintAndAirdrop({
-          tokenId: body.tokenId,
-          metadata: body.metadata,
-          recipient: body.recipient,
-        }));
       }
 
       if (req.url === "/payout") {
@@ -169,20 +115,6 @@ export function createApp({
       if (typeof t.amount !== "string" || !/^[1-9]\d*$/.test(t.amount)) return "invalid_transfer_amount";
     }
     return null;
-  }
-
-  function validHeartbeat(heartbeat, network) {
-    if (!heartbeat || typeof heartbeat !== "object" || Array.isArray(heartbeat)) return false;
-    const keys = Object.keys(heartbeat).sort();
-    const expected = ["network", "observed_at", "schema", "service", "status"];
-    if (keys.length !== expected.length || keys.some((key, index) => key !== expected[index])) return false;
-    return heartbeat.schema === "pwh-1" &&
-      heartbeat.service === "printwright" &&
-      heartbeat.status === "alive" &&
-      heartbeat.network === `hedera:${network}` &&
-      typeof heartbeat.observed_at === "string" &&
-      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(heartbeat.observed_at) &&
-      Number.isFinite(Date.parse(heartbeat.observed_at));
   }
 
   return http.createServer((req, res) => {

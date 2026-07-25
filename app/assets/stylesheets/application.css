@@ -897,9 +897,8 @@ body > .site-header {
   color: var(--text-3); overflow-wrap: normal;
 }
 
-.heartbeat-facts dd { min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 480px) {
-  .cert-facts, .fact-grid, .heartbeat-facts { grid-template-columns: 1fr; }
+  .cert-facts, .fact-grid { grid-template-columns: 1fr; }
   .cert-facts dt, .fact-grid dt { padding: var(--s3) 0 var(--s1); }
   .cert-facts dd, .fact-grid dd { padding: 0 0 var(--s3); }
   .cert-facts dt:not(:first-of-type) + dd, .fact-grid dt:not(:first-of-type) + dd { border-top: 0; }

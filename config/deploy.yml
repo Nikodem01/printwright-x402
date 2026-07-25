@@ -43,7 +43,6 @@ env:
     HEDERA_NETWORK: <%= ENV.fetch("HEDERA_NETWORK", "testnet") %>
     HEDERA_ACCOUNT_ID: <%= ENV.fetch("HEDERA_ACCOUNT_ID") %>
     HEDERA_HCS_TOPIC_ID: <%= ENV.fetch("HEDERA_HCS_TOPIC_ID") %>
-    HEDERA_HEARTBEAT_TOPIC_ID: <%= ENV.fetch("HEDERA_HEARTBEAT_TOPIC_ID") %>
     HEDERA_SIDECAR_URL: http://printwright_x402-sidecar:4021
     X402_FACILITATOR_URL: <%= ENV.fetch("X402_FACILITATOR_URL") %>
     X402_PAY_TO: <%= ENV.fetch("X402_PAY_TO") %>
@@ -103,7 +102,6 @@ accessories:
         HEDERA_NETWORK: <%= ENV.fetch("HEDERA_NETWORK", "testnet") %>
         HEDERA_ACCOUNT_ID: <%= ENV.fetch("HEDERA_ACCOUNT_ID") %>
         HEDERA_HCS_TOPIC_ID: <%= ENV.fetch("HEDERA_HCS_TOPIC_ID") %>
-        HEDERA_HEARTBEAT_TOPIC_ID: <%= ENV.fetch("HEDERA_HEARTBEAT_TOPIC_ID") %>
         TREASURY_ACCOUNT_ID: <%= ENV.fetch("TREASURY_ACCOUNT_ID") %>
         SENTRY_ENVIRONMENT: production-sidecar
         SENTRY_TRACES_SAMPLE_RATE: <%= ENV.fetch("SENTRY_TRACES_SAMPLE_RATE", "0") %>

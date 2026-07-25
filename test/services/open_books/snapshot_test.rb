@@ -62,13 +62,13 @@ class OpenBooks::SnapshotTest < ActiveSupport::TestCase
   private
 
   def stub_latest_message
-    certificate = { v: 1, cert_id: "pw-000058" }
+    envelope = { type: "printwright-license-commitment", version: 1, algorithm: "sha256-jcs-v1", commitment: "a" * 64 }
     stub_request(:get, latest_query).to_return(
       body: {
         messages: [ {
           topic_id: TOPIC, sequence_number: 50,
           consensus_timestamp: "1784449779.736670002",
-          message: Base64.strict_encode64(JSON.generate(certificate))
+          message: Base64.strict_encode64(JSON.generate(envelope))
         } ]
       }.to_json,
       headers: { "content-type" => "application/json" }

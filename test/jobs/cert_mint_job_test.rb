@@ -25,7 +25,8 @@ class CertMintJobTest < ActiveJob::TestCase
     cert = Certificates::Builder.call(@license)
     assert_equal %w[v cert_id model_id model_hash designer license_type unit_serial
                     buyer_hint payment_tx issued_at terms_hash], cert.keys
-    assert_equal [ 1, @license.cert_id, "0.0.777", "personal", 1, "0.0.9067781", "0.0.7162784@111.222" ],
+    # `designer` is the stable studio id, never the payout wallet (privacy §6b.2).
+    assert_equal [ 1, @license.cert_id, designers(:one).id, "personal", 1, "0.0.9067781", "0.0.7162784@111.222" ],
                  cert.values_at("v", "cert_id", "designer", "license_type", "unit_serial", "buyer_hint", "payment_tx")
     assert_operator JSON.generate(cert).bytesize, :<, 1024
   end
@@ -44,8 +45,9 @@ class CertMintJobTest < ActiveJob::TestCase
     assert_equal [ "0.0.9585069", 7 ], [ @license.hcs_topic_id, @license.hcs_sequence_number ]
     assert_equal @license.cert_id, @license.cert_json["cert_id"]
 
+    # Only the opaque commitment is published — never the certificate itself.
     assert_requested(:post, "#{SIDECAR}/submit-cert") do |req|
-      JSON.parse(req.body)["cert"] == @license.cert_json
+      JSON.parse(req.body)["cert"] == Certificates::Commitment.envelope(@license.cert_json, @license.cert_salt)
     end
   end
 

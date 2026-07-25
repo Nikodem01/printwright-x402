@@ -7,10 +7,11 @@ lawyer before building a business on it.
 
 ## 1. Parties and subject
 
-This license is granted by the **designer** (the account named as `designer`
-in the license certificate) to the **licensee** (the holder of the license
-certificate identified by `cert_id`), for the 3D model whose file bundle hash
-is recorded as `model_hash` in that certificate.
+This license is granted by the **designer** (identified by the stable
+`designer` id in the license certificate — an identity, never a wallet) to the
+**licensee** (the holder of the license certificate identified by `cert_id`),
+for the 3D model whose file bundle hash is recorded as `model_hash` in that
+certificate.
 
 ## 2. Grant — one unit
 
@@ -24,7 +25,7 @@ license to:
 
 Each additional unit offered for sale requires its own per-unit license. This
 is the royalty: designers earn per unit sold, at machine-payable prices, and
-each unit's legitimacy is publicly checkable.
+each unit's legitimacy is independently checkable from its certificate.
 
 ## 3. Not granted
 
@@ -48,18 +49,22 @@ publishing the model.
 
 The files carry no copy protection, watermarking, or usage tracking, and none
 will be added later. Per-unit honesty is the design: royalties are priced to
-be cheaper to pay than to evade, buyers of your prints can ask to see your
-unit certificates, and the public count of licensed units for any model is
-verifiable by anyone. Selling unlicensed copies is not prevented — it is
-simply provable.
+be cheaper to pay than to evade, and buyers of your prints can ask to see your
+unit certificates and verify each one independently. Selling unlicensed copies
+is not prevented — each licensed unit is simply provable from its own
+certificate.
 
 ## 6. The certificate
 
-Each unit license mints a public certificate on the Hedera Consensus Service
-recording the model hash, license type, unit serial, payment transaction, and
-a hash of this exact text (`terms_hash`). "Unit N of model X, licensed at
-time T" is public fact; anyone can verify it against the mirror node without
-trusting Printwright. The certificate is the durable proof of this grant.
+Each unit license anchors a certificate to the Hedera Consensus Service as an
+**opaque commitment** — a salted hash of the certificate. The certificate
+itself (model hash, license type, unit serial, payment transaction, and a hash
+of this exact text, `terms_hash`) is held off-chain and revealed by the holder.
+"Unit N of model X, licensed at time T under these terms" is provable to anyone
+you show the certificate to, who recomputes the hash and checks it against the
+mirror node without trusting Printwright. Because only the commitment is
+public, your sales volume is never broadcast. The certificate is the durable
+proof of this grant.
 
 ## 7. Termination
 

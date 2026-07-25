@@ -273,6 +273,11 @@ class Api::V1::BatchesController < Api::V1::BaseController
       batch.purchases.each do |purchase|
         license = purchase.license || License.allocate!(purchase)
         Sandbox::Topic.anchor!(license) if batch.sandbox? && !license.anchored?
+        # Build the certificate now so each delivered proof bundle is complete;
+        # CertMintJob then just anchors the commitment (see downloads flow).
+        if !batch.sandbox? && license.cert_json.blank?
+          license.update!(cert_json: Certificates::Builder.call(license))
+        end
         purchase.transition_to!(:delivered) unless purchase.delivered?
         licenses << license
       end
@@ -318,7 +323,9 @@ class Api::V1::BatchesController < Api::V1::BaseController
       max_units: purchase.license_offer.max_units,
       remaining_units: purchase.license_offer.units_remaining,
       files: files,
-      verify_url: "#{request.base_url}/verify/#{license.verify_slug}"
+      verify_url: "#{request.base_url}/verify/#{license.verify_slug}",
+      proof_bundle: Certificates::Bundle.for(license),
+      bundle_url: api_v1_certificate_url(license.cert_id)
     }
     payload[:share_card_url] = verify_share_card_url(license.verify_slug) unless purchase.sandbox?
     payload[:receipt] = {

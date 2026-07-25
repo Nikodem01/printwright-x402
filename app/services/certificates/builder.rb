@@ -11,7 +11,7 @@ module Certificates
         "cert_id" => license.cert_id,
         "model_id" => model.id,
         "model_hash" => model.file_hash,
-        "designer" => model.designer.hedera_account_id.to_s,
+        "designer" => model.designer_id,
         "license_type" => offer.kind,
         "unit_serial" => license.serial,
         "buyer_hint" => purchase.buyer_hint.presence || "bearer",

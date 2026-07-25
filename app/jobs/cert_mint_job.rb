@@ -14,14 +14,19 @@ class CertMintJob < ApplicationJob
     end
 
     license.update!(cert_json: Certificates::Builder.call(license)) if license.cert_json.blank?
+    # Legacy licenses created before the commitment migration carry no salt.
+    license.update!(cert_salt: SecureRandom.hex(32)) if license.cert_salt.blank?
 
-    receipt = SidecarClient.new.submit_cert(license.cert_json)
+    # Publish only an opaque, salted commitment to the certificate — never the
+    # cert itself. The full cert + salt stay off-chain; /verify reveals and
+    # re-hashes them to prove they match this on-chain commitment.
+    receipt = SidecarClient.new.submit_cert(
+      Certificates::Commitment.envelope(license.cert_json, license.cert_salt)
+    )
     license.update!(
       hcs_topic_id: receipt["topicId"],
       hcs_sequence_number: receipt["sequenceNumber"]
     )
     WebhookFanoutJob.perform_later(license.id, "certificate.anchored")
-    # The anchored cert is the record; the NFT is the holdable proof of it.
-    NftMintJob.perform_later(license.id)
   end
 end

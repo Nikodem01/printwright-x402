@@ -4,15 +4,16 @@
 <div class="container">
   <h1>Open books</h1>
   <p class="t-small muted">Two ledgers, labeled separately: Hedera's public topic is the durable
-    count of certificate messages; the marketplace's immutable revenue ledger records the split
-    for settlements retained in this deployment. Raw values are also available from
+    count of license commitments (opaque hashes — no buyer, designer, or per-model data); the
+    marketplace's immutable revenue ledger records the split for settlements retained in this
+    deployment. Raw values are also available from
     <%= link_to "/api/v1/stats", api_v1_stats_path, class: "mono" %>.</p>
 
   <h2>Public certificate topic</h2>
   <% hcs = @snapshot[:hcs] %>
   <% if hcs[:status] == "ok" %>
     <dl class="fact-grid">
-      <dt>PWC-1 messages on HCS</dt><dd><strong><%= hcs[:message_count] %></strong></dd>
+      <dt>License commitments on HCS</dt><dd><strong><%= hcs[:message_count] %></strong></dd>
       <dt>Latest consensus time</dt><dd class="mono"><%= hcs[:latest_consensus_timestamp] %></dd>
       <dt>Licenses retained in this database</dt><dd><%= hcs[:local_anchored_licenses] %></dd>
       <dt>On-chain minus local</dt><dd><%= hcs[:count_difference] %></dd>
@@ -30,8 +31,9 @@
     </p>
   <% end %>
   <p class="t-caption muted">The topic sequence is the message count because this submit-key-
-    protected topic contains only PWC-1 certificates. A local difference is disclosed rather
-    than hidden; imports, database resets, or in-flight anchoring can make the two counts differ.</p>
+    protected topic contains only opaque license commitments and version events. A local difference
+    is disclosed rather than hidden; imports, database resets, or in-flight anchoring can make the
+    two counts differ.</p>
 
   <h2>Revenue split</h2>
   <p class="t-small">Configured split: designers <strong><%= @snapshot.dig(:split, :designer_bps) / 100.0 %>%</strong>,
