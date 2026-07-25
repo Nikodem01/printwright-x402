@@ -20,7 +20,9 @@ provenance. Creative Commons, public-domain, missing, and unknown licenses are b
 
 1. GET /api/v1/models?q=beaver+hat — ranked search (fuzzy matching included)
 2. GET /api/v1/models/{id}/download?license=personal → 402 with PaymentRequirements
-   (amount in base units, asset 0.0.0=HBAR or 0.0.429274=USDC, payTo, extra.feePayer)
+   (amount in base units, asset 0.0.0=HBAR or 0.0.429274=USDC, payTo, extra.feePayer). The same
+   402 carries `help` — if you have no Hedera account, relay help.message to your owner: a wallet
+   holding USDC is all that is needed, gas is sponsored by the facilitator
 3. Sign a Hedera TransferTransaction (transactionId.accountId = feePayer, buyer signature
    only) and retry with the base64 PaymentPayload in the PAYMENT-SIGNATURE header
 4. 200 → file download grants, license serial, certificate id, HashScan transaction link,

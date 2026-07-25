@@ -23,6 +23,18 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
     assert_select ".badge[role='img'][aria-label='Identity verified']", text: "✓"
   end
 
+  test "checkout points a visitor with no wallet at one they can create" do
+    model = Model3d.where(status: "published").first
+    get model_page_path(model.slug)
+
+    assert_response :success
+    assert_select "a[href=?]", "https://www.hashpack.app/"
+    assert_match(/No wallet\?/, response.body)
+    # Browsing is never gated on having one; the pointer sits next to the buy
+    # action, where the wallet is actually needed.
+    assert_match(/no seed phrase/, response.body)
+  end
+
   test "browse lists published models with price and printability facts" do
     get root_path
     assert_response :success

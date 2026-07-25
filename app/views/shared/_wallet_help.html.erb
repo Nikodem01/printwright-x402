@@ -1,0 +1,11 @@
+<%# The app had connect affordances everywhere and no way to *get* a wallet,
+    which assumes every visitor already holds one. HashPack does creation and
+    card funding itself, so all we owe the visitor is the pointer — offered at
+    the moment they are asked to connect, never as a gate on browsing.
+    `note` tailors the reason; the wallet story itself lives only here. %>
+<span class="wallet-help t-caption muted">
+  No wallet?
+  <%= link_to "Create one free with HashPack", "https://www.hashpack.app/",
+        target: "_blank", rel: "noopener" %>
+  <%= "— #{note}" if note.present? %>
+</span>

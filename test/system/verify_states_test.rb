@@ -23,31 +23,32 @@ class VerifyStatesTest < RackSystemTestCase
   end
 
   test "unanchored cert shows the minting state with auto-refresh" do
-    visit verify_path(@license.cert_id)
+    visit verify_path(@license.verify_slug)
     assert_selector ".banner-pending", text: /Minting/
     assert_selector 'meta[http-equiv="refresh"]', count: 1, visible: false
   end
 
   test "anchored matching cert shows the green verified banner" do
     anchor!
-    stub_mirror(message: Base64.strict_encode64(JSON.generate(@cert)),
-                consensus_timestamp: "1784141018.086938437")
-    visit verify_path(@license.cert_id)
+    stub_mirror(message: commitment_envelope, consensus_timestamp: "1784141018.086938437")
+    visit verify_path(@license.verify_slug)
     assert_selector ".banner-ok", text: /Verified on Hedera/
     assert_text @license.cert_id
   end
 
-  test "tampered on-chain copy shows the mismatch banner with both copies" do
+  test "a certificate the on-chain commitment does not cover shows the mismatch banner" do
     anchor!
-    stub_mirror(message: Base64.strict_encode64(JSON.generate(@cert.merge("unit_serial" => 999))),
+    # Same anchor, a certificate altered after it was committed: the reveal no
+    # longer hashes to what the ledger holds.
+    stub_mirror(message: commitment_envelope(@cert.merge("unit_serial" => 999)),
                 consensus_timestamp: "1.2")
-    visit verify_path(@license.cert_id)
+    visit verify_path(@license.verify_slug)
     assert_selector ".banner-bad", text: /Mismatch/
-    assert_selector ".mismatch-row", minimum: 1
+    assert_text "Recorded commitment"
   end
 
   test "unknown cert renders the honest not-found page" do
-    visit verify_path("pw-999999")
+    visit verify_path("not-a-real-verify-token")
     assert_selector ".banner-bad", text: /not found/i
   end
 
@@ -57,6 +58,13 @@ class VerifyStatesTest < RackSystemTestCase
 
   def anchor!
     @license.update!(hcs_topic_id: "0.0.9585069", hcs_sequence_number: SEQUENCE)
+  end
+
+  # What the topic actually carries: the opaque envelope, nothing readable.
+  def commitment_envelope(cert = @cert)
+    Base64.strict_encode64(
+      JSON.generate(Certificates::Commitment.envelope(cert, @license.cert_salt))
+    )
   end
 
   def stub_mirror(**body)

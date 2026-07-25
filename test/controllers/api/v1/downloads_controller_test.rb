@@ -54,6 +54,17 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "x402", response.headers["WWW-Authenticate"]
   end
 
+  test "the 402 tells a walletless agent where its owner can get a wallet" do
+    get download_path
+
+    help = response.parsed_body.fetch("help")
+    assert_match(/hedera/i, help["message"])
+    # The one thing an owner over-funds without: gas is on the facilitator.
+    assert_match(/facilitator sponsors the network fee/, help["message"])
+    assert_equal "https://www.hashpack.app/", help["wallet_url"]
+    assert_equal "http://www.example.com/docs", help["docs_url"]
+  end
+
   test "initial real quote records one bounded channel event but sandbox does not" do
     clear_enqueued_jobs
 

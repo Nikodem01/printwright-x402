@@ -67,6 +67,8 @@
       </div>
       <%= f.submit Current.designer.payout_account_verified? ? "Stage replacement" : "Start wallet proof",
             class: "btn btn-primary" %>
+      <%= render "shared/wallet_help",
+            note: "email sign-up, no seed phrase; it is where your USDC payouts land" %>
     <% end %>
   <% end %>
 </section>

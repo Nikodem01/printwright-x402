@@ -34,6 +34,7 @@ class Designer::ModelVersionsController < Designer::BaseController
     end
 
     version = nil
+    oversize = false
     model.with_lock do
       version = model.model_versions.create!(
         number: model.model_versions.maximum(:number).to_i.clamp(1..) + 1,
@@ -50,7 +51,20 @@ class Designer::ModelVersionsController < Designer::BaseController
         # instead of re-reading its upload a second time.
         version_file.file.attach(index.zero? ? version.file.blob : part[:upload])
       end
+
+      # The provenance event must fit one HCS message, and only now is the file
+      # list known. Rejecting here beats accepting a version that would upload
+      # cleanly and then never anchor.
+      if version.anchor_payload_too_large?
+        oversize = true
+        raise ActiveRecord::Rollback
+      end
     end
+    if oversize
+      return reject(model, "That bundle has too many files to anchor as one provenance record. " \
+        "Split it into fewer files (about eight is the limit) and upload again.")
+    end
+
     AnalyzeModelVersionMeshJob.perform_later(version.id)
     redirect_to edit_designer_model_path(model),
       notice: "Version #{version.number} uploaded. It is validated before buyers receive it, then anchored on HCS."

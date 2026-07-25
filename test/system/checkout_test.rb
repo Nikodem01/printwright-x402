@@ -59,7 +59,8 @@ class CheckoutTest < ApplicationSystemTestCase
     assert_text "24 of 25 license slots now remain"
     assert_selector "img[alt^='Share card for pw-']"
     assert_selector "a", text: settled_tx
-    assert_selector "a", text: /\Apw-\d{6,}\z/
+    # Unguessable by design: a sequential id would let anyone walk the reveals.
+    assert_selector "a", text: /\Apw-[0-9a-f]{16,}\z/
     assert_link "Download files"
     assert_no_button "Buy license · 0.25 USDC"
 

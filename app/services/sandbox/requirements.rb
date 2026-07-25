@@ -27,8 +27,23 @@ module Sandbox
           description: "SANDBOX #{@offer.kind} rehearsal — no printable model is delivered",
           mimeType: "application/json"
         },
-        accepts: accepts
+        accepts: accepts,
+        # The rehearsal keeps the real challenge's shape, help included, so an
+        # agent's walletless branch is exercised here rather than discovered in
+        # production. Nothing to fund: sandbox settles no money.
+        help: {
+          message: "Sandbox rehearsal — no wallet or funds are needed. The real challenge " \
+            "carries the same field, pointing a walletless buyer at wallet setup.",
+          wallet_url: "https://www.hashpack.app/",
+          docs_url: docs_url
+        }
       }
+    end
+
+    def docs_url
+      URI.join(@resource_url, "/docs").to_s
+    rescue URI::Error
+      nil
     end
 
     def accepts

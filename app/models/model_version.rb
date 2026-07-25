@@ -2,6 +2,14 @@ class ModelVersion < ApplicationRecord
   HASH_FORMAT = /\Asha256:[0-9a-f]{64}\z/
   FILE_KINDS = %w[stl 3mf step].freeze
 
+  # One HCS message, one consensus sequence number: a provenance record that
+  # spanned chunks would not be a single atomic event. The sidecar enforces the
+  # same 1024 bytes and returns a 422 that is never retried, so an oversize
+  # bundle would upload happily and then never anchor — the check belongs here,
+  # where the designer can still do something about it. The payload grows with
+  # the file list, so in practice this caps a bundle at roughly eight files.
+  MAX_ANCHOR_BYTES = 1024
+
   belongs_to :model3d
   has_one_attached :file
   has_many :version_files, class_name: "ModelVersionFile", dependent: :destroy
@@ -38,6 +46,10 @@ class ModelVersion < ApplicationRecord
 
   def anchored?
     hcs_sequence_number.present?
+  end
+
+  def anchor_payload_too_large?
+    anchor_payload.to_json.bytesize > MAX_ANCHOR_BYTES
   end
 
   def anchor_payload

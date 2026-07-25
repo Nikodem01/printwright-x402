@@ -128,6 +128,7 @@
                       data-action="wallet-loader#connectWallet">Connect wallet</button>
               <button class="linklike wallet-disconnect" type="button" data-wallet-disconnect
                       data-action="wallet-loader#disconnectWallet" hidden>Disconnect</button>
+              <%= render "shared/wallet_help", note: nil %>
             </span>
           <% end %>
           <button type="button" class="theme-toggle" data-controller="theme"

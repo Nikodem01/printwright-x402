@@ -383,6 +383,12 @@ body > .site-header {
   color: var(--chain); font-family: var(--font-mono); font-size: 12px;
 }
 .wallet-disconnect { color: var(--text-3); font-size: 12px; }
+.wallet-help { display: block; margin-top: var(--s1); }
+/* In the header the pointer sits beside a connected/disconnected pair, where a
+   block would push the row apart; once a wallet is connected it has served its
+   purpose and goes away. */
+.wallet-control .wallet-help { display: inline; margin-top: 0; }
+.wallet-control[data-connected="true"] .wallet-help { display: none; }
 
 @media (max-width: 760px) {
   .header-actions { flex: 1 0 100%; justify-content: flex-start; }

@@ -23,7 +23,7 @@ class DesignerPublishTest < RackSystemTestCase
     visit new_designer_model_path
     fill_in "Title", with: "Form Flow Clip"
     fill_in "Tags (comma-separated)", with: "cable, clip"
-    assert_text "Canonical personal license (v1)"
+    assert_text "Canonical personal license (#{Licensing::Documents::CURRENT_VERSION})"
     assert_text "Personal Print License"
     assert_no_field "Terms"
     attach_file "Printable files (STL/3MF/STEP)", Rails.root.join("db/seed_assets/calibration-cube.stl")

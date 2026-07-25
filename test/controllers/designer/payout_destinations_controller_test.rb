@@ -34,6 +34,18 @@ class Designer::PayoutDestinationsControllerTest < ActionDispatch::IntegrationTe
     assert_not @designer.reload.payout_destination_change_pending?
   end
 
+  test "the payout screen offers a way to get a wallet, not just to connect one" do
+    complete_two_factor_setup("password")
+
+    get designer_payouts_path
+
+    assert_response :success
+    assert_select "a[href=?]", "https://www.hashpack.app/"
+    # A designer without crypto reaches this screen with nothing to paste; the
+    # earnings they have already made wait in treasury until they do.
+    assert_match(/No wallet\?/, response.body)
+  end
+
   test "designer stages, proves, and activates a first destination from Payouts" do
     complete_two_factor_setup("password")
     post designer_payout_destination_path, params: { account_id: "0.0.7007" }

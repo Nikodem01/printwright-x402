@@ -35,8 +35,31 @@ module X402
           description: description,
           mimeType: "application/json"
         },
-        accepts: accepts
+        accepts: accepts,
+        help: help
       }
+    end
+
+    # An agent that cannot pay reads this and can tell its owner what to do —
+    # the 402 body is the one message we are guaranteed to get in front of a
+    # walletless buyer. Unknown fields are ignored by x402 clients, so agents
+    # that can pay are unaffected. The gas note matters: buyers fund USDC only,
+    # because the facilitator sponsors the network fee.
+    def help
+      {
+        message: "Paying this needs a Hedera #{Hedera::Network.name} account holding USDC or " \
+          "HBAR. No wallet? HashPack creates one from an email address, with no seed phrase, " \
+          "and can fund it by card. Fund the payment asset only — you do not need HBAR for " \
+          "gas, because the x402 facilitator sponsors the network fee.",
+        wallet_url: "https://www.hashpack.app/",
+        docs_url: docs_url
+      }
+    end
+
+    def docs_url
+      URI.join(@resource_url, "/docs").to_s
+    rescue URI::Error
+      nil
     end
 
     # HBAR quotes drift with the live rate; a payment signed against a quote

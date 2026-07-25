@@ -198,6 +198,8 @@
         Pays via x402 on Hedera <%= Hedera::Network.name %> · HBAR or USDC.
         Your connected wallet signs only; the facilitator pays the network fee.
       </p>
+      <%= render "shared/wallet_help",
+            note: "email sign-up, no seed phrase, and you can buy USDC by card inside it" %>
       <% end %>
     <% else %>
       <section class="buy-panel" aria-labelledby="listing-unavailable-title">

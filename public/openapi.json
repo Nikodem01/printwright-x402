@@ -535,7 +535,9 @@
             "payTo": { "type": "string" },
             "maxTimeoutSeconds": { "type": "integer" },
             "extra": { "type": "object", "properties": { "feePayer": { "type": "string" } } }
-          } } }
+          } } },
+          "help": { "type": "object", "description": "For a buyer that cannot pay yet: what a wallet needs to hold, and where to get one. Buyers fund the payment asset only — the facilitator sponsors gas.", "properties": {
+            "message": { "type": "string" }, "wallet_url": { "type": "string" }, "docs_url": { "type": "string" } } }
         }
       },
       "BatchRequest": {
