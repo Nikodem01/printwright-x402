@@ -1,0 +1,73 @@
+<% content_for :title, "Set up payouts — Printwright" %>
+<div class="container" style="max-width: 46rem">
+  <p class="t-small"><%= link_to "← Payouts", designer_payouts_path %></p>
+  <h1 class="t-title">Get paid</h1>
+
+  <p>You are paid in USDC to a Hedera wallet you control. Three steps, about two minutes.
+    Printwright never holds your keys and cannot move your funds — a signature here proves the
+    wallet is yours, it does not authorize a transfer.</p>
+
+  <% if @owed.any? %>
+    <div class="notice-card">
+      <p><strong>You have already earned
+        <% @owed.each do |asset, amount| %><%= format_base_units(amount, asset) %><% end %>.</strong>
+        It is held safely and pays out once this is done — sales do not wait on payout setup.</p>
+    </div>
+  <% end %>
+
+  <ol class="payout-steps">
+    <li>
+      <h2 class="t-subtitle">1 · A wallet to be paid into</h2>
+      <% if @account_id.present? %>
+        <p><%= render "shared/state_mark", state: "settled" %>
+          Using <span class="mono"><%= @account_id %></span>.</p>
+      <% else %>
+        <p>Any Hedera account works. If you already have one, you will paste its id in step 3.</p>
+        <p><%= render "shared/wallet_help",
+                 note: "email sign-up, no seed phrase; nothing to install" %></p>
+      <% end %>
+    </li>
+
+    <li>
+      <h2 class="t-subtitle">2 · Let it receive USDC</h2>
+      <p>A brand-new wallet holds HBAR but has to opt in before it can receive a token like USDC.
+        This is the step that quietly breaks payouts, so check it before you sign.</p>
+
+      <%= form_with url: designer_payout_setup_check_path, method: :post, class: "field",
+            data: { turbo_stream: true } do |f| %>
+        <%= f.label :account_id, "Your Hedera account id" %>
+        <%= f.text_field :account_id, value: @account_id, placeholder: "0.0.12345",
+              pattern: "0\\.0\\.\\d+", required: true %>
+        <%= f.submit "Check my wallet", class: "btn" %>
+      <% end %>
+
+      <%= render "designer/payout_setup/receivability",
+            receivable: @receivable, account_id: @account_id.to_s %>
+    </li>
+
+    <li>
+      <h2 class="t-subtitle">3 · Prove the wallet is yours</h2>
+      <% case @state %>
+      <% when :active %>
+        <p><%= render "shared/state_mark", state: "settled" %>
+          <strong>Done.</strong> Payouts go to <span class="mono"><%= current_designer.hedera_account_id %></span>.
+          Held earnings are released on the next payout run.</p>
+      <% when :awaiting_proof %>
+        <p>Connect <span class="mono"><%= current_designer.payout_pending_account_id %></span> —
+          it must be that exact wallet — and sign the one-time challenge.</p>
+        <% if @receivable == false %>
+          <p class="hint">Finish step 2 first: signing now would prove the wallet is yours and
+            still leave it unable to receive the payment.</p>
+        <% end %>
+        <%= render "designer/sales/proof_form" %>
+      <% when :safety_hold, :ready_to_activate %>
+        <p>Wallet control is proved. <%= link_to "Finish on the Payouts page", designer_payouts_path(anchor: "payout-destination") %> —
+          a replacement waits out a 24-hour window you can cancel within.</p>
+      <% else %>
+        <p>Start the proof from the Payouts page, which holds the security checks this step needs
+          (two-factor and a recent password).</p>
+        <p><%= link_to "Go to Payouts", designer_payouts_path(anchor: "payout-destination"), class: "btn btn-primary" %></p>
+      <% end %>
+    </li>
+  </ol>
+</div>

@@ -23,16 +23,9 @@
         <p class="t-small">Awaiting proof. Connect this exact wallet and sign the single-use
           challenge before <%= Current.designer.payout_challenge_expires_at&.utc&.to_fs(:long) %> UTC.
           A signature proves wallet control; it does not authorize a transfer.</p>
-        <%= form_with url: verify_designer_payout_destination_path, method: :post,
-              data: { controller: "payout-proof",
-                      payout_proof_account_value: Current.designer.payout_pending_account_id,
-                      payout_proof_message_value: Current.designer.payout_challenge } do |f| %>
-          <%= f.hidden_field :message, value: Current.designer.payout_challenge %>
-          <%= f.hidden_field :signature_map, value: "", data: { payout_proof_target: "signature" } %>
-          <button type="button" class="btn btn-primary" data-payout-proof-target="button"
-                  data-action="payout-proof#sign">Sign with staged wallet</button>
-          <span class="hint" data-payout-proof-target="status" role="status"></span>
-        <% end %>
+        <%= render "designer/sales/proof_form" %>
+        <p class="t-small"><%= link_to "Not sure your wallet can receive USDC? Check it first",
+              designer_payout_setup_path %></p>
       <% elsif Current.designer.payout_hold_until&.future? %>
         <p class="t-small"><strong>24-hour safety hold:</strong> wallet control and USDC receipt
           passed. The current destination remains active. You may activate the replacement after

@@ -41,6 +41,8 @@ Rails.application.routes.draw do
       get :export, on: :collection
     end
     get :payouts, to: "sales#payouts"
+    get "payouts/setup", to: "payout_setup#show", as: :payout_setup
+    post "payouts/setup/check", to: "payout_setup#check", as: :payout_setup_check
     get :analytics, to: "analytics#show"
     resources :payout_attempts, only: [] do
       post :retry, on: :member

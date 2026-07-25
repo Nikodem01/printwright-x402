@@ -57,7 +57,8 @@ class Designer::PayoutDestinationsController < Designer::BaseController
       challenge_expired: "That signing challenge expired. Start again to get a new one.",
       invalid_challenge: "The signing challenge changed. Start again before signing.",
       invalid_signature: "The wallet signature did not prove control of the staged account.",
-      not_receivable: "That account cannot currently receive the configured USDC token.",
+      not_receivable: "That account cannot receive USDC yet. Turn on Unlimited Auto Association " \
+        "in your wallet (we pay the fee), then re-check it under Get paid — your signature is not lost.",
       verification_unavailable: "Wallet verification is temporarily unavailable. Your active destination was not changed.",
       hold_active: "The safety hold has not ended. You can cancel now or activate after the displayed time.",
       account_closed: "This account is closed and cannot change payout settings."

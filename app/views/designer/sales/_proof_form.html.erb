@@ -1,0 +1,13 @@
+<%# The signature that proves control of the staged wallet. Rendered both by the
+    Payouts section and by the guided setup flow — one implementation, so the
+    two screens can never disagree about what signing does. %>
+<%= form_with url: verify_designer_payout_destination_path, method: :post,
+      data: { controller: "payout-proof",
+              payout_proof_account_value: Current.designer.payout_pending_account_id,
+              payout_proof_message_value: Current.designer.payout_challenge } do |f| %>
+  <%= f.hidden_field :message, value: Current.designer.payout_challenge %>
+  <%= f.hidden_field :signature_map, value: "", data: { payout_proof_target: "signature" } %>
+  <button type="button" class="btn btn-primary" data-payout-proof-target="button"
+          data-action="payout-proof#sign">Sign with staged wallet</button>
+  <span class="hint" data-payout-proof-target="status" role="status"></span>
+<% end %>

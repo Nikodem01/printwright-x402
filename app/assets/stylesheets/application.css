@@ -1131,6 +1131,14 @@ fieldset.field textarea, fieldset.field select { background: var(--bg-card); }
   display: block; color: var(--text-3); font-size: var(--t-label);
 }
 .home-check-state { color: var(--text-3); font-size: var(--t-label); }
+/* The guided payout steps: numbered, because their order is load-bearing —
+   signing before the wallet can receive USDC is the failure this flow exists
+   to prevent. */
+.payout-steps { list-style: decimal inside none; padding: 0; margin: var(--s5) 0 0; }
+.payout-steps > li {
+  list-style: none; padding: var(--s4) 0; border-top: 1px solid var(--hairline);
+}
+.payout-steps h2 { margin: 0 0 var(--s2); }
 .home-task-list { display: flex; flex-direction: column; gap: var(--s3); }
 .home-task {
   display: flex; align-items: center; justify-content: space-between; gap: var(--s4);

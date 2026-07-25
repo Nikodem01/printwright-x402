@@ -56,7 +56,8 @@ class Designer::HomeController < Designer::BaseController
       { label: "Listing live", complete: @model_counts.fetch("published", 0).positive?,
         detail: "A published listing is discoverable and available for checkout." },
       { label: "Payout destination ready", complete: current_designer.payout_account_verified?,
-        detail: "Sales can happen before this; your share stays held until it is ready." }
+        detail: "Sales can happen before this; your share stays held until it is ready.",
+        href: designer_payout_setup_path, cta: "Start" }
     ]
   end
 
@@ -104,7 +105,7 @@ class Designer::HomeController < Designer::BaseController
       title = @owed_by_asset.any? ? "Unlock earnings awaiting payout" : "Set up a payout destination"
       tasks << task(title,
         "Prove control of a Hedera account that can receive USDC. Buyer checkout and delivery do not wait for this step.",
-        designer_payouts_path(anchor: "payout-destination"), "Set up payouts")
+        designer_payout_setup_path, "Set up payouts")
     end
 
     if @payout_attention_count.positive?

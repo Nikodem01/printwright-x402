@@ -35,7 +35,13 @@
         <li>
           <%= render "shared/state_mark", state: item[:complete] ? "settled" : "pending" %>
           <span><strong><%= item[:label] %></strong><small><%= item[:detail] %></small></span>
-          <span class="home-check-state"><%= item[:complete] ? "Complete" : "To do" %></span>
+          <span class="home-check-state">
+            <% if item[:complete] || item[:href].blank? %>
+              <%= item[:complete] ? "Complete" : "To do" %>
+            <% else %>
+              <%= link_to item[:cta], item[:href] %>
+            <% end %>
+          </span>
         </li>
       <% end %>
     </ol>

@@ -1,0 +1,20 @@
+<%# Answered from the public mirror, never from our own records: the question is
+    whether Hedera would let this account receive the token, and only Hedera
+    can say. `nil` means we have not asked yet (or could not reach the mirror). %>
+<div id="payout-receivability" class="notice-card t-small">
+  <% if local_assigns[:note].present? %>
+    <p><%= note %></p>
+  <% elsif receivable.nil? %>
+    <p class="muted">Not checked yet. Enter your account id and check it here before you sign —
+      a wallet that cannot receive USDC would take your signature and still fail to be paid.</p>
+  <% elsif receivable %>
+    <p><%= render "shared/state_mark", state: "settled" %>
+      <strong><%= account_id %> can receive USDC.</strong> Nothing else to do in this step.</p>
+  <% else %>
+    <p><%= render "shared/state_mark", state: "pending" %>
+      <strong><%= account_id.presence || "That account" %> cannot receive USDC yet.</strong></p>
+    <p>In HashPack, open <em>Menu → Accounts → your account</em> and turn on
+      <strong>Unlimited Auto Association</strong>. It is one toggle, it costs you nothing, and the
+      association fee is paid by whoever sends the tokens — us. Then check again.</p>
+  <% end %>
+</div>

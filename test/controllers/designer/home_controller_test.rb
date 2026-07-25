@@ -24,7 +24,10 @@ class Designer::HomeControllerTest < ActionDispatch::IntegrationTest
     assert_select "h1", text: @designer.display_name
     assert_select ".home-heading", text: /shop is not live yet/i
     assert_select "#setup-title", text: "0 of 4 operational steps complete"
-    assert_select ".home-checklist", text: /Email verified.*To do.*Catalog started.*To do.*Listing live.*To do.*Payout destination ready.*To do/m
+    # The payout step reads as its action, not as a status: it is the one item
+    # a designer cannot complete by guessing where to go.
+    assert_select ".home-checklist", text: /Email verified.*To do.*Catalog started.*To do.*Listing live.*To do.*Payout destination ready.*Start/m
+    assert_select ".home-checklist a[href=?]", designer_payout_setup_path, text: "Start"
     assert_select ".home-task", text: /Verify your email.*Send verification email/m
     assert_select "form[action='/verify-account-resend'][method='post']" do
       assert_select "input[name='email'][value=?]", @designer.email_address
@@ -138,8 +141,9 @@ class Designer::HomeControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select ".home-metric", text: /Awaiting payout.*0\.90 USDC.*Held until destination is ready/m
     assert_select ".home-task", text: /Unlock earnings awaiting payout.*Buyer checkout and delivery do not wait/m
-    assert_select ".home-task a[href=?]", designer_payouts_path(anchor: "payout-destination"),
-      text: "Set up payouts"
+    # Held earnings send the designer into the guided flow, not to the raw
+    # settings section — the USDC step is what is actually blocking the money.
+    assert_select ".home-task a[href=?]", designer_payout_setup_path, text: "Set up payouts"
   end
 
   test "failed payout operations become a private recovery task" do
