@@ -172,7 +172,7 @@
           <%= link_to "Open books", open_books_path %> ·
           <%= link_to "Chaos log", chaos_log_path %> ·
           <%= link_to "License library", new_license_library_path %> ·
-          <%= link_to "License texts", license_document_path(version: "v1", kind: "personal") %> ·
+          <%= link_to "License texts", license_document_path(version: Licensing::Documents::CURRENT_VERSION, kind: "personal") %> ·
           <%= link_to "Ask the shopkeeper", chat_path %>
         </span>
       </div>

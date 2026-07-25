@@ -13,6 +13,15 @@ const ALGORITHM = "sha256-jcs-v1";
 const ENVELOPE_TYPE = "printwright-license-commitment";
 const DOMAIN = Buffer.from("printwright:license-certificate:v1\0", "utf8");
 
+// The bundle says where its commitment is anchored, but never where to look:
+// the mirror host is one of these, and the message URL is derived from the
+// topic id and sequence number. A bundle that could name its own "mirror"
+// would be a bundle that verifies itself.
+const MIRRORS = Object.freeze({
+  testnet: "https://testnet.mirrornode.hedera.com",
+  mainnet: "https://mainnet-public.mirrornode.hedera.com",
+});
+
 const CERTIFICATE_KEYS = Object.freeze([
   "v", "cert_id", "model_id", "model_hash", "designer", "license_type",
   "unit_serial", "buyer_hint", "payment_tx", "issued_at", "terms_hash",
@@ -99,6 +108,7 @@ export function validateCertificate(certificate) {
 // the ledger genuinely proves from what it does not.
 export async function verifyBundle(bundle, {
   fetch: fetchImplementation = globalThis.fetch,
+  expectedTopicId = null,
   timeoutMs = 10_000,
 } = {}) {
   if (!plainObject(bundle)) throw new VerificationError("proof bundle must be a JSON object", "invalid_input");
@@ -134,10 +144,15 @@ export async function verifyBundle(bundle, {
   //    confirm it is our commitment type and equals the recomputed value.
   const hedera = plainObject(bundle.hedera) ? bundle.hedera : {};
   let consensusTimestamp = null;
-  if (!hedera.mirror_url || hedera.status === "minting") {
+  let mirrorUrl = null;
+  if (hedera.status === "minting" || !hedera.topic_id) {
     checks.hedera_anchoring = "pending";
+  } else if (expectedTopicId && String(hedera.topic_id) !== expectedTopicId) {
+    // Anchored somewhere the caller does not trust — no fetch, no verdict.
+    checks.hedera_anchoring = "failed";
   } else {
-    const envelope = await fetchMirrorMessage(hedera.mirror_url, { fetchImplementation, timeoutMs });
+    mirrorUrl = mirrorMessageUrl(hedera);
+    const envelope = await fetchMirrorMessage(mirrorUrl, { fetchImplementation, timeoutMs });
     const onchain = decodeMessage(envelope.message);
     if (!onchain || onchain.type !== ENVELOPE_TYPE) {
       checks.hedera_anchoring = "failed";
@@ -166,7 +181,25 @@ export async function verifyBundle(bundle, {
     topic_id: hedera.topic_id ?? null,
     sequence_number: hedera.sequence_number ?? null,
     consensus_timestamp: consensusTimestamp,
+    mirror_url: mirrorUrl,
   });
+}
+
+function mirrorMessageUrl(hedera) {
+  const network = hedera.network ?? "testnet";
+  if (!Object.hasOwn(MIRRORS, network)) {
+    throw new VerificationError(
+      `no public mirror for network "${network}" — only ${Object.keys(MIRRORS).join(" and ")} can be verified`,
+      "invalid_input",
+    );
+  }
+  if (!/^\d+\.\d+\.\d+$/.test(String(hedera.topic_id))) {
+    throw new VerificationError("topic_id must be a Hedera entity id", "invalid_input");
+  }
+  if (!positiveInteger(hedera.sequence_number)) {
+    throw new VerificationError("sequence_number must be a positive integer", "invalid_input");
+  }
+  return `${MIRRORS[network]}/api/v1/topics/${hedera.topic_id}/messages/${hedera.sequence_number}`;
 }
 
 async function fetchMirrorMessage(url, { fetchImplementation, timeoutMs }) {

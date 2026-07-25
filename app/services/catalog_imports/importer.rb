@@ -171,7 +171,7 @@ module CatalogImports
         {
           kind: kind, price_cents: price, currency: offer.fetch("currency", "USDC"),
           max_units: offer["max_units"], terms_md: offer["terms_md"],
-          terms_version: offer.fetch("terms_version", "v1")
+          terms_version: offer.fetch("terms_version", Licensing::Documents::CURRENT_VERSION)
         }
       rescue ArgumentError, TypeError
         raise Error, "#{slug}: offer price must be an integer"

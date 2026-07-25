@@ -60,7 +60,7 @@ class FakePrintwrightHandler(BaseHTTPRequestHandler):
                 200,
                 {
                     "status": "sandbox",
-                    "hcs": {"sandbox": True, "mirror_url": "/api/v1/sandbox/topics/topic/messages/9"},
+                    "hedera": {"sandbox": True, "mirror_url": "/api/v1/sandbox/topics/topic/messages/9"},
                 },
             )
             return

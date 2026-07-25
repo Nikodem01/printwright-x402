@@ -59,9 +59,10 @@ class BadgeCertificateTest < ActionDispatch::IntegrationTest
     get badge_docs_path
     assert_response :success
     assert_match "&lt;img src=", response.body
-    assert_match "/verify/pw-000001/badge", response.body
+    assert_match "/verify/YOUR-VERIFY-TOKEN/badge", response.body
     assert_match "/printwright-verify-widget.js", response.body
     assert_match "&lt;printwright-verify", response.body
+    assert_match "bundle-url", response.body
 
     get verify_badge_path(cert_id: "pw-999999", format: :svg)
     assert_response :not_found
@@ -76,11 +77,13 @@ class BadgeCertificateTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "text/javascript", response.media_type
     assert_match "testnet.mirrornode.hedera.com", response.body
+    # The widget reaches a verdict from the mirror alone — never from us.
     assert_no_match %r{/api/v1/(models|licenses|verify)}, response.body
 
     get "/widget-example.html"
     assert_response :success
     assert_match "<printwright-verify", response.body
-    assert_match 'cert-id="pw-000058"', response.body
+    assert_match 'topic-id="0.0.9585069"', response.body
+    assert_match "application/json", response.body
   end
 end

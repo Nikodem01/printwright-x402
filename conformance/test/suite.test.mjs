@@ -1,7 +1,23 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
+import { createHash } from "node:crypto";
 import { lintPaymentRequired, runConformance } from "../suite.mjs";
+
+const SANDBOX_CERTIFICATE = { cert_id: "sandbox-pw-000007", sandbox: true };
+const SANDBOX_NONCE = "cd".repeat(32);
+
+function sandboxCommitment() {
+  const canonical = JSON.stringify(SANDBOX_CERTIFICATE, (_key, item) =>
+    item && typeof item === "object" && !Array.isArray(item)
+      ? Object.fromEntries(Object.keys(item).sort().map((key) => [ key, item[key] ]))
+      : item);
+  return createHash("sha256").update(Buffer.concat([
+    Buffer.from("printwright:license-certificate:v1\0", "utf8"),
+    Buffer.from(SANDBOX_NONCE, "hex"),
+    Buffer.from(canonical, "utf8"),
+  ])).digest("hex");
+}
 
 let server;
 let baseUrl;
@@ -45,16 +61,24 @@ before(async () => {
       return response.end("PRINTWRIGHT SANDBOX RECEIPT — NOT A LICENSE — NO FUNDS MOVED");
     }
     if (url.pathname === "/api/v1/certificates/sandbox-pw-000007") {
-      const certificate = { cert_id: "sandbox-pw-000007", sandbox: true };
       return response.end(JSON.stringify({
-        status: "sandbox", certificate,
-        hcs: { sandbox: true, mirror_url: `${baseUrl}/api/v1/sandbox/topics/printwright-sandbox/messages/7` },
+        status: "sandbox",
+        proof_version: 1, algorithm: "sha256-jcs-v1",
+        certificate: SANDBOX_CERTIFICATE, blinding_nonce: SANDBOX_NONCE,
+        commitment: sandboxCommitment(),
+        hedera: {
+          sandbox: true, network: "sandbox",
+          mirror_url: `${baseUrl}/api/v1/sandbox/topics/printwright-sandbox/messages/7`,
+        },
       }));
     }
     if (url.pathname === "/api/v1/sandbox/topics/printwright-sandbox/messages/7") {
       return response.end(JSON.stringify({
         sandbox: true,
-        message: Buffer.from(JSON.stringify({ cert_id: "sandbox-pw-000007", sandbox: true })).toString("base64"),
+        message: Buffer.from(JSON.stringify({
+          type: "printwright-license-commitment", version: 1,
+          algorithm: "sha256-jcs-v1", commitment: sandboxCommitment(),
+        })).toString("base64"),
       }));
     }
     response.statusCode = 404;

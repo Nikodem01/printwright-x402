@@ -122,11 +122,26 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
     get "/pwc-1.schema.json"
     assert_response :success
     schema = JSON.parse(response.body)
-    assert_equal "PWC-1 Print License Certificate", schema["title"]
-    assert_equal false, schema["additionalProperties"]
-    assert_equal 1, schema.dig("properties", "v", "const")
+    certificate = schema.dig("$defs", "certificate")
+    assert_equal false, certificate["additionalProperties"]
+    assert_equal 1, certificate.dig("properties", "v", "const")
     assert_equal %w[v cert_id model_id model_hash designer license_type unit_serial
-                    buyer_hint payment_tx issued_at terms_hash], schema["required"]
+                    buyer_hint payment_tx issued_at terms_hash], certificate["required"]
+    # The designer is a stable studio id — publishing the payout wallet is the
+    # leak the commitment scheme exists to close.
+    assert_equal "integer", certificate.dig("properties", "designer", "type")
+  end
+
+  test "PWC-1 JSON Schema publishes the commitment envelope the code actually anchors" do
+    get "/pwc-1.schema.json"
+    schema = JSON.parse(response.body)
+
+    assert_equal Certificates::Commitment::ALGORITHM, schema.dig("properties", "algorithm", "const")
+    envelope = schema.dig("$defs", "commitment_envelope")
+    assert_equal Certificates::Commitment::TYPE, envelope.dig("properties", "type", "const")
+    assert_equal %w[type version algorithm commitment], envelope["required"]
+    assert_equal envelope["required"].sort,
+                 Certificates::Commitment.envelope({ "v" => 1 }, "00").keys.sort
   end
 
   test "external-profile schema and live example preserve source licenses and file hashes" do

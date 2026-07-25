@@ -8,21 +8,31 @@ module Certificates
   # touches no network: the verifier fetches the mirror itself.
   class Bundle
     def self.for(license)
-      offer = license.purchase.license_offer
       {
         "proof_version" => 1,
         "algorithm" => Commitment::ALGORITHM,
         "certificate" => license.cert_json.presence,
         "blinding_nonce" => license.cert_salt,
         "commitment" => commitment(license),
-        "terms" => {
-          "version" => offer.terms_version,
-          "kind" => offer.kind,
-          "hash" => offer.terms_hash,
-          "text" => offer.terms_text
-        },
+        "terms" => terms(license),
         "hedera" => hedera_block(license)
       }
+    end
+
+    # The bytes the certificate actually committed to — resolved from the
+    # anchored terms_hash, not from the offer as it stands today. An offer can
+    # move to a newer terms version after this license was sold; the grant this
+    # buyer holds is the one they paid under, and it must still hash correctly.
+    def self.terms(license)
+      offer = license.purchase.license_offer
+      anchored = license.cert_json.presence&.dig("terms_hash")
+      version = anchored.present? ? Licensing::Documents.version_for_hash(offer.kind, anchored) : nil
+
+      return { "version" => offer.terms_version, "kind" => offer.kind,
+               "hash" => offer.terms_hash, "text" => offer.terms_text } if version.nil?
+
+      { "version" => version, "kind" => offer.kind, "hash" => anchored,
+        "text" => Licensing::Documents.text(version, offer.kind) }
     end
 
     def self.commitment(license)

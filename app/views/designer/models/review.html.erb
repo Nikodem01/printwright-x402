@@ -68,7 +68,7 @@
     <%= check_box_tag :warranty, "1", false %>
     I warrant that this model is my own work or work I am licensed to sell, and that it prints as
     described. This warranty is recorded and named in every license certificate sold.
-    (<%= link_to "designer warranty terms", license_document_path(version: "v1", kind: "personal"), target: "_blank", rel: "noopener" %>, §4)
+    (<%= link_to "designer warranty terms", license_document_path(version: Licensing::Documents::CURRENT_VERSION, kind: "personal"), target: "_blank", rel: "noopener" %>, §4)
   </label>
   <%= form.submit "Publish — freeze the bundle hash and go live", class: "btn btn-primary" %>
   <%= link_to "Back to edit", edit_designer_model_path(@model), class: "btn" %>

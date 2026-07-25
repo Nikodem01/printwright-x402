@@ -3,7 +3,7 @@
   "info": {
     "title": "Printwright API",
     "version": "1.9.1",
-    "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; every purchase mints a public HCS license certificate.",
+    "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; every purchase anchors an opaque HCS commitment to a license certificate the buyer receives as a portable proof bundle.",
     "contact": { "url": "https://github.com/Nikodem01/printwright-x402" },
     "x-guidance": "Search GET /api/v1/models, inspect offers, then buy one license with GET /api/v1/models/{id}/download or up to 20 licenses with POST /api/v1/batches. An unpaid request returns an x402 v2 challenge; sign one exact payment option and retry the identical request. Paid requests settle to Printwright's treasury; designer payout happens separately after delivery and does not change buyer rights. For a zero-funds rehearsal, send X-Sandbox: true on both requests; sandbox artifacts are explicitly not payments or licenses."
   },
@@ -155,12 +155,12 @@
     "/certificates/{cert_id}": {
       "get": {
         "operationId": "getCertificate",
-        "summary": "Public license certificate + HCS/HTS anchoring links",
+        "summary": "Proof bundle for one certificate + HCS anchoring links",
         "security": [],
-        "parameters": [{ "name": "cert_id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "pw-000036" }],
+        "parameters": [{ "name": "cert_id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "pw-a47531e0723a76beaa7e7b29" }],
         "responses": {
           "200": {
-            "description": "Certificate with status anchored|minting|sandbox, proof links, and the NFT claim (when minted)",
+            "description": "The certificate's proof bundle (revealed certificate, blinding nonce, commitment, licensed terms, HCS coordinates) with status anchored|minting|sandbox",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CertificateResponse" } } }
           },
           "404": { "$ref": "#/components/responses/NotFound" },
@@ -581,6 +581,8 @@
                 "cert_id": { "type": "string" }, "serial": { "type": "integer" },
                 "max_units": { "type": ["integer", "null"] }, "remaining_units": { "type": ["integer", "null"] },
                 "verify_url": { "type": "string" },
+                "proof_bundle": { "$ref": "#/components/schemas/ProofBundle" },
+                "bundle_url": { "type": "string" },
                 "share_card_url": { "type": "string" },
                 "receipt": { "$ref": "#/components/schemas/ReceiptCapability" },
                 "print_feedback": { "$ref": "#/components/schemas/PrintFeedbackCapability" },
@@ -601,6 +603,8 @@
             "cert_id": { "type": "string" }, "serial": { "type": "integer" }, "kind": { "type": "string" },
             "max_units": { "type": ["integer", "null"] }, "remaining_units": { "type": ["integer", "null"] } } },
           "certificate": { "type": ["object", "null"] },
+          "proof_bundle": { "$ref": "#/components/schemas/ProofBundle" },
+          "bundle_url": { "type": "string", "description": "re-fetch the bundle here once the commitment is anchored" },
           "verify_url": { "type": "string" },
           "share_card_url": { "type": "string" },
           "receipt": { "$ref": "#/components/schemas/ReceiptCapability" },
@@ -623,24 +627,34 @@
         },
         "additionalProperties": false
       },
-      "CertificateResponse": {
+      "ProofBundle": {
         "type": "object",
+        "description": "Portable proof of one license. Hedera holds only the commitment; this bundle is the reveal. Recompute SHA-256(domain || blinding_nonce || RFC 8785 JCS(certificate)) and compare it with the message at hedera.topic_id/hedera.sequence_number on the public mirror. Normative contract: /pwc-1.schema.json.",
         "properties": {
+          "proof_version": { "type": "integer", "const": 1 },
+          "algorithm": { "type": "string", "const": "sha256-jcs-v1" },
           "certificate": { "type": ["object", "null"], "properties": {
-            "v": { "type": "integer" }, "cert_id": { "type": "string" }, "designer": { "type": "string" },
+            "v": { "type": "integer" }, "cert_id": { "type": "string" }, "designer": { "type": "integer", "description": "stable studio id, never a payout wallet" },
             "model_id": { "type": "integer" }, "issued_at": { "type": "string" }, "buyer_hint": { "type": "string" },
             "model_hash": { "type": "string" }, "payment_tx": { "type": "string" }, "terms_hash": { "type": "string" },
             "unit_serial": { "type": "integer" }, "license_type": { "type": "string" } } },
-          "status": { "type": "string", "enum": ["anchored", "minting", "sandbox"] },
-          "hcs": { "type": ["object", "null"], "properties": {
-            "topic_id": { "type": "string" }, "sequence_number": { "type": "integer" },
-            "hashscan_url": { "type": ["string", "null"] }, "mirror_url": { "type": "string" },
-            "sandbox": { "type": "boolean" }, "warning": { "type": "string" } } },
-          "nft": { "type": ["object", "null"], "description": "null until the license NFT is minted and airdropped", "properties": {
-            "token_id": { "type": "string" }, "serial": { "type": "integer" },
-            "claim_state": { "type": "string" }, "airdrop_tx_id": { "type": ["string", "null"] },
-            "hashscan_url": { "type": "string" } } }
+          "blinding_nonce": { "type": ["string", "null"], "description": "32 random bytes, hex-encoded; part of the commitment preimage" },
+          "commitment": { "type": ["string", "null"], "description": "the value anchored on HCS" },
+          "terms": { "type": "object", "description": "the exact licensed text, so the grant needs no lookup here", "properties": {
+            "version": { "type": "string" }, "kind": { "type": "string" },
+            "hash": { "type": "string" }, "text": { "type": "string" } } },
+          "hedera": { "type": "object", "description": "where the commitment is anchored, or {\"status\":\"minting\"} until it is", "properties": {
+            "network": { "type": "string" }, "topic_id": { "type": "string" }, "sequence_number": { "type": "integer" },
+            "mirror_url": { "type": "string" }, "hashscan_url": { "type": "string" },
+            "status": { "type": "string" }, "sandbox": { "type": "boolean" } } }
         }
+      },
+      "CertificateResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ProofBundle" },
+          { "type": "object", "properties": {
+            "status": { "type": "string", "enum": ["anchored", "minting", "sandbox"] } } }
+        ]
       }
     }
   }

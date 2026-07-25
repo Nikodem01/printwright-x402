@@ -116,7 +116,7 @@ class PaymentClient:
             "status": certificate.get("status"),
             "verify_url": receipt.get("verify_url"),
             "transaction_url": receipt.get("sandbox_url") or receipt.get("hashscan_url"),
-            "mirror_url": certificate.get("hcs", {}).get("mirror_url"),
+            "mirror_url": certificate.get("hedera", {}).get("mirror_url"),
             "sandbox": self.sandbox,
         }
 

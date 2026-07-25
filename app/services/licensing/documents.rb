@@ -7,6 +7,13 @@ module Licensing
   class Documents
     ROOT = Rails.root.join("app/licenses")
 
+    # The version new offers publish under. Superseded versions stay on disk
+    # forever: certificates anchor the hash of the bytes they were sold under,
+    # and those bytes must remain fetchable to verify. Bump this (never edit a
+    # published document) by adding app/licenses/vN/ and a migration that moves
+    # existing offers forward.
+    CURRENT_VERSION = "v2".freeze
+
     class UnknownDocument < StandardError; end
 
     def self.text(version, kind)

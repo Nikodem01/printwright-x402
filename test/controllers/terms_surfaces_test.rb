@@ -14,18 +14,20 @@ class TermsSurfacesTest < ActionDispatch::IntegrationTest
   test "model page renders the full license text before purchase" do
     get model_page_path(@model.slug)
     assert_response :success
-    assert_match "License terms — personal (v1)", response.body
+    version = Licensing::Documents::CURRENT_VERSION
+    assert_match "License terms — personal (#{version})", response.body
     assert_match "Printwright Personal Print License", response.body
     assert_match "honesty clause", response.body
-    assert_select "a[href=?]", license_document_path(version: "v1", kind: "personal")
+    assert_select "a[href=?]", license_document_path(version: version, kind: "personal")
   end
 
   test "API model details serve terms text, hash, and permalink" do
     get "/api/v1/models/#{@model.id}", headers: { accept: "application/json" }
     terms = response.parsed_body["license_offers"].first["terms"]
-    assert_equal "v1", terms["version"]
-    assert_equal Licensing::Documents.hash("v1", "personal"), terms["hash"]
-    assert_includes terms["url"], "/license/v1/personal"
+    version = Licensing::Documents::CURRENT_VERSION
+    assert_equal version, terms["version"]
+    assert_equal Licensing::Documents.hash(version, "personal"), terms["hash"]
+    assert_includes terms["url"], "/license/#{version}/personal"
     assert_includes terms["text"], "Personal Print License"
   end
 

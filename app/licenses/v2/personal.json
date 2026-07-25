@@ -1,0 +1,12 @@
+{
+  "schema_version": "1",
+  "license_kind": "personal",
+  "personal_use": { "allowed": true, "max_prints": null },
+  "commercial_units": { "allowed": false, "max_units": 0 },
+  "resale_files": { "allowed": false },
+  "share_files": { "allowed": false },
+  "remix": { "allowed": true, "scope": "personal_noncommercial_only" },
+  "attribution": { "required": false, "false_authorship_prohibited": true },
+  "transfer": { "allowed": false },
+  "sublicense": { "allowed": false }
+}

@@ -78,16 +78,24 @@ for (const file of body.files) {
   console.log(`   file:        ${path}`);
 }
 
+// The bundle is the portable proof: certificate + blinding nonce + terms + the
+// anchor coordinates. Saved whole so it can be verified later, offline of us:
+//   npx --package ./verifier printwright-verify purchases/<slug>/certificate.json
 const cert = await waitForCertificate(body.license.cert_id);
-writeFileSync(join(dir, "certificate.json"), JSON.stringify(cert, null, 2));
-console.log(`   certificate: ${join(dir, "certificate.json")} (${cert.status})`);
+// Save the bundle alone — our own verdict fields are not part of the proof and
+// have no business sitting next to it in the file a verifier will read.
+const { match, onchain, consensus_timestamp, status, ...bundle } = cert;
+writeFileSync(join(dir, "certificate.json"), JSON.stringify(bundle, null, 2));
+console.log(`   proof bundle: ${join(dir, "certificate.json")} (${cert.status})`);
 
 console.log(`\n   License:     ${body.license.cert_id} — ${body.license.kind}, unit serial ${body.license.serial}`);
 console.log(`   Transaction: ${body.sandbox ? body.sandbox_url : body.hashscan_url}`);
 console.log(`   Verify:      ${body.verify_url}`);
-if (cert.hcs) {
-  console.log(`   HCS topic:   ${cert.hcs.sandbox ? `${cert.hcs.topic_id} (LOCAL SANDBOX ONLY)` : cert.hcs.hashscan_url}`);
-  console.log(`   Mirror node: ${cert.hcs.mirror_url}`);
+if (cert.hedera) {
+  const hedera = cert.hedera;
+  console.log(`   HCS topic:   ${hedera.sandbox ? `${hedera.topic_id} (LOCAL SANDBOX ONLY)` : hedera.hashscan_url}`);
+  console.log(`   Mirror node: ${hedera.mirror_url}`);
+  console.log(`   Commitment:  ${cert.commitment ?? "(pending)"}`);
 }
 console.log(body.sandbox
   ? "\ndone — SANDBOX rehearsal complete; no printable model or real license was issued."

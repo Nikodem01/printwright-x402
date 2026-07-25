@@ -45,7 +45,7 @@ class Licensing::PermissionsTest < ActiveSupport::TestCase
     assert_not offer.update(terms_version: nil, terms_md: "replacement terms for future purchases")
     assert_includes offer.errors[:base],
       "A reserved or sold offer is immutable; create a new offer revision for future buyers."
-    assert_equal "v1", Licensing::Permissions.for_license(license)[:version]
+    assert_equal Licensing::Documents::CURRENT_VERSION, Licensing::Permissions.for_license(license)[:version]
     license.update!(cert_json: { "terms_hash" => "sha256:not-the-offer" })
     assert_nil Licensing::Permissions.for_license(license)
   end

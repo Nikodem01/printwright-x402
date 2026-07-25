@@ -2,7 +2,8 @@
 // Printwright smoke gate: is the demo path alive, end to end, right now?
 // Boot checks (app /up, sidecar /healthz, facilitator /supported), then one REAL
 // x402 settle on Hedera testnet via scripts/buy.mjs, then independent confirmation
-// that the license certificate anchored on the public mirror node.
+// that the license commitment anchored on the public mirror node — judged by the
+// standalone verifier CLI, not by our own API.
 // Exits non-zero on the first failure. Budget: under 2 minutes.
 //
 // Usage: node scripts/smoke.mjs
@@ -21,6 +22,7 @@ const LICENSE = process.env.SMOKE_LICENSE || "commercial_unit";
 const USDC_ID = process.env.HEDERA_NETWORK === "mainnet" ? "0.0.456858" : "0.0.429274"; // native USDC per network
 const DEADLINE_MS = 120_000;
 const BUY_SCRIPT = fileURLToPath(new URL("./buy.mjs", import.meta.url));
+const VERIFY_CLI = fileURLToPath(new URL("../verifier/cli.js", import.meta.url));
 
 const started = Date.now();
 const watchdog = setTimeout(() => fail(`smoke exceeded ${DEADLINE_MS / 1000}s`), DEADLINE_MS);
@@ -60,18 +62,26 @@ const settleUrl = buy.match(/Transaction:\s+(\S+)/)?.[1];
 if (!certId) fail("could not find the license cert id in buy.mjs output");
 ok(`settled — license ${certId}`);
 
-// ---- 3. certificate anchored, confirmed on the public mirror ---------------
-const cert = await waitAnchored(certId);
-const mirror = await waitForMirror(cert.hcs.mirror_url);
-if (!mirror.consensus_timestamp) fail(`mirror has no message at ${cert.hcs.mirror_url}`);
-ok(`certificate anchored (topic ${cert.hcs.topic_id} seq ${cert.hcs.sequence_number}, consensus ${mirror.consensus_timestamp})`);
+// ---- 3. commitment anchored, confirmed on the public mirror ----------------
+const bundle = await waitAnchored(certId);
+const mirror = await waitForMirror(bundle.hedera.mirror_url);
+if (!mirror.consensus_timestamp) fail(`mirror has no message at ${bundle.hedera.mirror_url}`);
+ok(`commitment anchored (topic ${bundle.hedera.topic_id} seq ${bundle.hedera.sequence_number}, consensus ${mirror.consensus_timestamp})`);
+
+// ---- 4. the proof bundle verifies, judged by the standalone verifier -------
+// Our own API saying "anchored" proves nothing about the buyer's position. The
+// gate is the third-party CLI: recompute the commitment from the revealed
+// certificate and require the public mirror to carry exactly that value.
+const verification = await verifyBundleWithCli(bundle);
+ok(`proof bundle verified by verifier/cli.js — ${verification}`);
 
 // ---- summary ----------------------------------------------------------------
 clearTimeout(watchdog);
 console.log(`\nSMOKE GREEN in ${((Date.now() - started) / 1000).toFixed(1)}s`);
 console.log(`  settle tx:  ${settleUrl ?? "(see buy.mjs output above)"}`);
-console.log(`  topic:      ${cert.hcs.hashscan_url}`);
-console.log(`  mirror:     ${cert.hcs.mirror_url}`);
+console.log(`  topic:      ${bundle.hedera.hashscan_url}`);
+console.log(`  mirror:     ${bundle.hedera.mirror_url}`);
+console.log(`  commitment: ${bundle.commitment}`);
 process.exit(0);
 
 // ---- helpers ----------------------------------------------------------------
@@ -136,10 +146,30 @@ function runBuy(args) {
 
 async function waitAnchored(certId) {
   for (;;) {
-    const cert = await getJson(`${APP}/api/v1/certificates/${certId}`, "certificate api");
-    if (cert.status === "anchored") return cert;
+    const bundle = await getJson(`${APP}/api/v1/certificates/${certId}`, "certificate api");
+    if (bundle.status === "anchored") return bundle;
     await new Promise((r) => setTimeout(r, 2000));
   }
+}
+
+// Feed the bundle to the published verifier over stdin, exactly as a buyer
+// would. Exit 0 and a VERIFIED verdict, or the smoke is red.
+function verifyBundleWithCli(bundle) {
+  return new Promise((resolve) => {
+    const child = spawn(process.execPath, [ VERIFY_CLI, "-" ], { env: process.env });
+    let out = "";
+    child.stdout.on("data", (chunk) => { out += chunk; });
+    child.stderr.on("data", (chunk) => { out += chunk; });
+    child.on("error", (e) => fail(`could not run verifier/cli.js: ${e.message}`));
+    child.on("close", (code) => {
+      if (code !== 0 || !/=> VERIFIED/.test(out)) {
+        fail(`independent verification failed (exit ${code}):\n${out}`);
+      }
+      const anchoring = out.match(/Hedera anchoring\s+(.+)/)?.[1]?.trim();
+      resolve(anchoring ?? "VERIFIED");
+    });
+    child.stdin.end(JSON.stringify(bundle));
+  });
 }
 
 // "anchored" comes from the sidecar's receipt; the mirror node indexes a few

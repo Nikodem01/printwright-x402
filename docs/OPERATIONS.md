@@ -317,8 +317,7 @@ Boot check without spending: start the app with `HEDERA_NETWORK=mainnet` and
 |---|---|---|
 | HCS message (the certificate) | $0.0001 | every purchase |
 | token transfer (settle leg) | $0.0001–0.001 | every purchase (facilitator pays) |
-| NFT mint + airdrop | ~$0.03–0.10 | every purchase with an account buyer |
-| NFT collection create | ~$1 | once per designer |
+| token association (first USDC payout) | $0.05 | once per designer, paid by the operator |
 | account create (demo/testing) | $0.05 | rare |
 | HCS topic create | $0.01 | once |
 

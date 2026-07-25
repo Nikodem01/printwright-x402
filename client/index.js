@@ -2,10 +2,12 @@ import { x402Client, x402HTTPClient } from "@x402/core/client";
 import { createClientHederaSigner, PrivateKey } from "@x402/hedera";
 import { ExactHederaScheme } from "@x402/hedera/exact/client";
 import { Client as HederaClient, TokenAssociateTransaction } from "@hiero-ledger/sdk";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 const USDC_IDS = { testnet: "0.0.429274", mainnet: "0.0.456858" };
 const ASSET_IDS = { hbar: "0.0.0" };
+const COMMITMENT_DOMAIN = "printwright:license-certificate:v1\0";
+const COMMITMENT_TYPE = "printwright-license-commitment";
 
 export class PrintwrightError extends Error {
   constructor(message, { status, body } = {}) {
@@ -157,18 +159,23 @@ export class PrintwrightClient {
     return body;
   }
 
+  // The topic holds an opaque commitment, not the certificate: fetch the proof
+  // bundle, recompute SHA-256( domain || nonce || JCS(certificate) ) here, and
+  // require the on-chain envelope to carry exactly that value. `match` is
+  // therefore our own arithmetic over the ledger's bytes, not the marketplace's
+  // opinion of itself.
   async verify(certId) {
     if (!certId?.trim()) throw new TypeError("certId is required");
 
-    const ours = await this.getJson(this.url(`api/v1/certificates/${encodeURIComponent(certId)}`));
-    if (!["anchored", "sandbox"].includes(ours.status)) return { ...ours, match: null };
+    const bundle = await this.getJson(this.url(`api/v1/certificates/${encodeURIComponent(certId)}`));
+    if (!["anchored", "sandbox"].includes(bundle.status)) return { ...bundle, match: null };
 
     let mirror;
     try {
-      mirror = await this.getJson(new URL(ours.hcs.mirror_url, this.baseUrl));
+      mirror = await this.getJson(new URL(bundle.hedera.mirror_url, this.baseUrl));
     } catch (error) {
       if (error instanceof PrintwrightError && error.status === 404) {
-        return { ...ours, match: null, note: "HCS message is anchored but still indexing on the mirror node" };
+        return { ...bundle, match: null, note: "HCS message is anchored but still indexing on the mirror node" };
       }
       throw error;
     }
@@ -178,9 +185,11 @@ export class PrintwrightClient {
     } catch {
       throw new PrintwrightError("mirror node returned an invalid certificate message", { body: mirror });
     }
+    const commitment = licenseCommitment(bundle.certificate, bundle.blinding_nonce);
     return {
-      ...ours,
-      match: canonical(onchain) === canonical(ours.certificate),
+      ...bundle,
+      match: onchain.type === COMMITMENT_TYPE && onchain.commitment === commitment,
+      commitment,
       onchain,
       consensus_timestamp: mirror.consensus_timestamp,
     };
@@ -412,6 +421,22 @@ function canonical(value) {
     item && typeof item === "object" && !Array.isArray(item)
       ? Object.fromEntries(Object.keys(item).sort().map((key) => [ key, item[key] ]))
       : item);
+}
+
+// The commitment construction, kept byte-identical to the Ruby anchoring side
+// and the standalone verifier: SHA-256 over a fixed domain string, the blinding
+// nonce, and RFC 8785 canonical JSON. The shared test vector in test/ fails the
+// moment any of the three drift apart.
+function licenseCommitment(certificate, nonceHex) {
+  if (!/^(?:[0-9a-f]{2})+$/i.test(String(nonceHex ?? ""))) {
+    throw new PrintwrightError("proof bundle has no usable blinding_nonce");
+  }
+  const preimage = Buffer.concat([
+    Buffer.from(COMMITMENT_DOMAIN, "utf8"),
+    Buffer.from(nonceHex, "hex"),
+    Buffer.from(canonical(certificate), "utf8"),
+  ]);
+  return createHash("sha256").update(preimage).digest("hex");
 }
 
 function deepFreeze(value) {

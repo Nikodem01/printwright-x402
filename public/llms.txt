@@ -4,9 +4,10 @@ Live commerce manifest: GET /.well-known/x402-catalog.json
 
 > The agent-buyable marketplace for licensed 3D-printable models. Search, inspect, and BUY
 > print licenses over plain HTTP — payments use the x402 protocol (HTTP 402) settling on
-> Hedera testnet in HBAR or USDC. No account, no API key, no card. Every purchase mints a
-> tamper-evident license certificate on the Hedera Consensus Service, publicly verifiable
-> via the mirror node.
+> Hedera testnet in HBAR or USDC. No account, no API key, no card. Every purchase anchors a
+> tamper-evident license certificate to the Hedera Consensus Service as an opaque commitment;
+> the certificate travels with the buyer as a proof bundle and is verifiable by anyone they
+> show it to, against the public mirror node.
 
 API base: /api/v1 — full spec at /openapi.json — human docs at /docs
 
@@ -22,8 +23,9 @@ provenance. Creative Commons, public-domain, missing, and unknown licenses are b
    (amount in base units, asset 0.0.0=HBAR or 0.0.429274=USDC, payTo, extra.feePayer)
 3. Sign a Hedera TransferTransaction (transactionId.accountId = feePayer, buyer signature
    only) and retry with the base64 PaymentPayload in the PAYMENT-SIGNATURE header
-4. 200 → file download grants, license serial, certificate id, HashScan transaction link
-   plus a private receipt capability for a durable receipt/re-download (real paid flow only)
+4. 200 → file download grants, license serial, certificate id, HashScan transaction link,
+   a portable proof_bundle (+ bundle_url to re-fetch it once anchored), plus a private receipt
+   capability for a durable receipt/re-download (real paid flow only)
 
 For 1-20 licenses sharing one payTo, POST {"items":[{"model_id":1,"license":"commercial_unit"}, ...]}
 to /api/v1/batches. Probe and retry the identical JSON body. One aggregate x402 settlement returns
@@ -68,8 +70,9 @@ and retry after the given number of seconds.
 - /api/v1/models/{id}: full metadata incl. license offers and terms
 - /api/v1/models/{id}/download: the paid endpoint (x402)
 - /api/v1/batches: up to 20 licenses, one aggregate x402 payment, one certificate per item
-- /api/v1/certificates/{cert_id}: public certificate + HCS mirror links + nft (license NFT
-  claim state, once minted)
+- /api/v1/certificates/{cert_id}: the proof bundle for one certificate — revealed certificate,
+  blinding nonce, commitment, licensed terms text, and HCS mirror/HashScan coordinates. The
+  cert_id is an unguessable token: holding it is the disclosure.
 - /api/v1/licenses/{cert_id}/can?use=commercial_print&qty=3: machine-decidable yes/no from
   structured permissions, with stable reason code and anchored terms refs. Supported uses:
   personal_print, commercial_print, resell_files, share_files, personal_remix,
@@ -89,20 +92,24 @@ and retry after the given number of seconds.
 - /verify/{cert_id}/share-card: receipt-linked 1200x630 SVG certificate card
 - /receipts/{cert_id}: private signed paid-receipt capability; re-download and optional email-library opt-in
 - /library/sign-in: enumeration-safe email magic-link entry for previously saved paid receipts
-- /pwc-1.schema.json: normative frozen schema for the eleven-field PWC-1 HCS certificate payload
-- /printwright-verify-widget.js: dependency-free custom element that validates PWC-1 by querying
-  the selected Hedera mirror directly; /widget-example.html is a plain static integration example
+- /pwc-1.schema.json: normative frozen PWC-1 contract — the on-chain commitment envelope, the
+  certificate it commits to, and the proof bundle that reveals it
+- /printwright-verify-widget.js: dependency-free custom element that recomputes a proof bundle's
+  commitment in the browser and compares it against the selected Hedera mirror;
+  /widget-example.html is a plain static integration example
 
 ## Reference clients
 
 - scripts/buy.mjs in the repo — one-command purchase
 - MCP server (mcp/server.mjs) — search_models, get_model, buy_license, check_license,
   get_latest_version, verify_certificate
-- Third-party verifier — `npx --package ./verifier printwright-verify <cert_id|mirror-message-url>`
-  (shortens to `npx printwright-verify` after registry release) queries Hedera's mirror node
-  directly and validates the PWC-1 payload without requesting this marketplace
-- Browser widget — load `/printwright-verify-widget.js`, then add `<printwright-verify cert-id="..."
-  topic-id="0.0.N" network="testnet">`; it never requests the marketplace API or database
+- Third-party verifier — `npx --package ./verifier printwright-verify <bundle.json|bundle-url|->`
+  (shortens to `npx printwright-verify` after registry release) recomputes the commitment locally
+  (RFC 8785 JCS + SHA-256) and checks it against Hedera's mirror node without requesting this
+  marketplace; the mirror host is fixed and its URL derived from the bundle's topic and sequence
+- Browser widget — load `/printwright-verify-widget.js`, then add `<printwright-verify
+  bundle-url="..." topic-id="0.0.N" network="testnet">` (or paste the bundle inline as
+  `<script type="application/json">`); it never requests the marketplace API or database
 
 `max_units` and `remaining_units` are a cap and current snapshot of licenses sold/reserved. They
 do not claim physical scarcity or technically prevent prints; the anchored license terms govern use.

@@ -193,7 +193,8 @@ module CatalogImports
           end
 
           offer.slice("kind", "max_units").merge(
-            "kind" => kind, "price_cents" => price, "currency" => currency, "terms_version" => "v1"
+            "kind" => kind, "price_cents" => price, "currency" => currency,
+            "terms_version" => Licensing::Documents::CURRENT_VERSION
           )
         rescue ArgumentError, TypeError
           raise Error, "#{external_id}: offer price must be an integer"

@@ -5,28 +5,30 @@
     Put it on your product page, your shop listing, anywhere — a buyer one click away
     from public proof beats a claim.</p>
 
-  <p><img src="<%= verify_badge_path(cert_id: "pw-000001", format: :svg) %>" alt="example Printwright license badge" width="200" height="36"></p>
+  <p><%= render template: "verify/badge", formats: :svg,
+           locals: { cert_id: "pw-4f2c8ab1d90e77", sandbox: false } %></p>
 
   <h2>Snippet</h2>
-  <p class="t-small muted">Replace <code>pw-000001</code> with your certificate id (it's on your receipt and the verify page).</p>
-  <pre class="mono t-small" style="overflow-x:auto"><code>&lt;a href="<%= verify_url("pw-000001") %>"&gt;
-  &lt;img src="<%= verify_badge_url("pw-000001", format: :svg) %>"
-       alt="Printwright licensed unit pw-000001" width="200" height="36"&gt;
+  <p class="t-small muted">Your verify link is on your receipt and your certificate; it ends in a
+    random token that only you can hand out.</p>
+  <pre class="mono t-small" style="overflow-x:auto"><code>&lt;a href="<%= verify_url("YOUR-VERIFY-TOKEN") %>"&gt;
+  &lt;img src="<%= verify_badge_url("YOUR-VERIFY-TOKEN", format: :svg) %>"
+       alt="Printwright licensed unit" width="200" height="36"&gt;
 &lt;/a&gt;</code></pre>
 
   <h2>What it proves</h2>
-  <p class="t-small">The badge itself proves nothing — the page it links to does: a live,
-    field-by-field comparison against the public Hedera mirror node. A printable
+  <p class="t-small">The badge itself proves nothing — the page it links to does: it reveals your
+    certificate and recomputes the commitment anchored on the public Hedera mirror node. A printable
     certificate is available from the same page.</p>
 
   <h2>Independent verification widget</h2>
-  <p class="t-small">For proof that does not depend on this marketplace, add the standalone
-    widget to any HTML page. It reads the named Hedera mirror topic directly, validates the
-    frozen PWC-1 fields, and links to the exact consensus message. Replace both identifiers
-    with the values on your receipt.</p>
+  <p class="t-small">For proof that does not depend on this marketplace, add the standalone widget to
+    any HTML page. Give it the proof bundle from your delivery — as a URL, or pasted into the page —
+    and it recomputes the commitment in the browser and compares it against the Hedera mirror.
+    Pinning <code>topic-id</code> means a bundle anchored anywhere else cannot pass.</p>
   <pre class="mono t-small code-block"><code>&lt;script defer src="<%= request.base_url %>/printwright-verify-widget.js"&gt;&lt;/script&gt;
-&lt;printwright-verify cert-id="pw-000058"
-  topic-id="0.0.9585069" network="testnet"&gt;
+&lt;printwright-verify bundle-url="<%= request.base_url %>/api/v1/certificates/YOUR-CERT-ID"
+  topic-id="<%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %>" network="<%= Hedera::Network.name %>"&gt;
 &lt;/printwright-verify&gt;</code></pre>
   <p class="t-small"><%= link_to "Open the plain HTML example", "/widget-example.html" %>.</p>
 </div>

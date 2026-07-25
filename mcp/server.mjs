@@ -143,9 +143,10 @@ server.registerTool(
 server.registerTool(
   "verify_certificate",
   {
-    description: "Verify a license certificate: compares our copy with its HCS mirror message " +
-      "(or explicitly local sandbox message), returning both plus match: true/false.",
-    inputSchema: { cert_id: z.string().describe("e.g. pw-000003") },
+    description: "Verify a license certificate: recomputes the commitment from the revealed " +
+      "certificate and checks it against the HCS message on the public mirror node (or the " +
+      "explicitly local sandbox message), returning the proof bundle plus match: true/false.",
+    inputSchema: { cert_id: z.string().describe("e.g. pw-a47531e0723a76beaa7e7b29") },
   },
   async ({ cert_id }) => {
     const proof = await client.verify(cert_id);
@@ -164,7 +165,7 @@ server.registerTool(
       "Requires the model_updates receipt_token returned by buy_license; reports the original " +
       "certified hash, latest file hash, changelog, HCS anchor, and authenticated download endpoint.",
     inputSchema: {
-      cert_id: z.string().describe("certificate id returned by buy_license, e.g. pw-000003"),
+      cert_id: z.string().describe("certificate id returned by buy_license"),
       receipt_token: z.string().describe("model_updates.receipt_token from the paid purchase receipt"),
     },
   },

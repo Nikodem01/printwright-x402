@@ -19,7 +19,7 @@ class LicenseOfferTest < ActiveSupport::TestCase
 
     offer.update!(kind: "commercial_unit")
 
-    assert_equal Licensing::Documents.hash("v1", "commercial_unit"), offer.terms_hash
+    assert_equal Licensing::Documents.hash(Licensing::Documents::CURRENT_VERSION, "commercial_unit"), offer.terms_hash
     assert_includes offer.terms_text, "Commercial Per-Unit Print License"
   end
 
@@ -34,7 +34,7 @@ class LicenseOfferTest < ActiveSupport::TestCase
     assert_equal "personal", offer.kind
     assert_equal 250, offer.price_cents
     assert_nil offer.max_units
-    assert_equal Licensing::Documents.hash("v1", "personal"), offer.terms_hash
+    assert_equal Licensing::Documents.hash(Licensing::Documents::CURRENT_VERSION, "personal"), offer.terms_hash
   end
 
   test "failed and sandbox attempts do not freeze an otherwise unsold offer" do

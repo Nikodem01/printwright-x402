@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_24_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_25_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "citext"
   enable_extension "pg_catalog.plpgsql"
@@ -248,7 +248,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_24_160000) do
     t.bigint "supersedes_id"
     t.string "terms_hash"
     t.text "terms_md"
-    t.string "terms_version", default: "v1"
+    t.string "terms_version", default: "v2"
     t.datetime "updated_at", null: false
     t.index ["model3d_id", "kind"], name: "index_license_offers_on_active_model_and_kind", unique: true, where: "active"
     t.index ["model3d_id"], name: "index_license_offers_on_model3d_id"

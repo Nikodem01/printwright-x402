@@ -1,6 +1,7 @@
 import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
+import { createHash } from "node:crypto";
 import { PrivateKey } from "@hiero-ledger/sdk";
 import { PrintwrightClient, PrintwrightError } from "../index.js";
 
@@ -18,6 +19,38 @@ const certificate = {
   model_hash: "sha256:abc",
   serial: 1,
 };
+const sandboxCertificate = { cert_id: "sandbox-pw-000009", sandbox: true };
+const NONCE = "ab".repeat(32);
+
+// Recomputed here the long way — a fixture that reused the client's own helper
+// could agree with a broken client. This mirrors the Ruby anchoring side.
+function commitmentFor(cert, nonceHex = NONCE) {
+  const canonical = JSON.stringify(cert, (_key, item) =>
+    item && typeof item === "object" && !Array.isArray(item)
+      ? Object.fromEntries(Object.keys(item).sort().map((key) => [ key, item[key] ]))
+      : item);
+  return createHash("sha256").update(Buffer.concat([
+    Buffer.from("printwright:license-certificate:v1\0", "utf8"),
+    Buffer.from(nonceHex, "hex"),
+    Buffer.from(canonical, "utf8"),
+  ])).digest("hex");
+}
+
+function proofBundle(cert, hedera) {
+  return {
+    proof_version: 1, algorithm: "sha256-jcs-v1",
+    certificate: cert, blinding_nonce: NONCE, commitment: commitmentFor(cert),
+    terms: { version: "v1", kind: "personal", hash: "sha256:abc", text: "terms" },
+    hedera,
+  };
+}
+
+function commitmentMessage(cert) {
+  return Buffer.from(JSON.stringify({
+    type: "printwright-license-commitment", version: 1,
+    algorithm: "sha256-jcs-v1", commitment: commitmentFor(cert),
+  })).toString("base64");
+}
 
 before(async () => {
   server = http.createServer(async (request, response) => {
@@ -116,8 +149,8 @@ before(async () => {
     }
     if (url.pathname === "/api/v1/certificates/pw-000007") {
       return response.end(JSON.stringify({
-        status: "anchored", certificate,
-        hcs: { mirror_url: `${baseUrl}/mirror/messages/7` },
+        status: "anchored",
+        ...proofBundle(certificate, { mirror_url: `${baseUrl}/mirror/messages/7` }),
       }));
     }
     if (url.pathname === "/api/v1/licenses/pw-000007/can") {
@@ -143,28 +176,33 @@ before(async () => {
     }
     if (url.pathname === "/api/v1/certificates/pw-000008") {
       return response.end(JSON.stringify({
-        status: "anchored", certificate,
-        hcs: { mirror_url: `${baseUrl}/mirror/messages/8` },
+        status: "anchored",
+        ...proofBundle(certificate, { mirror_url: `${baseUrl}/mirror/messages/8` }),
+      }));
+    }
+    // Same anchor, a certificate whose serial was edited after the fact.
+    if (url.pathname === "/api/v1/certificates/pw-000010") {
+      return response.end(JSON.stringify({
+        status: "anchored",
+        ...proofBundle({ ...certificate, serial: 999 }, { mirror_url: `${baseUrl}/mirror/messages/7` }),
       }));
     }
     if (url.pathname === "/api/v1/certificates/sandbox-pw-000009") {
-      const sandboxCertificate = { cert_id: "sandbox-pw-000009", sandbox: true };
       return response.end(JSON.stringify({
-        status: "sandbox", certificate: sandboxCertificate,
-        hcs: { sandbox: true, mirror_url: "/sandbox/messages/9" },
+        status: "sandbox",
+        ...proofBundle(sandboxCertificate, { sandbox: true, mirror_url: "/sandbox/messages/9" }),
       }));
     }
     if (url.pathname === "/mirror/messages/7") {
       return response.end(JSON.stringify({
-        message: Buffer.from(JSON.stringify({ serial: 1, cert_id: "pw-000007", model_hash: "sha256:abc" }))
-          .toString("base64"),
+        message: commitmentMessage(certificate),
         consensus_timestamp: "123.456",
       }));
     }
     if (url.pathname === "/sandbox/messages/9") {
       return response.end(JSON.stringify({
         sandbox: true,
-        message: Buffer.from(JSON.stringify({ cert_id: "sandbox-pw-000009", sandbox: true })).toString("base64"),
+        message: commitmentMessage(sandboxCertificate),
         consensus_timestamp: "sandbox-local",
       }));
     }
@@ -229,7 +267,7 @@ test("completes a labeled sandbox purchase without an account or private key", a
   const proof = await client.verify(receipt.license.cert_id);
   assert.equal(proof.status, "sandbox");
   assert.equal(proof.match, true);
-  assert.equal(proof.onchain.sandbox, true);
+  assert.equal(proof.onchain.type, "printwright-license-commitment");
 });
 
 test("posts an identical batch body across one aggregate x402 negotiation", async () => {
@@ -259,12 +297,21 @@ test("posts an identical batch body across one aggregate x402 negotiation", asyn
   );
 });
 
-test("verifies an anchored certificate independent of JSON key order", async () => {
+test("verifies an anchored certificate by recomputing its on-chain commitment", async () => {
   const proof = await new PrintwrightClient({ baseUrl }).verify("pw-000007");
 
   assert.equal(proof.match, true);
-  assert.deepEqual(proof.onchain, { serial: 1, cert_id: "pw-000007", model_hash: "sha256:abc" });
+  assert.equal(proof.commitment, commitmentFor(certificate));
+  assert.equal(proof.onchain.commitment, proof.commitment);
   assert.equal(proof.consensus_timestamp, "123.456");
+});
+
+test("a certificate the on-chain commitment does not cover does not match", async () => {
+  const client = new PrintwrightClient({ baseUrl });
+  const proof = await client.verify("pw-000010");
+
+  assert.equal(proof.status, "anchored");
+  assert.equal(proof.match, false);
 });
 
 test("checks a structured license decision without payment credentials", async () => {

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
@@ -64,15 +64,21 @@ export async function runConformance({ baseUrl = "http://localhost:3000", fetchI
   assert(/sandbox/i.test(await receipt.text()), "downloaded receipt is not labeled sandbox");
   checks.push("non-printable receipt");
 
-  const certificate = await getJson(fetchImpl,
+  const bundle = await getJson(fetchImpl,
     `${base}/api/v1/certificates/${encodeURIComponent(delivery.license.cert_id)}`);
-  assert(certificate.status === "sandbox" && certificate.certificate?.sandbox === true,
+  assert(bundle.status === "sandbox" && bundle.certificate?.sandbox === true,
     "certificate lookup is not labeled sandbox");
-  assert(certificate.hcs?.sandbox === true, "certificate pretends its local topic is HCS");
-  const mirror = await getJson(fetchImpl, new URL(certificate.hcs.mirror_url, `${base}/`).toString());
+  assert(bundle.hedera?.sandbox === true, "certificate pretends its local topic is HCS");
+  // The sandbox must rehearse the real proof, not a friendlier version of it:
+  // the local message is the same opaque commitment envelope, and it must equal
+  // what we recompute from the revealed certificate.
+  const mirror = await getJson(fetchImpl, new URL(bundle.hedera.mirror_url, `${base}/`).toString());
   const mirrored = JSON.parse(Buffer.from(mirror.message, "base64").toString("utf8"));
-  assert(canonical(mirrored) === canonical(certificate.certificate), "local mirror message differs from certificate");
-  checks.push("local certificate mirror equality");
+  assert(mirrored.type === "printwright-license-commitment",
+    "sandbox message is not a commitment envelope — the rehearsal differs from the real path");
+  assert(mirrored.commitment === commitment(bundle.certificate, bundle.blinding_nonce),
+    "local commitment does not cover the revealed certificate");
+  checks.push("local certificate commitment equality");
 
   return { conformant: true, seller: base, cert_id: delivery.license.cert_id, checks };
 }
@@ -128,6 +134,16 @@ function decodeHeader(value, name) {
   } catch {
     throw new Error(`${name} is not base64 JSON`);
   }
+}
+
+// SHA-256( domain || nonce || RFC 8785 JCS(certificate) ) — the construction
+// the marketplace anchors and any third party can reproduce.
+function commitment(certificate, nonceHex) {
+  return createHash("sha256").update(Buffer.concat([
+    Buffer.from("printwright:license-certificate:v1\0", "utf8"),
+    Buffer.from(String(nonceHex), "hex"),
+    Buffer.from(canonical(certificate), "utf8"),
+  ])).digest("hex");
 }
 
 function canonical(value) {

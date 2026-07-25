@@ -37,8 +37,8 @@ class DesignerFlowTest < ActionDispatch::IntegrationTest
     assert_equal false, model.printability["supports"]
     assert model.model_files.count == 2
     offer = model.license_offers.sole
-    assert_equal "v1", offer.terms_version
-    assert_equal Licensing::Documents.hash("v1", "personal"), offer.terms_hash
+    assert_equal Licensing::Documents::CURRENT_VERSION, offer.terms_version
+    assert_equal Licensing::Documents.hash(Licensing::Documents::CURRENT_VERSION, "personal"), offer.terms_hash
     assert_not_equal "T.", offer.terms_text
 
     get edit_designer_model_path(model)
@@ -342,8 +342,8 @@ class DesignerFlowTest < ActionDispatch::IntegrationTest
 
     get api_v1_model_path(model)
     terms = response.parsed_body.fetch("license_offers").sole.fetch("terms")
-    assert_equal "v1", terms.fetch("version")
-    assert_equal Licensing::Documents.hash("v1", "commercial_unit"), terms.fetch("hash")
+    assert_equal Licensing::Documents::CURRENT_VERSION, terms.fetch("version")
+    assert_equal Licensing::Documents.hash(Licensing::Documents::CURRENT_VERSION, "commercial_unit"), terms.fetch("hash")
     assert_includes terms.fetch("text"), "Commercial Per-Unit Print License"
   end
 
