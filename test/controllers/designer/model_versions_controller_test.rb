@@ -122,7 +122,7 @@ class Designer::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_hash, @model.reload.file_hash
   end
 
-  test "a bundle whose provenance record would not fit one HCS message is rejected at upload" do
+  test "a large bundle publishes and anchors — the file count is the designer's call" do
     @model.update!(status: "paused")
     files = Array.new(12) do |index|
       Rack::Test::UploadedFile.new(
@@ -131,18 +131,19 @@ class Designer::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
       )
     end
 
-    assert_no_enqueued_jobs(only: AnalyzeModelVersionMeshJob) do
+    assert_enqueued_with(job: AnalyzeModelVersionMeshJob) do
       post designer_model_versions_path(@model), params: {
-        model_version: { changelog: "Everything at once.", files: files }
+        model_version: { changelog: "Twelve-part assembly.", files: files }
       }
     end
 
-    # Nothing half-created: an accepted upload that could never anchor would be
-    # worse than a refusal, because the failure would only surface in the job.
-    assert_empty @model.model_versions
-    assert_redirected_to edit_designer_model_path(@model)
-    follow_redirect!
-    assert_match(/too many files to anchor/, response.body)
+    version = @model.model_versions.sole
+    assert_equal 12, version.version_files.count
+    # The provenance record commits to the list instead of carrying it, so a
+    # twelve-part model anchors in exactly one message like any other.
+    assert_operator version.anchor_payload.to_json.bytesize, :<, 1024
+    assert_equal version.files_hash, version.anchor_payload["files_hash"]
+    assert_equal 12, version.anchor_payload["file_count"]
   end
 
   test "an invalid file anywhere in the bundle rejects the whole submission" do

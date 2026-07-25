@@ -1,16 +1,17 @@
+require "digest"
+require "json/canonicalization"
+
 class ModelVersion < ApplicationRecord
   HASH_FORMAT = /\Asha256:[0-9a-f]{64}\z/
   FILE_KINDS = %w[stl 3mf step].freeze
 
   # One HCS message, one consensus sequence number: a provenance record that
-  # spanned chunks would not be a single atomic event. The sidecar enforces the
-  # same 1024 bytes and returns a 422 that is never retried, so an oversize
-  # bundle would upload happily and then never anchor — the check belongs here,
-  # where the designer can still do something about it. The payload grows by
-  # ~96 bytes per file over a ~360-byte base, so in practice a bundle fits six
-  # files and the seventh does not. The check measures the real payload rather
-  # than counting files, because the base varies with the timestamp and ids.
-  MAX_ANCHOR_BYTES = 1024
+  # spanned chunks would not be a single atomic event. That is our constraint,
+  # not the designer's — so the anchor commits to a hash of the file list
+  # (`files_hash`) instead of listing the files, and a version may carry as many
+  # files as the model actually needs. The payload is constant-size by
+  # construction; the sidecar's 1024-byte limit is a backstop it can no longer
+  # reach.
 
   belongs_to :model3d
   has_one_attached :file
@@ -50,8 +51,19 @@ class ModelVersion < ApplicationRecord
     hcs_sequence_number.present?
   end
 
-  def anchor_payload_too_large?
-    anchor_payload.to_json.bytesize > MAX_ANCHOR_BYTES
+  # The ordered bundle, as the buyer receives it from the versions API. This is
+  # the thing the anchor commits to; it is not itself anchored.
+  def file_manifest
+    version_files.ordered.map { |f| { "kind" => f.kind, "hash" => f.file_hash } }
+  end
+
+  # One hash covering every file in order, so the provenance record stays the
+  # same size whether a version ships one file or fifty. A holder recomputes it
+  # from the `files` list the API already hands them — RFC 8785 canonical JSON,
+  # the same canonicalization the license commitment uses, so the JavaScript
+  # verifier can reproduce it byte for byte.
+  def files_hash
+    "sha256:#{Digest::SHA256.hexdigest(file_manifest.to_json_c14n)}"
   end
 
   def anchor_payload
@@ -63,7 +75,8 @@ class ModelVersion < ApplicationRecord
       "file_hash" => file_hash,
       "changelog_hash" => changelog_hash,
       "published_at" => published_at.iso8601,
-      "files" => version_files.ordered.map { |f| { "kind" => f.kind, "hash" => f.file_hash } }
+      "file_count" => version_files.size,
+      "files_hash" => files_hash
     }
   end
 end

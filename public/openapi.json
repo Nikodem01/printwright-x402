@@ -468,6 +468,7 @@
           "hcs_transaction_id": { "type": ["string", "null"] },
           "hcs_mirror_url": { "type": ["string", "null"], "format": "uri" },
           "download_url": { "type": "string", "format": "uri" },
+          "files_hash": { "type": ["string", "null"], "description": "sha256: over the RFC 8785 canonicalization of [{kind, hash}, ...] in order — the value the pwv-1 HCS event commits to. Recompute it from `files` to prove the bundle is the published one, whatever its size." },
           "files": { "type": "array", "description": "The version's ordered file bundle. file_hash may be absent for a part whose individual hash was never recorded (e.g. a pre-bundle original file beyond the primary).", "items": { "type": "object", "properties": {
             "kind": { "type": "string", "enum": ["stl", "3mf", "step"] },
             "file_hash": { "type": "string" },

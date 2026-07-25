@@ -18,7 +18,12 @@ class Api::V1::ModelVersionsController < Api::V1::BaseController
       hcs_transaction_id: version&.hcs_transaction_id,
       hcs_mirror_url: mirror_url(version),
       download_url: api_v1_license_latest_version_file_url(@license.cert_id),
-      files: bundle_files
+      files: bundle_files,
+      # What the on-chain event commits to. Recompute it from `files` — SHA-256
+      # over the RFC 8785 canonicalization of [{kind, hash}, ...] in order — and
+      # compare with the anchored message to prove the bundle is the one that
+      # was published, however many files it contains.
+      files_hash: version&.files_hash
     }
   end
 
