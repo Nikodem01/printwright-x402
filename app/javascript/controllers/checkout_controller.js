@@ -15,6 +15,9 @@ const FAILURE_COPY = {
   invalid_payload: () =>
     "The payment could not be read by the server. Retrying this exact request won't help.",
   wallet_refused: () => "You declined the payment request in your wallet.",
+  wallet_unavailable: () =>
+    "This deployment has no browser wallet configured, so there is nothing to sign with. " +
+    "The same purchase still works over the API with x402 — see the API docs.",
   purchases_disabled: () => "Chat purchases are currently disabled.",
   spend_cap_exceeded: () => "This proposal exceeds the configured conversation spend cap.",
   daily_spend_cap_exceeded: () => "The chat purchase budget for today has been reached.",
@@ -34,9 +37,12 @@ const TERMINAL_ERRORS = new Set([
   "sold_out", "duplicate_payment", "invalid_payload", "purchases_disabled", "spend_cap_exceeded",
   "daily_spend_cap_exceeded", "approval_expired", "stale_proposal", "approval_already_used",
   "invalid_purchase_intent", "payment_intent_replayed",
-  "incompatible_payees",
+  "incompatible_payees", "wallet_unavailable",
 ])
-const TERMINAL_LABELS = { sold_out: "Sold out", duplicate_payment: "Already submitted", invalid_payload: "Unavailable" }
+const TERMINAL_LABELS = {
+  sold_out: "Sold out", duplicate_payment: "Already submitted", invalid_payload: "Unavailable",
+  wallet_unavailable: "No wallet configured",
+}
 
 // S3 checkout state machine (plan 06): idle -> quoting -> wallet -> settling
 // -> success | failed. Customer builds use Hedera WalletConnect; an explicitly
@@ -168,7 +174,7 @@ export default class extends Controller {
       try {
         headers = await this.sign(quote)
       } catch (error) {
-        return this.fail("wallet_refused", error.message)
+        return this.fail(error.code || "wallet_refused", error.message)
       }
 
       const paymentHeaders = { accept: "application/json", "X-Printwright-Channel": "human", ...headers }
@@ -211,7 +217,12 @@ export default class extends Controller {
       return (await signed.json()).headers
     }
 
-    if (!window.loadPrintwrightWallet) throw new Error("Wallet checkout is not configured")
+    // No wallet loader on the page means WALLETCONNECT_PROJECT_ID is unset, so
+    // there is nothing to sign with. That is not a refusal by the buyer, and
+    // reporting it as one told them they had declined a prompt they never saw.
+    if (!window.loadPrintwrightWallet) {
+      throw Object.assign(new Error("Wallet checkout is not configured"), { code: "wallet_unavailable" })
+    }
     const wallet = await window.loadPrintwrightWallet()
     return wallet.sign(paymentRequired)
   }

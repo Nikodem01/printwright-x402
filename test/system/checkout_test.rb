@@ -120,6 +120,25 @@ class CheckoutTest < ApplicationSystemTestCase
     end
   end
 
+  # With no signer configured at all, the buyer never saw a wallet prompt, so
+  # "you declined the payment request in your wallet" accused them of an action
+  # they could not have taken — and it appeared alongside the true reason, which
+  # contradicted it. Only the configuration statement is true here.
+  test "an unconfigured wallet says so instead of blaming the buyer for declining" do
+    ENV.delete("DEMO_WALLET_URL") # and no WALLETCONNECT_PROJECT_ID, so no loader is attached
+
+    visit model_page_path(@model.slug)
+    assert_no_changes -> { Purchase.count } do
+      click_button "Buy license · 0.25 USDC"
+      assert_selector ".badge-bad", text: "failed"
+      assert_text "This deployment has no browser wallet configured"
+      assert_no_text "You declined the payment request in your wallet."
+      # Retrying cannot configure a wallet, so the button must not invite it.
+      assert_no_button "Try again"
+      assert_button "No wallet configured", disabled: true
+    end
+  end
+
   test "a sold-out offer fails immediately with a non-retryable message, before any wallet prompt" do
     @model.license_offers.sole.update!(max_units: 0)
 
