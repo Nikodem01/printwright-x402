@@ -1,0 +1,32 @@
+{
+  "proof_version": 1,
+  "algorithm": "sha256-jcs-v1",
+  "certificate": {
+    "v": 1,
+    "cert_id": "pw-7f8241b9192b86285400cfd7",
+    "designer": 14,
+    "model_id": 87,
+    "issued_at": "2026-07-25T10:44:04Z",
+    "buyer_hint": "0.0.9067781",
+    "model_hash": "sha256:9faad93d155e27f3c7fa8b7b875999865b7e48d03dc986e51d066b5b9a6b0ce3",
+    "payment_tx": "0.0.7162784@1784976230.265183795",
+    "terms_hash": "sha256:a99ecd158752e18eeb76b547489023f43661ee9f6c4cdc4aaa570af07de6301b",
+    "unit_serial": 5,
+    "license_type": "commercial_unit"
+  },
+  "blinding_nonce": "cc74176b939af3dc81783abf34e477367952bbc1d640dde19b7b4f88c1670d15",
+  "commitment": "d018923f613ed67e36e38f4aa1a9eec0b076fb7110c11490efbcf0368b0e74d6",
+  "terms": {
+    "version": "v2",
+    "kind": "commercial_unit",
+    "hash": "sha256:a99ecd158752e18eeb76b547489023f43661ee9f6c4cdc4aaa570af07de6301b",
+    "text": "# Printwright Commercial Per-Unit Print License — v2\n\n**This is a template license, not legal advice.** Printwright provides this\ntext as a standard grant between a designer and a buyer; neither Printwright\nnor the designer has tailored it to your situation, and you should consult a\nlawyer before building a business on it.\n\n## 1. Parties and subject\n\nThis license is granted by the **designer** (identified by the stable\n`designer` id in the license certificate — an identity, never a wallet) to the\n**licensee** (the holder of the license certificate identified by `cert_id`),\nfor the 3D model whose file bundle hash is recorded as `model_hash` in that\ncertificate.\n\n## 2. Grant — one unit\n\nThe designer grants the licensee a perpetual, non-exclusive, non-transferable\nlicense to:\n\n- download and keep the model's file bundle;\n- print and **sell one (1) physical copy** of the model — the unit whose\n  serial number is recorded as `unit_serial` in the certificate;\n- print personal-use copies under the same terms as the Personal license.\n\nEach additional unit offered for sale requires its own per-unit license. This\nis the royalty: designers earn per unit sold, at machine-payable prices, and\neach unit's legitimacy is independently checkable from its certificate.\n\n## 3. Not granted\n\nThe licensee may not:\n\n- sell more physical copies than they hold unit licenses for;\n- redistribute, resell, sublicense, or publicly share the digital files,\n  modified or not;\n- present the model or a derivative as their own original design;\n- imply the designer endorses the licensee's products.\n\n## 4. Designer's warranty\n\nThe designer warrants that they hold the rights needed to grant this license\nand that the model is their own work or work they are licensed to sell, and\nthat the model was print-tested as described on its listing. The designer —\nnot Printwright — is responsible for this warranty, and accepted it when\npublishing the model.\n\n## 5. No DRM — the honesty clause\n\nThe files carry no copy protection, watermarking, or usage tracking, and none\nwill be added later. Per-unit honesty is the design: royalties are priced to\nbe cheaper to pay than to evade, and buyers of your prints can ask to see your\nunit certificates and verify each one independently. Selling unlicensed copies\nis not prevented — each licensed unit is simply provable from its own\ncertificate.\n\n## 6. The certificate\n\nEach unit license anchors a certificate to the Hedera Consensus Service as an\n**opaque commitment** — a salted hash of the certificate. The certificate\nitself (model hash, license type, unit serial, payment transaction, and a hash\nof this exact text, `terms_hash`) is held off-chain and revealed by the holder.\n\"Unit N of model X, licensed at time T under these terms\" is provable to anyone\nyou show the certificate to, who recomputes the hash and checks it against the\nmirror node without trusting Printwright. Because only the commitment is\npublic, your sales volume is never broadcast. The certificate is the durable\nproof of this grant.\n\n## 7. Termination\n\nThis license ends automatically if the licensee breaches section 3 and does\nnot cure the breach within 14 days of notice. Units sold under valid\ncertificates before termination remain licensed.\n\n## 8. Liability\n\nThe model is provided **as print-tested by the designer, but otherwise\nas-is**. To the maximum extent permitted by law, neither the designer nor\nPrintwright is liable for damages arising from printing, using, or selling\ncopies of the model. Total liability is capped at ten times the price paid\nfor this license.\n\n## 9. Governing law\n\n*Placeholder:* the governing law and venue are those stated on the\nmarketplace's terms-of-service page at the time of purchase, unless designer\nand licensee agree otherwise in writing.\n"
+  },
+  "hedera": {
+    "network": "testnet",
+    "topic_id": "0.0.9585069",
+    "sequence_number": 59,
+    "mirror_url": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/59",
+    "hashscan_url": "https://hashscan.io/testnet/topic/0.0.9585069"
+  }
+}

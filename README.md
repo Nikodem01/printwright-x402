@@ -234,9 +234,17 @@ the build if key/token/signature material ever reaches a log.
   ```
 
   No model, designer, buyer, or count — that is the point. The buyer's proof bundle for this
-  purchase is embedded in [`public/widget-example.html`](public/widget-example.html); open it
-  from any static server, or run `node verifier/cli.js` against it, and the commitment
-  recomputes to the value above.
+  purchase ships two ways: embedded in [`public/widget-example.html`](public/widget-example.html),
+  which verifies in the browser from any static server, and as plain JSON in
+  [`public/widget-example.bundle.json`](public/widget-example.bundle.json) for the CLI, which
+  takes JSON rather than HTML:
+
+  ```
+  node verifier/cli.js public/widget-example.bundle.json
+  ```
+
+  Both carry the same bytes and recompute the commitment to the value above, checked against the
+  public mirror.
 
 ## Why this needs Web3 (and Hedera specifically)
 
