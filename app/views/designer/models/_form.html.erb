@@ -39,7 +39,13 @@
       </a>
     </div>
 
+    <%# "Review and publish" retargets this same form to the review action with
+        formaction/formmethod. Per-form CSRF tokens are bound to one action and
+        method, so this form carries the global token instead — otherwise the
+        retargeted submit is rejected as a forgery and publishing is
+        unreachable. %>
     <%= form_with model: model, scope: :model3d,
+          authenticity_token: form_authenticity_token,
           html: { multipart: true, class: "listing-editor-form",
                   data: { turbo: false, action: "submit->listing-editor#saving" } },
           url: model.persisted? ? designer_model_path(model) : designer_models_path do |f| %>
