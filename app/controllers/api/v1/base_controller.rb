@@ -5,6 +5,15 @@ class Api::V1::BaseController < ApplicationController
     render json: { error: "not_found" }, status: :not_found
   end
 
+  # Issuing a 402 asks the facilitator for the fee payer, so an outage can fail
+  # a quote before any money is at stake. The paid legs rescue this themselves
+  # (they also have a purchase to keep alive); this is the backstop that keeps
+  # every other path on the documented contract instead of a 500.
+  rescue_from FacilitatorClient::Unavailable do
+    response.set_header("Retry-After", "5")
+    render json: { error: "facilitator_unavailable", retry_after: 5 }, status: :service_unavailable
+  end
+
   private
 
   def render_listing_unavailable(model)
