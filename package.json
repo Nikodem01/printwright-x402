@@ -7,6 +7,7 @@
   "scripts": {
     "buy": "node scripts/buy.mjs",
     "test:load": "node --test scripts/load-sanity.test.mjs",
+    "test:proof-links": "node --test scripts/proof-links.test.mjs",
     "test:conformance": "node --test conformance/test/"
   },
   "dependencies": {

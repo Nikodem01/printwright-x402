@@ -74,7 +74,7 @@ jobs:
         with:
           node-version: 20
       - name: Load harness contract
-        run: npm ci && npm audit --audit-level=high && npm run test:load && npm run test:conformance
+        run: npm ci && npm audit --audit-level=high && npm run test:load && npm run test:proof-links && npm run test:conformance
       - name: Client SDK tests and audit
         working-directory: client
         run: npm ci && npm audit --audit-level=high && npm test

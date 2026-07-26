@@ -9,6 +9,7 @@ import "dotenv/config";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { assets, PrintwrightClient } from "@printwright/client";
+import { proofLines } from "./proof-links.mjs";
 
 const NET = process.env.HEDERA_NETWORK === "mainnet" ? "mainnet" : "testnet";
 const USDC = assets[NET].usdc;
@@ -91,11 +92,8 @@ console.log(`   proof bundle: ${join(dir, "certificate.json")} (${cert.status})`
 console.log(`\n   License:     ${body.license.cert_id} — ${body.license.kind}, unit serial ${body.license.serial}`);
 console.log(`   Transaction: ${body.sandbox ? body.sandbox_url : body.hashscan_url}`);
 console.log(`   Verify:      ${body.verify_url}`);
-if (cert.hedera) {
-  const hedera = cert.hedera;
-  console.log(`   HCS topic:   ${hedera.sandbox ? `${hedera.topic_id} (LOCAL SANDBOX ONLY)` : hedera.hashscan_url}`);
-  console.log(`   Mirror node: ${hedera.mirror_url}`);
-  console.log(`   Commitment:  ${cert.commitment ?? "(pending)"}`);
+for (const line of proofLines(cert, { baseUrl: BASE, certId: body.license.cert_id })) {
+  console.log(line);
 }
 console.log(body.sandbox
   ? "\ndone — SANDBOX rehearsal complete; no printable model or real license was issued."
