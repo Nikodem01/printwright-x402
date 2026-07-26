@@ -12,7 +12,8 @@ export interface PrintwrightClientOptions {
 }
 
 export interface SearchOptions {
-  query: string;
+  /** Omit to browse the whole published catalog. */
+  query?: string;
   maxPriceCents?: number;
   material?: string;
   supports?: boolean;
@@ -194,7 +195,7 @@ export class PrintwrightError extends Error {
 
 export class PrintwrightClient {
   constructor(options?: PrintwrightClientOptions);
-  search(options: SearchOptions): Promise<SearchResponse>;
+  search(options?: SearchOptions): Promise<SearchResponse>;
   get(modelId: number): Promise<ModelDetails>;
   quote(options: QuoteOptions): Promise<PaymentQuote>;
   buy(options: PurchaseOptions): Promise<PurchaseReceipt>;

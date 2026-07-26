@@ -61,6 +61,13 @@ before(async () => {
       lastSearchParams = url.searchParams;
       return response.end(JSON.stringify({ count: 1, models: [ { id: 7, title: "Gear" } ] }));
     }
+    // No q at all: the catalog listing, exactly as the Rails controller treats it.
+    if (url.pathname === "/api/v1/models" && !url.searchParams.has("q")) {
+      lastSearchParams = url.searchParams;
+      return response.end(JSON.stringify({
+        count: 2, models: [ { id: 7, title: "Gear" }, { id: 9, title: "Bracket" } ],
+      }));
+    }
     if (url.pathname === "/api/v1/models/7") {
       return response.end(JSON.stringify({ id: 7, title: "Gear", license_offers: [] }));
     }
@@ -228,6 +235,28 @@ test("searches and gets catalog models without payment credentials", async () =>
   assert.equal(lastSearchParams.get("category"), "toys-and-games");
   assert.equal(lastSearchParams.get("collection"), "under-an-hour");
   assert.equal((await client.get(7)).title, "Gear");
+});
+
+// /api/v1/models serves the whole published catalog when q is absent, so the
+// SDK must be able to ask for it. Requiring a query left an agent with no
+// list-everything call and no way to use the filters on their own.
+test("browses the whole catalog with no query, and filters without one", async () => {
+  const client = new PrintwrightClient({ baseUrl });
+
+  const all = await client.search();
+  assert.equal(all.count, 2);
+  assert.deepEqual(all.models.map((m) => m.id), [ 7, 9 ]);
+  assert.equal(lastSearchParams.has("q"), false, "an absent query must not be sent as an empty q");
+
+  const cheap = await client.search({ maxPriceCents: 100, category: "toys-and-games" });
+  assert.equal(cheap.count, 2);
+  assert.equal(lastSearchParams.get("max_price_cents"), "100");
+  assert.equal(lastSearchParams.get("category"), "toys-and-games");
+  assert.equal(lastSearchParams.has("q"), false);
+
+  // A blank or whitespace query is a browse, not a search for whitespace.
+  await client.search({ query: "   " });
+  assert.equal(lastSearchParams.has("q"), false);
 });
 
 test("quotes, signs offline, and retries the selected x402 requirement", async () => {

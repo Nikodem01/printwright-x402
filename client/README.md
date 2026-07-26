@@ -16,6 +16,11 @@ const printwright = new PrintwrightClient({ baseUrl: "https://printwright.exampl
 const { models } = await printwright.search({ query: "cable clip", maxPriceCents: 300 });
 const model = await printwright.get(models[0].id);
 console.log(model.title, model.license_offers);
+
+// Every option is optional: no query browses the whole published catalog, and
+// the filters work on their own.
+const { models: everything } = await printwright.search();
+const { models: cheap } = await printwright.search({ maxPriceCents: 100 });
 ```
 
 Buying requires a funded Hedera account. The key stays in this process and signs locally; it

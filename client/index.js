@@ -47,10 +47,14 @@ export class PrintwrightClient {
     this.batchQuotes = new WeakSet();
   }
 
+  // Every argument is optional, because /api/v1/models treats them that way:
+  // with no query it serves the whole published catalog, and the filters stand
+  // on their own ("everything under 100 cents", "everything in a category").
+  // Requiring a query here made the SDK narrower than the endpoint it wraps,
+  // leaving an agent no way to browse without dropping to raw HTTP.
   async search({ query, maxPriceCents, material, supports, category, collection } = {}) {
-    if (!query?.trim()) throw new TypeError("query is required");
-
-    const params = new URLSearchParams({ q: query });
+    const params = new URLSearchParams();
+    if (query?.trim()) params.set("q", query.trim());
     if (maxPriceCents !== undefined) params.set("max_price_cents", String(maxPriceCents));
     if (material) params.set("material", material);
     if (supports !== undefined) params.set("supports", String(supports));
