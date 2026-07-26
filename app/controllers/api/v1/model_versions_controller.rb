@@ -19,10 +19,16 @@ class Api::V1::ModelVersionsController < Api::V1::BaseController
       hcs_mirror_url: mirror_url(version),
       download_url: api_v1_license_latest_version_file_url(@license.cert_id),
       files: bundle_files,
-      # What the on-chain event commits to. Recompute it from `files` — SHA-256
-      # over the RFC 8785 canonicalization of [{kind, hash}, ...] in order — and
-      # compare with the anchored message to prove the bundle is the one that
-      # was published, however many files it contains.
+      # What the on-chain event commits to. Recompute it from `files` above, in
+      # order, and compare with the anchored message to prove the bundle is the
+      # one that was published, however many files it contains. The manifest
+      # that is hashed names the digest `hash`, not `file_hash` as `files` does,
+      # so map each entry to exactly {"kind", "hash"} first:
+      #
+      #   manifest = files.map { |f| { "kind" => f["kind"], "hash" => f["file_hash"] } }
+      #   "sha256:" + SHA256(RFC8785_canonicalize(manifest)).hexdigest
+      #
+      # The "sha256:" prefix is part of the served and anchored value.
       files_hash: version&.files_hash
     }
   end

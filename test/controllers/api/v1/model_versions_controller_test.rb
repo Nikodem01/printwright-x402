@@ -114,6 +114,33 @@ class Api::V1::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # The controller documents how to recompute files_hash from the served `files`
+  # list. A third party has only that comment and this response, so run the
+  # recipe exactly as written and require it to land on both the served value and
+  # the value anchored on HCS. The rename is the whole trap: the manifest that is
+  # hashed keys the digest `hash`, while `files` serves it as `file_hash`.
+  test "the documented recipe recomputes files_hash from the served bundle" do
+    version = deliverable_version(number: 2, changelog: "Two-part bundle.", sequence: 61)
+    second = version.version_files.create!(position: 1, kind: "stl", file_hash: "sha256:#{'c' * 64}")
+    second.file.attach(io: StringIO.new("solid part-b\nendsolid part-b\n"),
+      filename: "part-b.stl", content_type: "model/stl")
+
+    get api_v1_license_latest_version_path(@license.cert_id), headers: bearer(@token)
+    assert_response :success
+    body = response.parsed_body
+
+    manifest = body["files"].map { |f| { "kind" => f["kind"], "hash" => f["file_hash"] } }
+    recomputed = "sha256:#{Digest::SHA256.hexdigest(manifest.to_json_c14n)}"
+
+    assert_equal body["files_hash"], recomputed
+    assert_equal version.anchor_payload["files_hash"], recomputed
+
+    # Passing the served entries through unmapped is the reading the old wording
+    # invited; it must not be mistaken for the real digest.
+    naive = "sha256:#{Digest::SHA256.hexdigest(body['files'].map { |f| f.except('download_url') }.to_json_c14n)}"
+    assert_not_equal body["files_hash"], naive
+  end
+
   test "receipt is required, license-scoped, delivered, and never available to sandbox" do
     get api_v1_license_latest_version_path(@license.cert_id)
     assert_response :unauthorized
