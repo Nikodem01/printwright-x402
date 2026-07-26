@@ -9,6 +9,11 @@ class License < ApplicationRecord
 
   validates :serial, presence: true
 
+  # The shape allocate! mints below. /verify is keyed by verify_slug, not by
+  # this, so the not-found page uses it to tell a buyer holding a cert_id that
+  # they have the right proof and the wrong handle.
+  CERT_ID_FORMAT = /\A(?:sandbox-)?pw-\h{24}\z/
+
   # Serial allocation must survive concurrent purchases of the same offer:
   # the row lock on the offer serializes counting, and max_units is enforced
   # inside the same critical section.

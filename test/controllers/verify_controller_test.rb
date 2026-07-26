@@ -84,6 +84,46 @@ class VerifyControllerTest < ActionDispatch::IntegrationTest
     assert_select ".banner-bad", text: /not found/i
   end
 
+  # The licence text tells buyers to keep their cert_id, and the receipt shows
+  # it next to the verify link, so pasting the id into /verify is the mistake
+  # the product invites. Telling them to "check the id on your receipt" when the
+  # id came from the receipt sends them looking for a mistake they did not make.
+  test "a cert_id pasted into verify explains that the link carries a different token" do
+    get verify_path(@license.cert_id)
+
+    assert_response :not_found
+    assert_select ".banner-bad", text: /not found/i
+    assert_match "is a certificate id, not a verify token", response.body
+    assert_match "verify link on your receipt", response.body
+    assert_match "/api/v1/certificates/#{@license.cert_id}", response.body
+    assert_no_match(/Check the id on your receipt/, response.body)
+  end
+
+  test "the cert_id explanation is by shape, so it does not disclose which ids exist" do
+    unissued = "pw-#{SecureRandom.hex(12)}"
+    assert_nil License.find_by(cert_id: unissued)
+
+    get verify_path(unissued)
+
+    assert_response :not_found
+    assert_match "is a certificate id, not a verify token", response.body
+  end
+
+  test "a sandbox cert_id is recognised too" do
+    get verify_path("sandbox-pw-#{SecureRandom.hex(12)}")
+
+    assert_response :not_found
+    assert_match "is a certificate id, not a verify token", response.body
+  end
+
+  test "a token that is not cert_id-shaped keeps the plain not-found copy" do
+    get verify_path("totally-unknown-token")
+
+    assert_response :not_found
+    assert_match "No certificate with id", response.body
+    assert_no_match(/is a certificate id, not a verify token/, response.body)
+  end
+
   test "certificate social metadata escapes a hostile model title" do
     @license.purchase.model3d.update!(title: 'Part"><script>alert(1)</script>')
 
