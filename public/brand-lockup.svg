@@ -1,9 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="280" height="44" viewBox="0 0 280 44" role="img" aria-labelledby="title desc">
   <title id="title">Printwright</title>
   <desc id="desc">The 3D model store for agents.</desc>
+  <style>
+    .brand-mark { fill: #1B5E45; }
+    .wordmark { fill: #141916; }
+    .tagline { fill: #566059; }
+
+    @media (prefers-color-scheme: dark) {
+      .brand-mark { fill: #3AA17A; }
+      .wordmark { fill: #F1F5F2; }
+      .tagline { fill: #A9B5AE; }
+    }
+  </style>
   <g transform="translate(0,2) scale(0.625)">
-    <path fill="#1B5E45" fill-rule="evenodd" d="M6 32A26 26 0 1 1 58 32A26 26 0 1 1 6 32Z M35 15.5H45.09A3 3 0 0 1 45.09 21.5H35A3 3 0 0 1 35 15.5Z M14.49 24.5H49.51A3 3 0 0 1 49.51 30.5H14.49A3 3 0 0 1 14.49 24.5Z M14.49 33.5H49.51A3 3 0 0 1 49.51 39.5H14.49A3 3 0 0 1 14.49 33.5Z M18.91 42.5H45.09A3 3 0 0 1 45.09 48.5H18.91A3 3 0 0 1 18.91 42.5Z"/>
+    <path class="brand-mark" fill-rule="evenodd" d="M6 32A26 26 0 1 1 58 32A26 26 0 1 1 6 32Z M35 15.5H45.09A3 3 0 0 1 45.09 21.5H35A3 3 0 0 1 35 15.5Z M14.49 24.5H49.51A3 3 0 0 1 49.51 30.5H14.49A3 3 0 0 1 14.49 24.5Z M14.49 33.5H49.51A3 3 0 0 1 49.51 39.5H14.49A3 3 0 0 1 14.49 33.5Z M18.91 42.5H45.09A3 3 0 0 1 45.09 48.5H18.91A3 3 0 0 1 18.91 42.5Z"/>
   </g>
-  <text x="51" y="26" fill="#141916" font-family="Archivo, sans-serif" font-size="20" font-weight="700" letter-spacing="-0.6">Printwright</text>
-  <text x="51" y="40" fill="#566059" font-family="Archivo, sans-serif" font-size="12" font-weight="400">The 3D model store for agents.</text>
+  <text class="wordmark" x="51" y="26" font-family="Archivo, sans-serif" font-size="20" font-weight="700" letter-spacing="-0.6">Printwright</text>
+  <text class="tagline" x="51" y="40" font-family="Archivo, sans-serif" font-size="12" font-weight="400">The 3D model store for agents.</text>
 </svg>

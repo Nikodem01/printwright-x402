@@ -35,7 +35,7 @@ one licence, proof bundle, and asynchronous HCS commitment per item.
 | Discover and license a model | API, MCP, storefront, or cart → shared purchase core → paid licence/access → private proof → asynchronous opaque HCS commitment |
 | License each physical print | One `commercial_unit` purchase per requested unit → paid licence/files → print may start; that unit's HCS commitment continues asynchronously |
 | Publish and version a model | Original review → catalog, with no Hedera write; deliverable later version → covered owner access + asynchronous sidecar submission → `pwv-1` HCS event |
-| Turn a sale into designer payout | Buyer settlement → local split ledger; paid delivery triggers payout runner → signing sidecar → separate treasury-to-designer CryptoTransfer → payout ledger record |
+| Turn a sale into designer payout | Buyer settlement → local split ledger → paid delivery → payout runner → signing sidecar → separate treasury-to-designer CryptoTransfer; the successful transfer ID is recorded locally |
 | Verify a licence independently | Buyer-disclosed bundle → local JCS/SHA-256 recomputation → exact topic/sequence GET from Mirror Node → exact commitment comparison |
 
 Receipts, fresh download grants, and covered model updates are continuations of
@@ -63,7 +63,8 @@ count; it publishes only the opaque commitment envelope.
 - Dashed grey lines are asynchronous jobs that continue after their prerequisite.
 - Solid green lines write value or provenance to Hedera.
 - Dashed green lines are public Mirror Node reads.
-- Moving dots show direction; the underlying line style still identifies the operation.
+- The overview is intentionally static. Choose an outcome to animate only that path.
+- Moving dots then show direction; the underlying line style still identifies the operation.
 - Select any node for its concise responsibility and code boundary.
 
 ## Public testnet evidence

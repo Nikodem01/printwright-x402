@@ -79,21 +79,21 @@
 
   .shell {
     display: grid;
-    grid-template-columns: 256px minmax(0, 1fr);
-    gap: 20px;
-    width: min(1760px, 100%);
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 16px;
+    width: min(1600px, 100%);
     min-height: 100vh;
     margin: 0 auto;
-    padding: 20px;
+    padding: 16px;
   }
 
   .rail {
     position: sticky;
-    top: 20px;
+    top: 16px;
     align-self: start;
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 40px);
+    max-height: calc(100vh - 32px);
     overflow-y: auto;
     padding: 18px;
     background: var(--inset);
@@ -273,7 +273,7 @@
   h1 {
     max-width: 760px;
     margin: 0;
-    font-size: clamp(34px, 4.4vw, 64px);
+    font-size: clamp(32px, 3.8vw, 56px);
     font-weight: 770;
     font-stretch: 86%;
     line-height: 0.95;
@@ -364,8 +364,8 @@
   .map-canvas {
     position: relative;
     width: 100%;
-    min-width: 1400px;
-    height: 680px;
+    min-width: 1088px;
+    height: 600px;
     isolation: isolate;
   }
 
@@ -387,20 +387,20 @@
   }
 
   .lane.actors {
-    top: 18px;
-    height: 122px;
+    top: 16px;
+    height: 108px;
     background: var(--inset);
   }
 
   .lane.app {
-    top: 158px;
-    height: 328px;
+    top: 140px;
+    height: 260px;
     background: #e8eeea;
   }
 
   .lane.hedera {
-    top: 505px;
-    height: 154px;
+    top: 420px;
+    height: 160px;
     background: var(--chain-soft);
     border: 1px solid #b9d5c8;
   }
@@ -449,15 +449,26 @@
     opacity: 1;
   }
 
+  .map-canvas.is-overview .edge {
+    stroke-width: 1.25;
+    opacity: 0.3;
+  }
+
+  .map-canvas.is-overview .edge.chain,
+  .map-canvas.is-overview .edge.read {
+    opacity: 0.42;
+  }
+
   .flow-overlay {
     fill: none;
     stroke: var(--text);
     stroke-width: 3;
     stroke-linecap: round;
-    opacity: 0.48;
+    opacity: 0;
     pointer-events: none;
     vector-effect: non-scaling-stroke;
     animation: edge-flow var(--flow-duration, 1800ms) linear infinite;
+    animation-play-state: paused;
     transition: opacity 180ms ease, stroke-width 180ms ease;
   }
 
@@ -474,6 +485,7 @@
   .flow-overlay.is-active {
     stroke-width: 3.5;
     opacity: 0.94;
+    animation-play-state: running;
   }
 
   @keyframes edge-flow {
@@ -491,9 +503,9 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    width: 152px;
-    min-height: 66px;
-    padding: 10px 11px;
+    width: 132px;
+    min-height: 60px;
+    padding: 9px;
     background: var(--card);
     border: 1px solid var(--hairline);
     border-radius: var(--radius-sm);
@@ -508,7 +520,7 @@
   }
 
   .map-node.actor {
-    min-height: 54px;
+    min-height: 50px;
     border: 0;
   }
 
@@ -552,8 +564,8 @@
 
   .node-icon {
     display: grid;
-    width: 30px;
-    height: 30px;
+    width: 27px;
+    height: 27px;
     flex: 0 0 auto;
     place-items: center;
     background: var(--inset);
@@ -573,8 +585,8 @@
   }
 
   .node-icon svg {
-    width: 17px;
-    height: 17px;
+    width: 16px;
+    height: 16px;
     fill: none;
     stroke: currentColor;
     stroke-width: 1.8;
@@ -588,7 +600,7 @@
 
   .node-title {
     display: block;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 720;
     line-height: 1.1;
   }
@@ -611,9 +623,9 @@
   }
 
   .inspector {
-    min-height: 178px;
+    min-height: 160px;
     margin-top: 18px;
-    padding: 20px 22px;
+    padding: 17px 19px;
     background: var(--inset);
     border-radius: var(--radius-lg);
   }
@@ -752,7 +764,7 @@
     .flow-overlay { animation: none; opacity: 0; }
   }
 
-  @media (max-width: 980px) {
+  @media (max-width: 1320px) {
     .shell {
       display: block;
       padding: 12px;
@@ -886,7 +898,7 @@
 
     <section class="map-panel" aria-label="Interactive system map">
       <div class="map-topbar">
-        <div class="map-instruction">Choose a journey or click any node</div>
+        <div class="map-instruction">Choose a journey to animate its direction, or click any node</div>
         <div class="legend" aria-label="Map legend">
           <span class="legend-item"><span class="legend-line"></span> App flow</span>
           <span class="legend-item"><span class="legend-line chain"></span> Hedera write</span>
@@ -949,38 +961,37 @@
   };
 
   const NODES = [
-    { id: "designer", col: 0, y: 62, title: "Designer studio", meta: "CREATOR", icon: "designer", kind: "actor", summary: "Designers publish original printable bundles, validate later versions, inspect sales, and receive grouped payouts.", code: "app/controllers/designer/" },
-    { id: "agent", col: 1, y: 62, title: "API / MCP buyer", meta: "AGENT ENTRY", icon: "terminal", kind: "actor", summary: "API clients and MCP assistants enter the same purchase backend. MCP returns the licence, files, verification link, and covered-update capability.", code: "mcp/server.mjs · client/index.js" },
-    { id: "human", col: 2, y: 62, title: "Storefront / cart", meta: "HUMAN ENTRY", icon: "browser", kind: "actor", summary: "A browser buyer can buy one offer or approve one cart total; both call the shared download or batch API.", code: "checkout_controller.js · BatchesController" },
-    { id: "printer", col: 3, y: 62, title: "Print server", meta: "MACHINE BUYER", icon: "printer", kind: "actor", summary: "The print-job helper runs one commercial-unit purchase for each requested physical unit before it starts that job.", code: "scripts/print-job.mjs" },
-    { id: "verifier", col: 6, y: 62, title: "Independent verifier", meta: "NO ACCOUNT", icon: "verify", kind: "actor", summary: "Any holder of a disclosed proof bundle can check it without an account or a Printwright signing key.", code: "verifier/index.js · Certificates::MirrorCheck" },
+    { id: "designer", col: 0, y: 45, title: "Designer studio", meta: "CREATOR", icon: "designer", kind: "actor", summary: "Designers publish original printable bundles, validate later versions, inspect sales, and receive grouped payouts.", code: "app/controllers/designer/" },
+    { id: "agent", col: 1, y: 45, title: "API / MCP buyer", meta: "AGENT ENTRY", icon: "terminal", kind: "actor", summary: "API clients and MCP assistants enter the same purchase backend. MCP returns the licence, files, verification link, and covered-update capability.", code: "mcp/server.mjs · client/index.js" },
+    { id: "human", col: 2, y: 45, title: "Storefront / cart", meta: "HUMAN ENTRY", icon: "browser", kind: "actor", summary: "A browser buyer can buy one offer or approve one cart total; both call the shared download or batch API.", code: "checkout_controller.js · BatchesController" },
+    { id: "printer", col: 3, y: 45, title: "Print server", meta: "MACHINE BUYER", icon: "printer", kind: "actor", summary: "The print-job helper runs one commercial-unit purchase for each requested physical unit before it starts that job.", code: "scripts/print-job.mjs" },
+    { id: "verifier", col: 6, y: 45, title: "Independent verifier", meta: "NO ACCOUNT", icon: "verify", kind: "actor", summary: "Any holder of a disclosed proof bundle can check it without an account or a Printwright signing key.", code: "verifier/index.js · Certificates::MirrorCheck" },
 
-    { id: "workbench", col: 0, y: 220, title: "Original publish", meta: "NO HEDERA WRITE", icon: "designer", summary: "The designer uploads geometry and imagery, sets prices, accepts the ownership warranty, and publishes the original listing after local review.", code: "Designer::ModelsController · Models::PublishReview" },
-    { id: "catalog", col: 1, y: 220, title: "Catalog + offers", meta: "DISCOVER", icon: "search", summary: "Published models, printability facts, prices, and machine-readable personal or commercial-unit offers are public.", code: "StorefrontController · Api::V1::ModelsController" },
-    { id: "x402", col: 2, y: 220, title: "x402 quote", meta: "402 PAYMENT REQUIRED", icon: "quote", summary: "The protected single or batch resource returns exact HBAR or USDC requirements payable to the treasury.", code: "X402::Requirements · DownloadsController · BatchesController" },
-    { id: "signature", col: 3, y: 220, title: "Local signature", meta: "BUYER KEY STAYS LOCAL", icon: "signature", kind: "local", summary: "The buyer signs the exact Hedera TransferTransaction locally. Printwright never receives the buyer's private key.", code: "client/index.js · checkout_controller.js" },
-    { id: "facilitator", col: 4, y: 220, title: "Verify + submit", meta: "FACILITATOR FEE PAYER", icon: "bridge", kind: "bridge", summary: "The facilitator verifies the signed x402 payload, adds its separate fee-payer signature, submits it, and returns the result.", code: "FacilitatorClient · selfhost-facilitator/server.mjs" },
-    { id: "delivery", col: 5, y: 220, title: "Licence + access", meta: "AFTER SETTLEMENT", icon: "delivery", summary: "Printwright returns each licence, certificate, proof bundle, first file grant, durable receipt, and a separate updates capability. The receipt later authorizes fresh grants.", code: "DownloadsController#deliver · BatchesController#deliver · ModelVersionsController" },
-    { id: "proof", col: 6, y: 220, title: "Private proof bundle", meta: "BUYER-CONTROLLED", icon: "verify", summary: "The bundle contains the certificate, nonce, exact terms, and anchor state. It may say minting until the asynchronous HCS job succeeds.", code: "Certificates::Builder · Certificates::Bundle" },
+    { id: "workbench", col: 0, y: 180, title: "Original publish", meta: "NO HEDERA WRITE", icon: "designer", summary: "The designer uploads geometry and imagery, sets prices, accepts the ownership warranty, and publishes the original listing after local review.", code: "Designer::ModelsController · Models::PublishReview" },
+    { id: "catalog", col: 1, y: 180, title: "Catalog + offers", meta: "DISCOVER", icon: "search", summary: "Published models, printability facts, prices, and machine-readable personal or commercial-unit offers are public.", code: "StorefrontController · Api::V1::ModelsController" },
+    { id: "x402", col: 2, y: 180, title: "x402 quote", meta: "402 PAYMENT REQUIRED", icon: "quote", summary: "The protected single or batch resource returns exact HBAR or USDC requirements payable to the treasury.", code: "X402::Requirements · DownloadsController · BatchesController" },
+    { id: "signature", col: 3, y: 180, title: "Local signature", meta: "BUYER KEY STAYS LOCAL", icon: "signature", kind: "local", summary: "The buyer signs the exact Hedera TransferTransaction locally. Printwright never receives the buyer's private key.", code: "client/index.js · checkout_controller.js" },
+    { id: "facilitator", col: 4, y: 180, title: "Verify + submit", meta: "FACILITATOR FEE PAYER", icon: "bridge", kind: "bridge", summary: "The facilitator verifies the signed x402 payload, adds its separate fee-payer signature, submits it, and returns the result.", code: "FacilitatorClient · selfhost-facilitator/server.mjs" },
+    { id: "delivery", col: 5, y: 180, title: "Licence + access", meta: "AFTER SETTLEMENT", icon: "delivery", summary: "Printwright returns each licence, certificate, proof bundle, first file grant, durable receipt, and a separate updates capability. The receipt later authorizes fresh grants.", code: "DownloadsController#deliver · BatchesController#deliver · ModelVersionsController" },
+    { id: "proof", col: 6, y: 180, title: "Private proof bundle", meta: "BUYER-CONTROLLED", icon: "verify", summary: "The bundle contains the certificate, nonce, exact terms, and anchor state. It may say minting until the asynchronous HCS job succeeds.", code: "Certificates::Builder · Certificates::Bundle" },
 
-    { id: "version", col: 0, y: 385, title: "Version validation", meta: "LATER VERSIONS", icon: "library", summary: "A later bundle and changelog are analyzed first. Only a deliverable version queues its separate provenance event.", code: "AnalyzeModelVersionMeshJob · ModelVersionAnchorJob" },
-    { id: "sales", col: 3, y: 385, title: "Settlement ledger", meta: "LOCAL 90 / 10 BOOKS", icon: "ledger", summary: "The settled transition writes immutable designer-share and platform-fee rows before delivery. A successful payout later adds rows carrying its transaction ID.", code: "Purchase#transition_to! · LedgerEntry" },
-    { id: "payout", col: 4, y: 385, title: "Payout runner", meta: "TRIGGERED AFTER DELIVERY", icon: "payout", summary: "The delivery-triggered job or later sweep keeps unverified destinations owed, then groups eligible balances by designer into one transfer per asset.", code: "DesignerPayoutJob · Ledger::PayoutRunner" },
-    { id: "sidecar", col: 5, y: 385, title: "Signing sidecar", meta: "PLATFORM KEY BOUNDARY", icon: "key", summary: "The sidecar uses platform keys to create the topic, submit HCS messages, and sign treasury payouts. Buyer payment and facilitator signing stay outside it.", code: "SidecarClient · sidecar/app.mjs · sidecar/hedera.mjs" },
-    { id: "localhash", col: 6, y: 385, title: "Recompute + compare", meta: "LOCAL VERIFICATION", icon: "hash", kind: "local", summary: "The verifier validates the bundle, canonicalizes the private certificate, recomputes SHA-256, fetches one exact public message, and compares commitments.", code: "verifier/index.js · RFC 8785 JCS" },
+    { id: "version", col: 0, y: 325, title: "Version validation", meta: "LATER VERSIONS", icon: "library", summary: "A later bundle and changelog are analyzed first. Only a deliverable version queues its separate provenance event.", code: "AnalyzeModelVersionMeshJob · ModelVersionAnchorJob" },
+    { id: "sales", col: 3, y: 325, title: "Settlement ledger", meta: "LOCAL 90 / 10 BOOKS", icon: "ledger", summary: "The settled transition writes immutable designer-share and platform-fee rows before delivery. A successful payout later adds rows carrying its transaction ID.", code: "Purchase#transition_to! · LedgerEntry" },
+    { id: "payout", col: 4, y: 325, title: "Payout runner", meta: "TRIGGERED AFTER DELIVERY", icon: "payout", summary: "The delivery-triggered job or later sweep keeps unverified destinations owed, then groups eligible balances by designer into one transfer per asset.", code: "DesignerPayoutJob · Ledger::PayoutRunner" },
+    { id: "sidecar", col: 5, y: 325, title: "Signing sidecar", meta: "PLATFORM KEY BOUNDARY", icon: "key", summary: "The sidecar uses platform keys to create the topic, submit HCS messages, and sign treasury payouts. Buyer payment and facilitator signing stay outside it.", code: "SidecarClient · sidecar/app.mjs · sidecar/hedera.mjs" },
+    { id: "localhash", col: 6, y: 325, title: "Recompute + compare", meta: "LOCAL VERIFICATION", icon: "hash", kind: "local", summary: "The verifier validates the bundle, canonicalizes the private certificate, recomputes SHA-256, fetches one exact public message, and compares commitments.", code: "verifier/index.js · RFC 8785 JCS" },
 
-    { id: "settle", col: 3, y: 550, title: "Buyer payment", meta: "CRYPTO TRANSFER · WRITE", icon: "transfer", kind: "hedera-write", summary: "One confirmed HBAR or USDC CryptoTransfer moves purchase value from the buyer to the treasury.", code: "CryptoTransfer · x402 exact scheme" },
-    { id: "payouttx", col: 4, y: 550, title: "Designer payout", meta: "CRYPTO TRANSFER · WRITE", icon: "payout", kind: "hedera-write", summary: "A later, separate HBAR or USDC CryptoTransfer moves grouped owed value from the treasury to verified designer accounts.", code: "TransferTransaction · sidecar/hedera.mjs#payout" },
-    { id: "hcs", col: 5, y: 550, title: "HCS provenance", meta: "TOPIC MESSAGE · WRITE", icon: "topic", kind: "hedera-write", summary: "The current licence and version pipelines write an opaque commitment envelope or a separate pwv-1 event—never the private certificate.", code: "TopicMessageSubmitTransaction · 0.0.9585069" },
-    { id: "mirror", col: 6, y: 550, title: "Exact HCS message", meta: "MIRROR NODE · READ", icon: "mirror", kind: "hedera-read", summary: "The verifier derives a trusted public URL and GETs the exact topic and sequence. Mirror Node never submits a transaction.", code: "GET /api/v1/topics/{topic}/messages/{sequence}" }
+    { id: "settle", col: 3, y: 465, title: "Buyer payment", meta: "BUYER → TREASURY · WRITE", icon: "transfer", kind: "hedera-write", summary: "One confirmed HBAR or USDC CryptoTransfer moves purchase value from the buyer to the treasury.", code: "CryptoTransfer · x402 exact scheme" },
+    { id: "payouttx", col: 4, y: 465, title: "Designer payout", meta: "TREASURY → DESIGNER · WRITE", icon: "payout", kind: "hedera-write", summary: "A later, separate HBAR or USDC CryptoTransfer moves grouped owed value from the treasury to verified designer accounts.", code: "TransferTransaction · sidecar/hedera.mjs#payout" },
+    { id: "hcs", col: 5, y: 465, title: "HCS provenance", meta: "TOPIC MESSAGE · WRITE", icon: "topic", kind: "hedera-write", summary: "The current licence and version pipelines write an opaque commitment envelope or a separate pwv-1 event—never the private certificate.", code: "TopicMessageSubmitTransaction · 0.0.9585069" },
+    { id: "mirror", col: 6, y: 465, title: "Exact HCS message", meta: "MIRROR NODE · READ", icon: "mirror", kind: "hedera-read", summary: "The verifier derives a trusted public URL and GETs the exact topic and sequence. Mirror Node never submits a transaction.", code: "GET /api/v1/topics/{topic}/messages/{sequence}" }
   ];
 
   const EDGES = [
     { id: "agent-catalog", from: "agent", to: "catalog" },
     { id: "human-catalog", from: "human", to: "catalog" },
-    { id: "printer-catalog", from: "printer", to: "catalog", route: "corridor", channelY: 145 },
+    { id: "printer-catalog", from: "printer", to: "catalog", route: "corridor", channelY: 132 },
     { id: "designer-workbench", from: "designer", to: "workbench" },
-    { id: "designer-sales", from: "designer", to: "sales", route: "dogleg", channelY: 195, gapAfter: 2 },
     { id: "verifier-proof", from: "verifier", to: "proof" },
     { id: "workbench-catalog", from: "workbench", to: "catalog" },
     { id: "catalog-x402", from: "catalog", to: "x402" },
@@ -990,16 +1001,14 @@
     { id: "settle-sales", from: "settle", to: "sales" },
     { id: "sales-delivery", from: "sales", to: "delivery", route: "rise", channel: 0.52 },
     { id: "delivery-proof", from: "delivery", to: "proof" },
-    { id: "delivery-printer", from: "delivery", to: "printer", route: "corridor", channelY: 175 },
+    { id: "delivery-printer", from: "delivery", to: "printer", route: "corridor", channelY: 132 },
     { id: "delivery-sidecar", from: "delivery", to: "sidecar", type: "async", startOffsetX: 24, endOffsetX: 24 },
     { id: "delivery-payout", from: "delivery", to: "payout", type: "async", route: "gap", gapAfter: 4, startOffsetX: -24, endOffsetX: 24 },
-    { id: "sales-payout", from: "sales", to: "payout" },
     { id: "payout-sidecar", from: "payout", to: "sidecar" },
-    { id: "sidecar-payouttx", from: "sidecar", to: "payouttx", type: "chain", route: "gap", gapAfter: 4 },
-    { id: "payouttx-sales", from: "payouttx", to: "sales", route: "gap", gapAfter: 3 },
+    { id: "sidecar-payouttx", from: "sidecar", to: "payouttx", type: "chain", route: "under", channelY: 560, startOffsetX: -64 },
     { id: "workbench-version", from: "workbench", to: "version" },
     { id: "version-delivery", from: "version", to: "delivery", route: "rise", channel: 0.18, endOffsetX: -28 },
-    { id: "version-sidecar", from: "version", to: "sidecar", type: "async", route: "under", channelY: 474 },
+    { id: "version-sidecar", from: "version", to: "sidecar", type: "async", route: "under", channelY: 410 },
     { id: "sidecar-hcs", from: "sidecar", to: "hcs", type: "chain" },
     { id: "proof-localhash", from: "proof", to: "localhash" },
     { id: "mirror-localhash", from: "mirror", to: "localhash", type: "read" }
@@ -1049,14 +1058,14 @@
       id: "payout",
       category: "Publish & earn",
       title: "Turn a sale into designer payout",
-      actor: "Designer",
-      summary: "A treasury sale creates an accountable local obligation, then a separate background path pays eligible designer balances.",
-      entry: "The designer can inspect gross value, the 90/10 split, amount owed, and the eventual payout transaction.",
-      app: "Settlement creates immutable split rows and verified destinations are eligible. Delivery triggers the checkout payout job; the runner groups and records the result.",
-      hedera: "Buyer payment and designer payout are separate CryptoTransfers. The sidecar signs only the later treasury-to-designer transfer.",
+      actor: "Settled sale → designer",
+      summary: "A buyer's settled purchase creates an accountable local obligation, then a separate background path pays eligible designer balances.",
+      entry: "A completed buyer payment—not an action from the designer—starts this path.",
+      app: "Settlement creates immutable split rows. Delivery triggers the payout job; the runner groups eligible obligations, and records the successful transfer ID back in the local books.",
+      hedera: "Buyer → treasury and treasury → designer are separate CryptoTransfers. The sidecar signs only the later payout.",
       proof: ["View USDC payout on HashScan", "https://hashscan.io/testnet/transaction/0.0.9067781@1784242883.124267302"],
-      nodes: ["designer", "catalog", "x402", "signature", "facilitator", "settle", "sales", "delivery", "payout", "sidecar", "payouttx"],
-      edges: ["designer-sales", "catalog-x402", "x402-signature", "signature-facilitator", "facilitator-settle", "settle-sales", "sales-delivery", "delivery-payout", "sales-payout", "payout-sidecar", "sidecar-payouttx", "payouttx-sales"]
+      nodes: ["catalog", "x402", "signature", "facilitator", "settle", "sales", "delivery", "payout", "sidecar", "payouttx"],
+      edges: ["catalog-x402", "x402-signature", "signature-facilitator", "facilitator-settle", "settle-sales", "sales-delivery", "delivery-payout", "payout-sidecar", "sidecar-payouttx"]
     },
     {
       id: "verify",
@@ -1092,8 +1101,8 @@
   const nav = document.getElementById("journey-nav");
   const inspector = document.getElementById("inspector");
   const GRID_COLUMNS = 7;
-  const GRID_MARGIN = 42;
-  const NODE_WIDTH = 152;
+  const GRID_MARGIN = 30;
+  const NODE_WIDTH = 132;
   let columnPositions = [];
   let activeJourney = OVERVIEW;
   let inspectedNode = null;
@@ -1368,6 +1377,7 @@
     const overview = activeJourney.id === "overview";
     const activeNodes = new Set(activeJourney.nodes);
     const activeEdges = new Set(activeJourney.edges);
+    mapCanvas.classList.toggle("is-overview", overview);
 
     nodeLayer.querySelectorAll(".map-node").forEach(node => {
       const active = activeNodes.has(node.dataset.node);
@@ -1390,7 +1400,7 @@
 
     edgeLayer.querySelectorAll(".flow-overlay").forEach(path => {
       const active = activeEdges.has(path.dataset.flow);
-      path.classList.toggle("is-muted", !overview && !active);
+      path.classList.toggle("is-muted", overview || !active);
       path.classList.toggle("is-active", !overview && active);
     });
   }
