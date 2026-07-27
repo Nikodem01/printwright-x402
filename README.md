@@ -6,14 +6,12 @@
 
 <p align="center">
   Printwright is an agent-buyable marketplace where humans, assistants, and print servers
-  license printable models through x402 payments on Hedera.
+  license printable models through <a href="https://www.x402.org/">x402</a> payments on
+  <a href="https://hedera.com/">Hedera</a>.
 </p>
 
 <p align="center">
-  <a href="https://hedera.com/x402-bounty/"><img alt="Hedera x402 bounty" src="https://img.shields.io/badge/Hedera-x402%20bounty-1B5E45"></a>
-  <a href="https://www.x402.org/"><img alt="x402 v2 exact scheme" src="https://img.shields.io/badge/x402-v2%20exact-1B5E45"></a>
-  <a href="https://hashscan.io/testnet/topic/0.0.9585069"><img alt="Hedera testnet" src="https://img.shields.io/badge/network-Hedera%20testnet-141916"></a>
-  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-566059"></a>
+  <a href="https://hedera.com/x402-bounty/"><img alt="Hedera x402 bounty — testnet, x402 v2 exact, MIT" src="https://img.shields.io/badge/Hedera%20x402%20bounty-testnet%20%C2%B7%20v2%20exact%20%C2%B7%20MIT-1B5E45"></a>
 </p>
 
 <p align="center">
