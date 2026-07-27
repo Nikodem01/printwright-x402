@@ -1,308 +1,267 @@
-# Printwright
+<p align="center">
+  <img src="public/brand-lockup.svg" width="280" alt="Printwright — the 3D model store for agents">
+</p>
 
-**The agent-buyable marketplace for licensed 3D-printable models.** Designers set a per-print
-royalty; buyers — human or AI agent — get the file plus a license, paid over
-[x402](https://www.x402.org/) on [Hedera](https://hedera.com) testnet (HBAR or USDC), with every
-purchase anchored as a tamper-evident **HCS license certificate** ("unit N of model X, licensed
-at time T") that the holder can prove against the public mirror node.
+<h1 align="center">Licensed 3D models that software can buy</h1>
 
-DRM can't stop a printer, so Printwright doesn't sell copy protection. It makes **honesty
-frictionless** — a sub-1-USDC royalty paid at machine speed, in one HTTP round-trip — and
-**authorized units provable** — a $0.0001 anchor per licensed unit that anyone can check without
-trusting the marketplace. Card rails can do neither; both are native to x402 on Hedera.
+<p align="center">
+  Printwright is an agent-buyable marketplace where humans, assistants, and print servers
+  license printable models through x402 payments on Hedera.
+</p>
 
-The anchor is an **opaque commitment**, not the certificate: the topic carries only
-`SHA-256( domain ‖ nonce ‖ JCS(certificate) )`, so scraping it yields no buyer, no designer payout
-wallet, and no per-model sales count. The certificate travels with the buyer as a **proof bundle**
-and is disclosed by them; whoever they show it to recomputes the hash and compares it against the
-ledger. Per-certificate proof is kept; broadcasting every designer's sales volume is not.
+<p align="center">
+  <a href="https://hedera.com/x402-bounty/"><img alt="Hedera x402 bounty" src="https://img.shields.io/badge/Hedera-x402%20bounty-1B5E45"></a>
+  <a href="https://www.x402.org/"><img alt="x402 v2 exact scheme" src="https://img.shields.io/badge/x402-v2%20exact-1B5E45"></a>
+  <a href="https://hashscan.io/testnet/topic/0.0.9585069"><img alt="Hedera testnet" src="https://img.shields.io/badge/network-Hedera%20testnet-141916"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-566059"></a>
+</p>
 
-No accounts. No cards. A purchase is one HTTP negotiation:
+<p align="center">
+  <a href="#live-testnet-evidence"><strong>On-chain evidence</strong></a> ·
+  <a href="#run-the-demo"><strong>Run the demo</strong></a> ·
+  <a href="#verify-a-licence-independently"><strong>Verify a licence</strong></a> ·
+  <a href="docs/JOURNEYS.md"><strong>Explore the system</strong></a>
+</p>
 
+> **Bounty pitch.** Printwright is an agent-buyable marketplace for licensed 3D-printable
+> models: APIs, MCP assistants, storefront buyers, carts, and print servers all use the same
+> licensing core. x402 turns each new licence purchase into an HBAR or USDC payment on Hedera,
+> after which Printwright delivers the model and private licence proof while asynchronously
+> anchoring an opaque commitment on HCS. Designers receive accountable payouts, and anyone
+> holding the proof bundle can recompute it locally and compare it with the exact public
+> Mirror Node message.
+
+## Why Printwright
+
+Digital files cannot be made uncopyable. Printwright instead makes the honest path cheap,
+machine-payable, and independently provable.
+
+| | What changes |
+| --- | --- |
+| **Software can buy** | Public API, JavaScript client, MCP tools, storefront/cart, and print-job automation converge on one x402 purchase flow. |
+| **Rights match the real use** | Buyers choose a personal licence or one commercial-unit licence for each physical print. |
+| **Creators can audit earnings** | Every settled sale records the designer share and platform fee; eligible balances are paid in separate, attributable Hedera transfers. |
+| **Proof stays private** | The buyer keeps the certificate, terms, and nonce. Current licence HCS writes contain only an opaque commitment that a disclosed bundle can prove. |
+
+## How one purchase works
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as Buyer / agent
+    participant P as Printwright
+    participant F as x402 facilitator
+    participant H as Hedera
+    participant S as Signing sidecar
+    participant M as Mirror Node
+
+    B->>P: GET protected model licence
+    P-->>B: 402 Payment Required (HBAR or USDC)
+    B->>B: Sign the exact transfer locally
+    B->>P: Retry with PAYMENT-SIGNATURE
+    P->>F: Verify and settle
+    F->>H: CryptoTransfer (buyer → treasury)
+    H-->>F: Consensus result
+    F-->>P: Settlement proof
+    P->>P: Record 90 / 10 ledger entries
+    P-->>B: 200 licence + files + private proof bundle
+    Note over P,B: Paid delivery does not wait for HCS
+    P-->>S: Asynchronous commitment job
+    S->>H: TopicMessageSubmitTransaction
+    B->>M: Read the exact topic message
+    M-->>B: Public commitment
+    B->>B: Recompute locally and compare
 ```
-GET /api/v1/models/42/download?license=personal
-  -> 402 Payment Required        (PaymentRequirements: amount, asset, payTo, feePayer)
-  -> client signs a Hedera TransferTransaction (buyer signature only)
-GET ... + PAYMENT-SIGNATURE header
-  -> facilitator verifies & settles on-chain, sponsoring the network fee
-  -> 200: file bundle + license + certificate + proof bundle + HashScan links
-```
 
-## JavaScript client
+The first request discovers the price. The buyer signs locally; Printwright never receives the
+buyer key. Only a successful facilitator settlement creates the local books and allows delivery.
+Certificate anchoring then retries independently, so a temporary sidecar or HCS failure cannot
+turn a paid download into a false failure.
 
-The reusable client used by both command-line and MCP buyers lives in [`client/`](client/).
-From a checkout, install it with `npm install ./client` (the release package name is
-`@printwright/client`):
+### One core, several entry modes
 
-```js
-import { PrintwrightClient } from "@printwright/client";
-const printwright = new PrintwrightClient({ baseUrl: "http://localhost:3000" });
-const { models } = await printwright.search({ query: "cable clip", maxPriceCents: 300 });
-const model = await printwright.get(models[0].id);
-console.log(model.title, model.license_offers);
-```
+| Entry | Repository path | Role |
+| --- | --- | --- |
+| **HTTP / JavaScript** | [`client/`](client/) · [`scripts/buy.mjs`](scripts/buy.mjs) | Search, quote, approve, buy, and verify without a Printwright account. |
+| **MCP assistant** | [`mcp/`](mcp/) | The same flow as tools with explicit confirmation and a spend ceiling. |
+| **Storefront / cart** | Rails UI and batch API | Wallet-approved single purchases or one settlement that fans out to multiple licences. |
+| **Print server** | [`scripts/print-job.mjs`](scripts/print-job.mjs) · [`octoprint-printwright/`](octoprint-printwright/) | Buy one commercial-unit licence before each physical print job. |
 
-`search()` and `get()` need no credentials. `quote()` exposes the unsigned 402 for approval,
-`buy()` signs locally with the configured Hedera account, `can()` answers structured license
-use/quantity questions without parsing prose, and `verify()` recomputes the certificate's
-commitment and compares it with the message anchored on the public HCS topic.
+## Hedera, exactly
 
-Independent verification does not need this Rails app. Every paid delivery includes a
-`proof_bundle` — the certificate, its blinding nonce, the exact licensed terms text, and where the
-commitment is anchored. From this checkout,
-`npx --package ./verifier printwright-verify bundle.json` recomputes the commitment locally
-(RFC 8785 canonicalization + SHA-256) and confirms it matches the Hedera mirror; after the package
-release the shorter command is `npx printwright-verify bundle.json`. A `bundle_url` or `-` for
-stdin works too. The mirror host is fixed in the verifier and its message URL derived from the
-bundle's topic and sequence number, so a bundle can never nominate the "mirror" that blesses it.
-The frozen PWC-1 contract — on-chain envelope, certificate, and proof bundle — is published as
-[`/pwc-1.schema.json`](public/pwc-1.schema.json); the verifier implementation lives in
-[`verifier/`](verifier/).
-For a browser-native check, load [`public/printwright-verify-widget.js`](public/printwright-verify-widget.js)
-as a classic script and add `<printwright-verify bundle-url="…" topic-id="…" network="testnet">`,
-or paste the bundle inline. The committed [`widget-example.html`](public/widget-example.html) runs
-from any static server and queries only the Hedera mirror, so the marketplace can be offline.
-Paid delivery receipts also expose a 1200×630 certificate `share_card_url`. A capped offer reports
-its license unit and current license slots remaining; the cap limits licenses sold, not physical
-copies, and the storefront says so explicitly.
-Real paid deliveries include a private durable receipt capability for later re-download. Buyers
-may optionally attach a receipt to an email-only magic-link library; sandbox gets neither the
-capability nor library eligibility. No buyer account or password is created.
+| Operation | Hedera path | Why it exists |
+| --- | --- | --- |
+| **Buyer payment** | x402 `exact` → HBAR or HTS USDC `CryptoTransfer` | Moves purchase value from the buyer to the treasury with the facilitator as fee payer. |
+| **Licence commitment** | HCS `TopicMessageSubmitTransaction` to [`0.0.9585069`](https://hashscan.io/testnet/topic/0.0.9585069) | Timestamps one privacy-preserving commitment after delivery; private certificate contents stay off-chain. |
+| **Model provenance** | A separate `pwv-1` HCS message | Commits a validated later model version independently of any purchase. Original publication performs no Hedera write. |
+| **Designer payout** | A separate HBAR or USDC `CryptoTransfer` | Moves grouped, eligible earnings from the treasury to a verified designer account. |
+| **Public verification** | Mirror Node REST read | Fetches the exact topic sequence for local recomputation and comparison. Mirror Node never writes. |
 
-Designers can bulk-import their own catalog ZIP or review a portable public HTTPS profile under
-`/designer/imports`. The [`external-profile v1` schema](public/external-profile-v1.schema.json)
-requires a source URL, source license, and SHA-256 for every remote file. Import is per-model and
-warranty-gated: proprietary originals become drafts with provenance, while Creative Commons,
-public-domain, missing, and unknown licenses stay blocked with explicit reasons. The importer does
-not scrape undocumented Printables/Thingiverse HTML or silently re-license third-party work.
+The Node sidecar is the platform-key boundary for topic creation, HCS submissions, and treasury
+payouts. Buyer signing and facilitator fee-payer signing happen outside it.
 
-**Try the complete integration without funds:** construct the client with `sandbox: true`, or
-run `node scripts/buy.mjs --query "cable clip" --sandbox`. The app still returns a 402 and runs
-verify → settle → certificate, but through its built-in mock facilitator and local throwaway
-topic. Sandbox output is visibly fake and contains only a text receipt—never paid geometry.
-The public [`conformance/`](conformance/) runner lints the raw x402 v2 challenge and completes
-that sandbox contract with no credentials.
+## Live testnet evidence
 
-## Buy a model from the command line (Scene 1a)
+These are public records, not screenshots:
+
+| Demonstrated behavior | Evidence |
+| --- | --- |
+| **2.50 USDC x402 purchase** | [Settlement on HashScan ↗](https://hashscan.io/testnet/transaction/0.0.7162784@1785074352.536547527) |
+| **Resulting opaque licence commitment** | [HCS submit on HashScan ↗](https://hashscan.io/testnet/transaction/0.0.9067781@1785074359.768280048) · [exact Mirror message #60](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/60) |
+| **One 2.60 USDC batch settlement, two licences** | [Settlement on HashScan ↗](https://hashscan.io/testnet/transaction/0.0.7162784@1785074684.046610464) · [HCS #61](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/61) · [HCS #62](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/62) |
+| **Separate designer payout** | [USDC payout on HashScan ↗](https://hashscan.io/testnet/transaction/0.0.9067781@1784242883.124267302) |
+| **Separate model-version provenance** | [`pwv-1` submit on HashScan ↗](https://hashscan.io/testnet/transaction/0.0.9067781@1785078563.036978424) · [exact Mirror message #70](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/70) |
+
+The dated 2026-07-25 reproducibility snapshot, including what had and had not been externally
+validated at that point, is in [`docs/VALIDATION.md`](docs/VALIDATION.md).
+
+## Run the demo
+
+### Zero-funds rehearsal
+
+This exercises the same 402 → approve → settle → deliver contract with conspicuously fake local
+payment and topic identifiers. It never returns paid geometry, creates a real licence, or touches
+Hedera.
+
+Prerequisites: Ruby 3.3, PostgreSQL 16 with pgvector, Node.js 20+, and OpenSCAD 2021.01+.
 
 ```bash
+cp .env.example .env
+bin/setup --skip-server
+bin/rails db:seed
 npm install
-export BUYER_ACCOUNT_ID=0.0.xxxxxxx        # funded Hedera testnet account
-export BUYER_PRIVATE_KEY=0x...             # its hex ECDSA key (never sent anywhere)
-node scripts/buy.mjs --query "beaver hat" --asset usdc --max-price 300
+bin/dev
 ```
 
-The script searches the catalog, prints the raw 402 `PaymentRequired` object, signs the
-transfer, retries, and saves the STL plus `certificate.json` under `purchases/<slug>/`,
-printing the HashScan transaction link and the HCS mirror-node link for the certificate.
-`--dry-run` stops after the 402 (no payment) — useful as a smoke test.
-
-## Mount it in an AI assistant (Scene 1b)
-
-The MCP server exposes the same door to any MCP client (Claude Code, Claude Desktop, ...):
+In a second terminal:
 
 ```bash
-cd mcp && npm install && cd ..
-claude mcp add printwright \
-  --env PRINTWRIGHT_URL=http://localhost:3000 \
-  --env BUYER_ACCOUNT_ID=0.0.xxxxxxx \
-  --env BUYER_PRIVATE_KEY=0x... \
-  --env MAX_SPEND_CENTS=500 \
-  -- node mcp/server.mjs
+node scripts/buy.mjs --query "cable clip" --sandbox
 ```
 
-Five tools: `search_models`, `get_model`, `buy_license` (refuses without `confirm: true`,
-capped by `MAX_SPEND_CENTS`), `check_license` (machine-decidable use/quantity), and
-`verify_certificate` (recomputes the commitment from the revealed certificate and checks it against
-the on-chain HCS message on the public mirror node). Then ask:
-*"find a printable beaver with a hat under 3 USDC and buy a personal license."*
+The output shows the raw x402 challenge, the mock payment retry, delivered sandbox receipt,
+licence identifier, and locally verifiable sandbox commitment.
 
-## Run the marketplace locally
+### Real testnet purchase
 
-Prereqs: Ruby 3.3, Postgres (with `pg_trgm`), Node ≥ 20, OpenSCAD 2021.01+, and a funded
-[Hedera testnet account](https://portal.hedera.com/dashboard) (the portal grants test HBAR;
-testnet USDC comes from the [Circle faucet](https://faucet.circle.com) — pick Hedera).
+With the Rails app and signing sidecar configured from `.env.example` and
+`sidecar/.env.example`, fund a buyer through the
+[Hedera testnet portal](https://portal.hedera.com/dashboard) and, for USDC, the
+[Circle faucet](https://faucet.circle.com). Then run:
 
 ```bash
-sudo apt install postgresql-16-pgvector openscad  # or your platform's equivalent packages
-cp .env.example .env                     # fill in the marked values
-cp sidecar/.env.example sidecar/.env     # fill keys here; never in the Rails env
-bin/setup --skip-server                  # bundle + db:prepare
-bin/rails db:seed                        # 36 demo models
-(cd sidecar && npm install && npm start) &        # HCS signing sidecar on :4021
-bin/dev                                  # marketplace on :3000
+export BUYER_ACCOUNT_ID=0.0.xxxxxxx
+export BUYER_PRIVATE_KEY=0x...  # remains in this buyer process
+node scripts/buy.mjs --query "cable clip" --asset usdc --max-price 300
 ```
 
-**First-time setup — create your certificate topic (once):**
+The script prints the 402 payload, signs locally, retries the protected resource, downloads the
+model and proof bundle under `purchases/<slug>/`, and prints the payment and verification links.
+Use `--dry-run` to stop after the real 402 without signing or spending.
+
+<details>
+<summary><strong>First-time signing-sidecar setup</strong></summary>
 
 ```bash
-curl -X POST localhost:4021/create-topic -H "Authorization: Bearer $SIDECAR_TOKEN"
-# -> {"topicId":"0.0.xxxxxxx"} — put it in .env as HEDERA_HCS_TOPIC_ID, then restart
-#    BOTH the app and the sidecar (each reads the topic id at boot)
+cp sidecar/.env.example sidecar/.env
+(cd sidecar && npm install)
+(cd sidecar && npm start)
 ```
 
-Troubleshooting: if your Postgres needs a password or a non-default socket, export
-`DATABASE_URL` (e.g. `postgresql://user:pass@localhost/printwright_x402_development`).
-
-Production stores paid model files in a private S3-compatible bucket and runs an encrypted
-custom-format PostgreSQL dump to that bucket nightly. See [docs/OPERATIONS.md](docs/OPERATIONS.md)
-for the parameterized Kamal/pgvector/sidecar deployment, required storage and SMTP configuration,
-Sentry smoke checks, on-demand backup, and guarded restore rehearsal steps.
-
-The x402 facilitator is hosted ([Blocky402 testnet](https://blocky402.com), open access) —
-nothing to run. It is not a single point of dependency, and reproducing this repo does not depend
-on that service staying up: [`selfhost-facilitator/`](selfhost-facilitator/) is a working fallback
-you can run yourself — the Hedera slice of the x402-foundation reference facilitator, on the
-published `@x402/core` + `@x402/hedera` packages. `cd selfhost-facilitator && npm install`, copy
-`.env.example` and give it a funded testnet account as fee payer, `node server.mjs`, then point the
-app at it with the one env var `X402_FACILITATOR_URL=http://localhost:4023`. Nothing else changes:
-the same 402, the same signed transfer, the same settle. For a run with no funds and no facilitator
-at all, send `X-Sandbox: true`. `docker-compose up` starts pgvector/Postgres + sidecar if you prefer
-containers; Compose reads the operator key only from `sidecar/.env`.
-
-**Browser checkout:** set the public `WALLETCONNECT_PROJECT_ID` from Reown and register the exact
-app origin. The Connect wallet control uses the maintained Hedera WalletConnect/AppKit native
-adapter. HashPack (or another compatible Hedera wallet) signs and returns the exact x402 transfer;
-the facilitator remains the transaction fee payer and the browser never submits or exposes a key.
-The wallet bundle is locally hosted and loads only after Connect/Buy is clicked. For deterministic
-development tests only, `DEMO_WALLET_URL=http://localhost:4022` enables
-`scripts/demo-wallet.mjs` instead.
-
-**Shopkeeper chat:** `/chat` runs Gemini `gemini-3.1-flash-lite` server-side and dogfoods the
-same public catalog API. Search works with purchases disabled. The production deploy enables
-testnet proposals with bounded 5 USDC per-conversation and 25 USDC daily defaults; override
-`CHAT_PURCHASES_ENABLED`, `CHAT_MAX_SPEND_CENTS`, and `CHAT_DAILY_SPEND_CENTS` as needed.
-Gemini can only prepare a proposal: a separate human button re-prices it, reserves the caps,
-restricts settlement to exact USDC, and binds one signed transaction to that model/license.
-Private keys remain in the wallet process; payment headers, receipts, and bearer download URLs
-never enter the Gemini conversation. `CHAT_DAILY_VISITOR_MESSAGE_LIMIT` prevents one IP from
-consuming the shared allowance; `CHAT_DAILY_PROVIDER_CALL_LIMIT` bounds every Gemini request,
-including tool-loop follow-ups, in addition to the short per-IP burst limit.
-
-Agent discovery: `/.well-known/x402-catalog.json` (crawlable live offers) ·
-[`/openapi.json`](public/openapi.json) · [`/llms.txt`](public/llms.txt).
-The public `/open-books` page and `/api/v1/stats` expose the HCS certificate count, configured
-90/10 split, exact per-asset ledger totals, and recent raw mirror proof links.
-The public `/chaos-log` page lists reproducible adversarial test results at the linked code revision.
-
-Pre-release load sanity is a bounded, read-only catalog burst (100 requests stays below the
-documented 120/min per-IP catalog limit):
+In another terminal:
 
 ```bash
-node scripts/load-sanity.mjs --url https://your-host --requests 100 --concurrency 10
+set -a; source .env; set +a
+curl -X POST http://localhost:4021/create-topic \
+  -H "Authorization: Bearer $SIDECAR_TOKEN"
 ```
 
-It requires a successful warm-up first, then reports status counts, transport errors,
-throughput, and p50/p95/p99 latency. Non-local targets must use HTTPS.
+Copy the returned topic ID to `HEDERA_HCS_TOPIC_ID` in the root `.env`, restart the app and
+sidecar, then run the paid buyer command above. The hosted testnet facilitator is the default;
+[`selfhost-facilitator/`](selfhost-facilitator/) is the reproducible fallback.
+
+</details>
+
+## Verify a licence independently
+
+The committed proof bundle can be checked without Rails, a Printwright account, or a Printwright
+key:
+
+```bash
+node verifier/cli.js public/widget-example.bundle.json
+```
+
+Expected result:
+
+```text
+bundle integrity    VERIFIED
+certificate schema  VERIFIED
+terms integrity     VERIFIED
+Hedera anchoring    VERIFIED
+```
+
+The zero-runtime-dependency verifier canonicalizes the private certificate using RFC 8785,
+recomputes:
+
+```text
+SHA-256("printwright:license-certificate:v1\0" || nonce || JCS(certificate))
+```
+
+and compares it with the commitment in the exact HCS message. The proof demonstrates integrity
+and consensus timing; it does not independently prove every issuer assertion inside the
+certificate.
+
+- CLI/library: [`verifier/`](verifier/)
+- Browser widget example (serve `public/` as static files):
+  [`public/widget-example.html`](public/widget-example.html)
+- Portable sample: [`public/widget-example.bundle.json`](public/widget-example.bundle.json)
+- PWC-1 schema: [`public/pwc-1.schema.json`](public/pwc-1.schema.json)
 
 ## Architecture
 
-- **Rails 8 monolith** — catalog API, x402 paywall (402 issuance, verify/settle via the
-  facilitator, replay protection, settle-timeout reconciliation via mirror node), licenses
-  with per-offer serials, expiring download grants.
-- **HCS signing sidecar** (`sidecar/`, Node) — the only process holding a Hedera key; creates
-  the certificate topic and submits cert messages. Certificate minting is async: a sidecar
-  outage never blocks a paid download, certs backfill on retry.
-- **Agent clients** (`scripts/`) — the bare buyer script above; `scripts/spike/` holds the
-  original wire spike whose captures double as test fixtures.
+[![Printwright system journey map](docs/journey-map-preview.png)](docs/JOURNEYS.md)
 
-## Tests
+The compact explanation and evidence links are in [`docs/JOURNEYS.md`](docs/JOURNEYS.md).
+The interactive node inspector is [`docs/journey-map.html`](docs/journey-map.html) and can be
+opened directly from a local checkout.
+
+| Component | Responsibility |
+| --- | --- |
+| **Rails 8 application** | Catalog, x402 challenge, facilitator calls, settlement state, licences, private access, receipts, local books, and retrying jobs. |
+| **JavaScript client + MCP** | Buyer-side search, approval, local signing, purchase, licence checks, and verification. |
+| **Signing sidecar** | Platform-key boundary for HCS writes, topic creation, and treasury payouts. |
+| **Standalone verifier** | Local proof-bundle checks plus one public Mirror Node read. |
+
+Developer contracts: [`OpenAPI`](public/openapi.json) · [`llms.txt`](public/llms.txt) ·
+[`x402 conformance`](conformance/) · [`operations`](docs/OPERATIONS.md)
+
+<details>
+<summary><strong>Tests and quality gates</strong></summary>
 
 ```bash
-bin/rails test            # Rails suite (paywall error table runs against real captured wire bytes)
-bin/rails test:system     # Capybara: storefront + chat checkout, designer publish, verify states
-cd sidecar && npm test    # sidecar suite (SDK faked)
-cd mcp && npm test        # MCP stdio smoke (spawns the real server over stdio)
-cd verifier && npm test   # PWC-1 commitment + proof-bundle contracts (CLI and browser widget)
-cd wallet && npm test     # browser transaction/header contract (no live wallet popup)
+bin/rails test
+bin/rails test:system
+(cd sidecar && npm test)
+(cd client && npm test)
+(cd mcp && npm test)
+(cd verifier && npm test)
 ```
 
-All suites run on every push via GitHub Actions ([ci.yml](.github/workflows/ci.yml)), plus
-rubocop, brakeman, a seeds boot, a tree-wide secret grep, and a log-hygiene grep that fails
-the build if key/token/signature material ever reaches a log.
+GitHub Actions also runs RuboCop, Brakeman, sandbox conformance, seed boot, browser-wallet
+contracts, the OctoPrint smoke image, dependency audits, log hygiene, and a repository-wide
+secret scan.
 
-## On-chain artifacts (testnet)
+</details>
 
-- License commitment topic: [`0.0.9585069`](https://hashscan.io/testnet/topic/0.0.9585069)
-- Example purchase: [`0.0.7162784@1784976230.265183795`](https://hashscan.io/testnet/transaction/0.0.7162784@1784976230.265183795),
-  commitment anchored at [mirror message 59](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/59).
-  The message reads, in full:
+## Current scope
 
-  ```json
-  {"type":"printwright-license-commitment","version":1,"algorithm":"sha256-jcs-v1",
-   "commitment":"d018923f613ed67e36e38f4aa1a9eec0b076fb7110c11490efbcf0368b0e74d6"}
-  ```
-
-  No model, designer, buyer, or count — that is the point. The buyer's proof bundle for this
-  purchase ships two ways: embedded in [`public/widget-example.html`](public/widget-example.html),
-  which verifies in the browser from any static server, and as plain JSON in
-  [`public/widget-example.bundle.json`](public/widget-example.bundle.json) for the CLI, which
-  takes JSON rather than HTML:
-
-  ```
-  node verifier/cli.js public/widget-example.bundle.json
-  ```
-
-  Both carry the same bytes and recompute the commitment to the value above, checked against the
-  public mirror.
-
-## Why this needs Web3 (and Hedera specifically)
-
-A 3D model license is a *right* — designers need per-print royalties (often under 1 USDC), buyers
-increasingly are software (print servers, procurement agents), and both sides are global.
-Card rails can't do sub-1-USDC fees, can't pay at machine speed, and can't onboard a designer in
-minutes worldwide. x402-on-Hedera can: fixed sub-cent fees make micro-royalties viable, the
-facilitator model means neither party runs infrastructure, and a $0.0001 HCS message gives
-every license a tamper-evident anchor no Web2 service can match — one whose privacy is a design
-choice, not a compromise, because the ledger holds a commitment rather than the certificate. Every
-purchase generates a settlement transaction plus a consensus message; every buyer and designer is a
-Hedera account.
-
-## Hedera services used, and why each one
-
-| Service | Where it is used | Why this service |
-|---|---|---|
-| **Consensus Service (HCS)** | one global topic (`0.0.9585069`) holds a license commitment per purchase and a `pwv-1` provenance event per model version | A license needs an ordered, timestamped, tamper-evident record that outlives us. The topic was created **without an admin key**, so nobody — including Printwright — can rewrite or delete it. Each record is one message, one sequence number: a provenance event that spanned chunks would not be a single atomic fact. |
-| **Token Service (HTS)** | USDC settlement (`0.0.429274` testnet, `0.0.456858` mainnet) and designer payouts | Buyers pay a stable price in a real token rather than an amount that drifts between quote and settle, and payouts move the same asset back out. |
-| **HBAR (native)** | the second accepted asset on every 402 | Some agents hold only HBAR; quotes are priced live from the mirror's exchange rate with a 3% match tolerance so a quote that drifts still verifies. |
-| **Mirror node REST** | certificate verification, settle reconciliation, exchange rate, payout receivability | Every read goes to the public mirror, never to a consensus node — including the reads a *third party* makes, which is what makes verification independent of us. |
-| **x402 `exact` scheme** | the paywall itself | The buyer signs a `TransferTransaction`; the facilitator verifies, sponsors the network fee, and settles. One HTTP round-trip, no account on our side. |
-| **Wallet signatures** (`hedera_signMessage`) | proving a designer controls their payout account | Ownership is proved against the account's on-chain key, so Printwright never holds or needs a designer's key. |
-
-Not used, deliberately: **an NFT license**. A transferable, royalty-bearing token contradicts a
-license the terms make non-transferable and certificate-bound, and it gated nothing — see the
-license terms and the removal in the history.
-
-**Network impact per purchase.** One x402 settle (`CryptoTransfer`), one HCS message, and — when a
-designer's payout is due — one further `TransferTransaction`, plus a one-time `TokenAssociate` the
-first time a designer receives USDC. So a purchase is **2–3 mainnet-shaped transactions**, all
-initiated by software rather than by a person clicking. Publishing a model version adds one more
-HCS message. The audience is the part that compounds: print farms, procurement agents, and
-OctoPrint servers that pay per job are transaction sources that do not exist on Hedera today, and
-each one transacts per print rather than per session.
-
-## Post-bounty roadmap
-
-- Independent buyer/designer validation and public marketplace launch
-- Print-server royalty hook (OctoPrint): one `commercial_unit` purchase per job start
-- On-chain royalty splits (designer + marketplace legs in one transfer)
-- Mainnet + listing in the x402 ecosystem directory / x402scan
-
-## Status / usage so far
-
-Built solo during the Hedera x402 bounty week. Testnet activity to date, all of it checkable on the
-public mirror rather than taken on trust: **23 x402 settles** into the treasury across **8 separate
-days** from **two independently keyed buyer accounts**, in both USDC and HBAR; **59 messages** on
-[topic 0.0.9585069](https://hashscan.io/testnet/topic/0.0.9585069) covering license commitments and
-model-version provenance; six designer payouts executed; and a fresh-clone reproducibility rehearsal
-that reached a real settlement using only this README.
-
-[`docs/VALIDATION.md`](docs/VALIDATION.md) has the full record, the commands to re-derive every
-number, and an explicit account of what has *not* been validated — no outside party has bought on a
-public deployment yet, and no user feedback has been collected. Feedback and issues welcome.
+- Hedera **testnet**, not mainnet.
+- The linked transactions are real testnet payments made during project validation.
+- No independent third party has yet purchased from a public deployment; no traction claim is
+  made.
+- Licences are contractual grants with verifiable commitments, not DRM and not transferable NFTs.
 
 ## License
 
-MIT — see [LICENSE](LICENSE). The thirty-six demo models are self-authored, reproducible OpenSCAD
-designs dedicated CC0-1.0; their source, dimensions, print orientation, caveats, and provenance
-live in [`db/seed_assets/`](db/seed_assets/).
+MIT — see [`LICENSE`](LICENSE). Seeded demo models are self-authored, reproducible OpenSCAD
+designs dedicated to CC0-1.0; provenance lives in [`db/seed_assets/`](db/seed_assets/).
