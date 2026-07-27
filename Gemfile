@@ -24,10 +24,14 @@ gem "csv"
 # bcrypt is retained so legacy has_secure_password digests verify unchanged (account_password_hash_column).
 gem "bcrypt", "~> 3.1.7"
 gem "rodauth-rails", "~> 2.0"
+# CSRF for the OmniAuth request phase comes from Rodauth, not from the
+# Rails-side omniauth CSRF shim: rodauth-omniauth points OmniAuth's
+# request_validation_phase at its own check_csrf, and rodauth-rails routes that
+# to Rails' verify_authenticity_token. test/integration/oauth_csrf_test.rb pins
+# the behavior.
 gem "rodauth-omniauth", "~> 0.5"
 gem "omniauth-github", "~> 2.0"
 gem "omniauth-google-oauth2", "~> 1.1"
-gem "omniauth-rails_csrf_protection", "~> 1.0"
 gem "rotp", "~> 6.3"            # TOTP secrets/verification for Rodauth otp feature
 gem "pwned", "~> 2.4"          # Have I Been Pwned breached-password k-anonymity check
 gem "zxcvbn", "~> 0.1"         # password strength scoring (dictionary/pattern aware)

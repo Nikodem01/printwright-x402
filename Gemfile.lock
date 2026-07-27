@@ -287,9 +287,6 @@ GEM
     omniauth-oauth2 (1.9.0)
       oauth2 (>= 2.0.2, < 3)
       omniauth (~> 2.0)
-    omniauth-rails_csrf_protection (1.0.2)
-      actionpack (>= 4.2)
-      omniauth (~> 2.0)
     ostruct (0.6.3)
     parallel (2.1.0)
     parser (3.3.11.1)
@@ -549,7 +546,6 @@ DEPENDENCIES
   neighbor (~> 1.2)
   omniauth-github (~> 2.0)
   omniauth-google-oauth2 (~> 1.1)
-  omniauth-rails_csrf_protection (~> 1.0)
   pg (~> 1.1)
   prawn (~> 2.5)
   propshaft
