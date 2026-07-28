@@ -83,7 +83,7 @@ turn a paid download into a false failure.
 | **HTTP / JavaScript** | [`client/`](client/) · [`scripts/buy.mjs`](scripts/buy.mjs) | Search, quote, approve, buy, and verify without a Printwright account. |
 | **MCP assistant** | [`mcp/`](mcp/) | The same flow as tools with explicit confirmation and a spend ceiling. |
 | **Storefront / cart** | Rails UI and batch API | Wallet-approved single purchases or one settlement that fans out to multiple licences. |
-| **Print server** | [`scripts/print-job.mjs`](scripts/print-job.mjs) · [`octoprint-printwright/`](octoprint-printwright/) | Buy one commercial-unit licence before each physical print job. |
+| **Print server** | [`scripts/print-job.mjs`](scripts/print-job.mjs) | Buy the commercial-unit licences for a production run, one settlement per unit, with no human in the loop. |
 
 ## Hedera, exactly
 
@@ -246,8 +246,7 @@ bin/rails test:system
 ```
 
 GitHub Actions also runs RuboCop, Brakeman, sandbox conformance, seed boot, browser-wallet
-contracts, the OctoPrint smoke image, dependency audits, log hygiene, and a repository-wide
-secret scan.
+contracts, dependency audits, log hygiene, and a repository-wide secret scan.
 
 </details>
 

@@ -50,7 +50,7 @@ the facilitator sponsors the network fee. That is the x402 fee model working, vi
 | Bare HTTP agent (`scripts/buy.mjs`) | repeated real buys, most recently 2026-07-25 | saved deliverables under `purchases/<slug>/` (STL + proof bundle) for `beaver-with-hat`, `cable-clip`, `whistle`, `live-uploaded-gizmo` |
 | MCP assistant (`mcp/server.mjs`) | tool-driven purchase | `cd mcp && npm test` spawns the real server over stdio; a chat-approved purchase is linked in the README |
 | Browser + HashPack | wallet-signed checkout | `bin/rails test:system` drives the x402 states and the receipt end to end |
-| Print server (OctoPrint plugin) | pay-per-job-start | plugin builds and fires `PrintStarted` inside a stock OctoPrint 1.11.7 image in CI |
+| Print server (`scripts/print-job.mjs`) | one commercial-unit licence per unit in a run | drives `scripts/buy.mjs` per unit, so each unit is one real settlement on the evidence above |
 | Batch API | one aggregate settle, many licenses | covered in the Rails suite |
 | Sandbox (`X-Sandbox: true`) | credential-free rehearsal | `conformance/suite.mjs` runs the whole contract against a live server in CI |
 
