@@ -942,7 +942,6 @@
   const ICONS = {
     terminal: '<path d="M4 5l4 4-4 4M10 14h7"/>',
     browser: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 8h18M7 6h.01M10 6h.01"/>',
-    printer: '<path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="7" y="14" width="10" height="7" rx="1"/>',
     designer: '<path d="M4 20h4l11-11-4-4L4 16v4ZM13 7l4 4"/>',
     verify: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
     search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',
@@ -964,7 +963,6 @@
     { id: "designer", col: 0, y: 45, title: "Designer studio", meta: "CREATOR", icon: "designer", kind: "actor", summary: "Designers publish original printable bundles, validate later versions, inspect sales, and receive grouped payouts.", code: "app/controllers/designer/" },
     { id: "agent", col: 1, y: 45, title: "API / MCP buyer", meta: "AGENT ENTRY", icon: "terminal", kind: "actor", summary: "API clients and MCP assistants enter the same purchase backend. MCP returns the licence, files, verification link, and covered-update capability.", code: "mcp/server.mjs · client/index.js" },
     { id: "human", col: 2, y: 45, title: "Storefront / cart", meta: "HUMAN ENTRY", icon: "browser", kind: "actor", summary: "A browser buyer can buy one offer or approve one cart total; both call the shared download or batch API.", code: "checkout_controller.js · BatchesController" },
-    { id: "printer", col: 3, y: 45, title: "Print server", meta: "MACHINE BUYER", icon: "printer", kind: "actor", summary: "The print-job helper runs one commercial-unit purchase for each requested physical unit before it starts that job.", code: "scripts/print-job.mjs" },
     { id: "verifier", col: 6, y: 45, title: "Independent verifier", meta: "NO ACCOUNT", icon: "verify", kind: "actor", summary: "Any holder of a disclosed proof bundle can check it without an account or a Printwright signing key.", code: "verifier/index.js · Certificates::MirrorCheck" },
 
     { id: "workbench", col: 0, y: 180, title: "Original publish", meta: "NO HEDERA WRITE", icon: "designer", summary: "The designer uploads geometry and imagery, sets prices, accepts the ownership warranty, and publishes the original listing after local review.", code: "Designer::ModelsController · Models::PublishReview" },
@@ -990,7 +988,6 @@
   const EDGES = [
     { id: "agent-catalog", from: "agent", to: "catalog" },
     { id: "human-catalog", from: "human", to: "catalog" },
-    { id: "printer-catalog", from: "printer", to: "catalog", route: "corridor", channelY: 132 },
     { id: "designer-workbench", from: "designer", to: "workbench" },
     { id: "verifier-proof", from: "verifier", to: "proof" },
     { id: "workbench-catalog", from: "workbench", to: "catalog" },
@@ -1001,7 +998,6 @@
     { id: "settle-sales", from: "settle", to: "sales" },
     { id: "sales-delivery", from: "sales", to: "delivery", route: "rise", channel: 0.52 },
     { id: "delivery-proof", from: "delivery", to: "proof" },
-    { id: "delivery-printer", from: "delivery", to: "printer", route: "corridor", channelY: 132 },
     { id: "delivery-sidecar", from: "delivery", to: "sidecar", type: "async", startOffsetX: 24, endOffsetX: 24 },
     { id: "delivery-payout", from: "delivery", to: "payout", type: "async", route: "gap", gapAfter: 4, startOffsetX: -24, endOffsetX: 24 },
     { id: "payout-sidecar", from: "payout", to: "sidecar" },
@@ -1027,19 +1023,6 @@
       proof: ["View resulting commitment #60 on HashScan", "https://hashscan.io/testnet/transaction/0.0.9067781@1785074359.768280048"],
       nodes: ["agent", "human", "catalog", "x402", "signature", "facilitator", "settle", "sales", "delivery", "proof", "sidecar", "hcs"],
       edges: ["agent-catalog", "human-catalog", "catalog-x402", "x402-signature", "signature-facilitator", "facilitator-settle", "settle-sales", "sales-delivery", "delivery-proof", "delivery-sidecar", "sidecar-hcs"]
-    },
-    {
-      id: "print",
-      category: "License",
-      title: "License each physical print",
-      actor: "Print server",
-      summary: "The print-job helper repeats the shared commercial-unit purchase once for every requested physical unit.",
-      entry: "Each loop selects commercial-unit rights. Printwright does not claim to detect a real-world print.",
-      app: "A missing paid licence or settlement ID stops the helper. Once files arrive, printing may start while certificate status is still minting.",
-      hedera: "Each loop has its own buyer CryptoTransfer and, after delivery, its own asynchronous opaque HCS commitment.",
-      proof: ["View a shared-core settlement on HashScan", "https://hashscan.io/testnet/transaction/0.0.7162784@1785074352.536547527"],
-      nodes: ["printer", "catalog", "x402", "signature", "facilitator", "settle", "sales", "delivery", "proof", "sidecar", "hcs"],
-      edges: ["printer-catalog", "catalog-x402", "x402-signature", "signature-facilitator", "facilitator-settle", "settle-sales", "sales-delivery", "delivery-printer", "delivery-proof", "delivery-sidecar", "sidecar-hcs"]
     },
     {
       id: "publish",
@@ -1084,10 +1067,10 @@
 
   const OVERVIEW = {
     id: "overview",
-    title: "One core, five product outcomes",
+    title: "One core, four product outcomes",
     actor: "System overview",
     summary: "Printwright is an agent-buyable marketplace for licensed 3D-printable models: buyers share one licensing core, creators publish originals and earn accountable payouts, and anyone can verify privacy-preserving proof.",
-    entry: "API, MCP, storefront, cart, and print automation are entry modes—not separate product lifecycles.",
+    entry: "API, MCP, storefront, and cart are entry modes—not separate product lifecycles.",
     app: "The app owns catalog, settlement state, licence delivery, private receipts, local books, and the retrying jobs that continue after delivery.",
     hedera: "Separate CryptoTransfer paths move buyer payments and designer payouts; distinct HCS messages timestamp licence and version provenance; Mirror Node only reads.",
     proof: ["View the shared testnet topic on HashScan", "https://hashscan.io/testnet/topic/0.0.9585069"],

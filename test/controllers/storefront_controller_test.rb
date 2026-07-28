@@ -153,7 +153,6 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
     render = @beaver.model_files.create!(kind: "render", position: 1)
     render.file.attach(io: Rails.root.join("db/seed_assets/beaver-with-hat.png").open,
                        filename: "beaver.png", content_type: "image/png")
-    PreviewMeshes::Attacher.call(@beaver)
 
     get model_page_path(@beaver.slug)
 
@@ -227,7 +226,7 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "h2", text: "Shop with AI"
     assert_select "h2", text: "Humans"
-    assert_select "h2", text: /Agents & print servers/i
+    assert_select "h2", text: /Agents/i
     assert_select ".hero-shopkeeper form[action=?]", chat_path
     assert_select ".hero-chat-messages[data-controller='chat-scroll']"
     assert_select "a[href=?]", docs_path

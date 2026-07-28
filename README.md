@@ -5,7 +5,7 @@
 <h1 align="center">Licensed 3D models that software can buy</h1>
 
 <p align="center">
-  Printwright is an agent-buyable marketplace where humans, assistants, and print servers
+  Printwright is an agent-buyable marketplace where humans, assistants, and agents
   license printable models through <a href="https://www.x402.org/">x402</a> payments on
   <a href="https://hedera.com/">Hedera</a>.
 </p>
@@ -22,7 +22,7 @@
 </p>
 
 > **Bounty pitch.** Printwright is an agent-buyable marketplace for licensed 3D-printable
-> models: APIs, MCP assistants, storefront buyers, carts, and print servers all use the same
+> models: APIs, MCP assistants, storefront buyers, and carts all use the same
 > licensing core. x402 turns each new licence purchase into an HBAR or USDC payment on Hedera,
 > after which Printwright delivers the model and private licence proof while asynchronously
 > anchoring an opaque commitment on HCS. Designers receive accountable payouts, and anyone
@@ -36,7 +36,7 @@ machine-payable, and independently provable.
 
 | | What changes |
 | --- | --- |
-| **Software can buy** | Public API, JavaScript client, MCP tools, storefront/cart, and print-job automation converge on one x402 purchase flow. |
+| **Software can buy** | Public API, JavaScript client, MCP tools, and storefront/cart converge on one x402 purchase flow. |
 | **Rights match the real use** | Buyers choose a personal licence or one commercial-unit licence for each physical print. |
 | **Creators can audit earnings** | Every settled sale records the designer share and platform fee; eligible balances are paid in separate, attributable Hedera transfers. |
 | **Proof stays private** | The buyer keeps the certificate, terms, and nonce. Current licence HCS writes contain only an opaque commitment that a disclosed bundle can prove. |
@@ -83,7 +83,6 @@ turn a paid download into a false failure.
 | **HTTP / JavaScript** | [`client/`](client/) · [`scripts/buy.mjs`](scripts/buy.mjs) | Search, quote, approve, buy, and verify without a Printwright account. |
 | **MCP assistant** | [`mcp/`](mcp/) | The same flow as tools with explicit confirmation and a spend ceiling. |
 | **Storefront / cart** | Rails UI and batch API | Wallet-approved single purchases or one settlement that fans out to multiple licences. |
-| **Print server** | [`scripts/print-job.mjs`](scripts/print-job.mjs) | Buy the commercial-unit licences for a production run, one settlement per unit, with no human in the loop. |
 
 ## Hedera, exactly
 

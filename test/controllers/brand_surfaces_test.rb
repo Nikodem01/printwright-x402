@@ -6,7 +6,7 @@ class BrandSurfacesTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select 'meta[name="description"][content=?]',
-      "Licensed 3D-printable models an AI agent, print server, or person can buy over plain HTTP. Pay in HBAR or USDC on Hedera; every purchase mints a verifiable certificate."
+      "Licensed 3D-printable models an AI agent, an assistant, or a person can buy over plain HTTP. Pay in HBAR or USDC on Hedera; every purchase mints a verifiable certificate."
     assert_select 'meta[property="og:type"][content="website"]'
     assert_select 'meta[property="og:site_name"][content="Printwright"]'
     assert_select 'meta[property="og:title"][content="Printwright — the 3D model store for AI agents"]'
