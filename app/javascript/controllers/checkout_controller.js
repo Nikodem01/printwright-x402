@@ -15,6 +15,13 @@ const FAILURE_COPY = {
   invalid_payload: () =>
     "The payment could not be read by the server. Retrying this exact request won't help.",
   wallet_refused: () => "You declined the payment request in your wallet.",
+  // The facilitator checks the transfer against the ledger before submitting
+  // it. It reports one code for every way that check can fail, so this names
+  // the likely causes instead of asserting one we cannot actually distinguish.
+  // Funding the account fixes the common case, so this stays retryable.
+  preflight_failed: () =>
+    "Your wallet could not make this transfer. Usually that means the account is short of the " +
+    "asset being charged, or has not associated it yet. Check the balance, then try again.",
   wallet_unavailable: () =>
     "This deployment has no browser wallet configured, so there is nothing to sign with. " +
     "The same purchase still works over the API with x402 — see the API docs.",
@@ -246,7 +253,12 @@ export default class extends Controller {
     this.buttonTarget.disabled = terminal
     if (this.hasCartButtonTarget) this.cartButtonTarget.disabled = false
     this.buttonTarget.textContent = terminal ? (TERMINAL_LABELS[code] || "Unavailable") : "Try again"
-    const message = (FAILURE_COPY[code] && FAILURE_COPY[code](retryAfter)) || "The payment could not be completed."
+    // Preflight rejections arrive under several facilitator-specific codes
+    // (invalid_exact_hedera_payload_preflight_failed among them), so they are
+    // matched by shape rather than enumerated — an unmapped one would otherwise
+    // show a buyer nothing but the raw token.
+    const copyKey = FAILURE_COPY[code] ? code : (/preflight/.test(code || "") ? "preflight_failed" : code)
+    const message = (FAILURE_COPY[copyKey] && FAILURE_COPY[copyKey](retryAfter)) || "The payment could not be completed."
     this.statusTarget.innerHTML = `<span class="badge badge-bad">failed</span> <span class="t-small">${this.escape(message)}</span>` +
       (detail ? `<span class="t-caption muted" style="display:block">${this.escape(detail)}</span>` : "")
     this.statusTarget.focus()

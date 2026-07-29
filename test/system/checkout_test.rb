@@ -1,6 +1,9 @@
 require "application_system_test_case"
 require "timeout"
 require "webmock/minitest"
+# Required here rather than relied on from another test file, so this one can
+# be run on its own.
+require_relative "support/test_wallet_controller"
 
 # The human door, driven end to end in a real browser: the checkout Stimulus
 # state machine (quote 402 -> wallet sign -> settle -> receipt) against the
@@ -103,6 +106,26 @@ class CheckoutTest < ApplicationSystemTestCase
     assert_text "invalid_signature"
     assert_button "Try again"
     assert_equal "failed_verification", Purchase.last.status
+  end
+
+  # A buyer whose account cannot cover the charge is the first person to hit
+  # this, and the facilitator's own code is the whole of what they used to see.
+  # It has to say what to do about it, and stay retryable — funding the account
+  # is exactly the thing that makes a retry work.
+  test "a preflight rejection tells the buyer to check their balance instead of showing a raw code" do
+    stub_request(:post, "#{FACILITATOR}/verify")
+      .to_return(body: fixture("verify_preflight_failed.json"),
+        headers: { "content-type" => "application/json" })
+
+    visit model_page_path(@model.slug)
+    click_button "Buy license · 0.25 USDC"
+
+    assert_selector ".badge-bad", text: "failed"
+    assert_text "Your wallet could not make this transfer"
+    assert_text "Check the balance, then try again."
+    # The operator-facing detail stays visible, just no longer as the whole message.
+    assert_text "invalid_exact_hedera_payload_preflight_failed"
+    assert_button "Try again"
   end
 
   test "wallet refusal explains the decline in plain language, keeps the raw reason, and invites a retry" do

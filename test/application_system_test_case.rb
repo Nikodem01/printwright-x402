@@ -124,7 +124,12 @@ module ReliableChromeClicks
       end
     end
 
-    raise "Chrome did not complete a click after #{MAX_ATTEMPTS} attempts"
+    # Seen when the machine is loaded — one headless Chrome per parallel worker,
+    # plus Puma and Postgres, and a click can miss its deadline through no fault
+    # of the page. Say so, so it is not mistaken for a broken element.
+    raise "Chrome did not complete a click after #{MAX_ATTEMPTS} attempts " \
+          "(each waiting up to #{Capybara.default_max_wait_time}s). If other servers or browsers " \
+          "are running alongside the suite, this is usually contention rather than the page."
   end
 
   private
