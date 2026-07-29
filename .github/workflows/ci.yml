@@ -20,6 +20,11 @@ jobs:
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/printwright_test
       RAILS_ENV: test
+      # A developer gets this from .env; CI has no .env. It is the only setting
+      # with no in-code default, so it is the only one CI has to supply — every
+      # other Hedera/x402 value falls back to its testnet default. Public
+      # treasury id, not a credential.
+      X402_PAY_TO: "0.0.9584959"
     steps:
       - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
