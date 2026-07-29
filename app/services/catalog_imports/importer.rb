@@ -4,10 +4,18 @@ require "zip"
 
 module CatalogImports
   class Importer
+    # The byte caps are the real bound on an import: they are what actually
+    # costs storage and unzip time, and they are checked as the archive expands.
     MAX_ARCHIVE_BYTES = 250.megabytes
     MAX_EXPANDED_BYTES = 500.megabytes
-    MAX_ENTRIES = 201
-    MAX_MODELS = 50
+    # These two only stop a pathological archive — a zip of a million empty
+    # entries would otherwise spend real time in the entry loop before the byte
+    # caps could catch it. They are not a policy on catalog size: this importer
+    # exists so a designer can bring a whole 200-model catalog over in one go,
+    # and a 50-model ceiling turned that job into four uploads for no reason.
+    # 200 models at up to five parts each, plus the manifest.
+    MAX_ENTRIES = 1001
+    MAX_MODELS = 200
     CONTENT_TYPES = {
       "stl" => "model/stl", "3mf" => "model/3mf", "step" => "model/step",
       "render" => "image/png"

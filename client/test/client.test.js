@@ -79,12 +79,16 @@ before(async () => {
         return response.end(JSON.stringify({
           batch_id: 3, transaction_id: "0.0.7@1.2", hashscan_url: "https://hashscan.example/tx",
           sandbox: false,
-          licenses: body.items.map((item, index) => ({
+          // One license per unit, as the server does: a line with quantity 3 is
+          // three certificates, not one.
+          licenses: expandUnits(body.items).map((item, index) => ({
             model_id: item.model_id, kind: item.license, cert_id: `pw-00001${index}`,
             serial: index + 1, verify_url: `${baseUrl}/verify/pw-00001${index}`, files: [],
-            print_feedback: {
-              url: `${baseUrl}/api/v1/licenses/pw-00001${index}/print_reports`,
-              receipt_token: `receipt-${index}`,
+            receipt: {
+              url: `${baseUrl}/receipts/pw-00001${index}`,
+              files_url: `${baseUrl}/receipts/pw-00001${index}.json`,
+              download_url: `${baseUrl}/receipts/pw-00001${index}/download`,
+              token: `receipt-${index}`, expires_at: null,
             },
           })),
         }));
@@ -98,7 +102,7 @@ before(async () => {
           maxTimeoutSeconds: 180, extra: { feePayer: "0.0.5678" },
           amount: "3", asset: "0.0.0",
         } ],
-        batch: { license_count: body.items.length },
+        batch: { license_count: expandUnits(body.items).length },
       };
       response.setHeader("payment-required", Buffer.from(JSON.stringify(paymentRequired)).toString("base64"));
       return response.end(JSON.stringify(paymentRequired));
@@ -305,7 +309,9 @@ test("posts an identical batch body across one aggregate x402 negotiation", asyn
     accountId: "0.0.1234",
     privateKey: PrivateKey.generateECDSA().toStringRaw(),
   });
-  const items = Array.from({ length: 3 }, () => ({ modelId: 7, license: "commercial_unit" }));
+  // One line, three units — the batch API takes quantity, so a repeat order no
+  // longer has to be spelled out one line per licence.
+  const items = [ { modelId: 7, license: "commercial_unit", quantity: 3 } ];
   const webhook = {
     url: "https://buyer.example/certificates",
     secret: "buyer_webhook_secret_32_bytes_long",
@@ -388,7 +394,25 @@ test("rejects malformed ids, networks, and missing buyer credentials", async () 
     () => new PrintwrightClient({ baseUrl }).buy({ modelId: 7 }),
     (error) => error instanceof PrintwrightError && /accountId and privateKey/.test(error.message)
   );
-  await assert.rejects(() => new PrintwrightClient({ baseUrl }).quoteBatch({ items: [] }), /1 to 20/);
+  await assert.rejects(
+    () => new PrintwrightClient({ baseUrl }).quoteBatch({ items: [] }),
+    /1 to 200 line items/
+  );
+  await assert.rejects(
+    () => new PrintwrightClient({ baseUrl }).quoteBatch({
+      items: Array.from({ length: 201 }, () => ({ modelId: 7 })),
+    }),
+    /1 to 200 line items/
+  );
+  // Units are bounded in total, never per line by a line-shaped number.
+  await assert.rejects(
+    () => new PrintwrightClient({ baseUrl }).quoteBatch({ items: [ { modelId: 7, quantity: 251 } ] }),
+    /at most 250 licenses \(got 251\)/
+  );
+  await assert.rejects(
+    () => new PrintwrightClient({ baseUrl }).quoteBatch({ items: [ { modelId: 7, quantity: 0 } ] }),
+    /quantity must be a positive integer/
+  );
   await assert.rejects(
     () => new PrintwrightClient({ baseUrl }).quoteBatch({
       items: [ { modelId: 7 } ], webhook: { url: "http://127.0.0.1", secret: "short" },
@@ -396,6 +420,10 @@ test("rejects malformed ids, networks, and missing buyer credentials", async () 
     /HTTPS on port 443/
   );
 });
+
+function expandUnits(items) {
+  return items.flatMap((item) => Array.from({ length: item.quantity ?? 1 }, () => item));
+}
 
 async function requestBody(request) {
   const chunks = [];

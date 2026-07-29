@@ -376,14 +376,26 @@ function integerId(value, name) {
   return id;
 }
 
+// Mirrors the server's line-item and unit ceilings so a mistake is caught before
+// a wallet is involved. Quantity is per line and is bounded only by the total —
+// how many units an offer sells is the designer's max_units, not ours.
+const MAX_LINE_ITEMS = 200;
+const MAX_UNITS = 250;
+
 function normalizeBatchItems(items) {
-  if (!Array.isArray(items) || items.length < 1 || items.length > 20) {
-    throw new TypeError("items must contain 1 to 20 licenses");
+  if (!Array.isArray(items) || items.length < 1 || items.length > MAX_LINE_ITEMS) {
+    throw new TypeError(`items must contain 1 to ${MAX_LINE_ITEMS} line items`);
   }
-  return items.map((item, index) => ({
+  const normalized = items.map((item, index) => ({
     model_id: integerId(item?.modelId ?? item?.model_id, `items[${index}].modelId`),
     license: item?.license || "personal",
+    quantity: integerId(item?.quantity ?? 1, `items[${index}].quantity`),
   }));
+  const units = normalized.reduce((sum, item) => sum + item.quantity, 0);
+  if (units > MAX_UNITS) {
+    throw new TypeError(`items must total at most ${MAX_UNITS} licenses (got ${units})`);
+  }
+  return normalized;
 }
 
 function normalizeWebhook(webhook) {

@@ -27,7 +27,7 @@ class HardeningTest < ActionDispatch::IntegrationTest
     RateLimitStore.backend = ActiveSupport::Cache::MemoryStore.new
     ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "250"
 
-    31.times { get "/api/v1/models/#{@model.id}/download", headers: { accept: "application/json" } }
+    (Api::V1::DownloadsController::RATE_LIMIT + 1).times { get "/api/v1/models/#{@model.id}/download", headers: { accept: "application/json" } }
     assert_response :too_many_requests
     assert_equal "rate_limited", response.parsed_body["error"]
     assert_equal "60", response.headers["Retry-After"]
@@ -35,7 +35,7 @@ class HardeningTest < ActionDispatch::IntegrationTest
 
   test "limits are per-controller: hammering downloads leaves search alone" do
     RateLimitStore.backend = ActiveSupport::Cache::MemoryStore.new
-    31.times { get "/api/v1/models/#{@model.id}/download", headers: { accept: "application/json" } }
+    (Api::V1::DownloadsController::RATE_LIMIT + 1).times { get "/api/v1/models/#{@model.id}/download", headers: { accept: "application/json" } }
     assert_response :too_many_requests
 
     get "/api/v1/models", headers: { accept: "application/json" }

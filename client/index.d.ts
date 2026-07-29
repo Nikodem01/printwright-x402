@@ -65,6 +65,8 @@ export interface PurchaseOptions extends Partial<QuoteOptions> {
 export interface BatchItem {
   modelId: number;
   license?: "personal" | "commercial_unit" | string;
+  /** Licenses to buy on this line; each is its own certificate and serial. Defaults to 1. */
+  quantity?: number;
 }
 
 export interface BatchWebhook {
@@ -73,7 +75,7 @@ export interface BatchWebhook {
 }
 
 export interface BatchPaymentQuote {
-  items: ReadonlyArray<{ model_id: number; license: string }>;
+  items: ReadonlyArray<{ model_id: number; license: string; quantity: number }>;
   webhook?: Readonly<BatchWebhook>;
   resourceUrl: string;
   requestBody: string;

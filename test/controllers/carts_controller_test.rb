@@ -44,7 +44,7 @@ class CartsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to cart_path
     follow_redirect!
-    assert_select ".flash-bad", text: /Only 5 units remain/
+    assert_select ".flash-bad", text: /Only 5 units left/
     assert_select ".cart-empty"
   end
 end

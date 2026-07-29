@@ -99,7 +99,11 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
     assert_equal "1", spec.dig("components", "schemas", "LicensePermissions", "properties", "schema_version", "const")
     assert_equal "getOpenBooks", spec.dig("paths", "/stats", "get", "operationId")
     assert_equal "buyLicenseBatch", spec.dig("paths", "/batches", "post", "operationId")
-    assert_equal 20, spec.dig("components", "schemas", "BatchRequest", "properties", "items", "maxItems")
+    # Derived, not copied: the published contract and the server's own ceiling
+    # must not drift apart.
+    batch_items = spec.dig("components", "schemas", "BatchRequest", "properties", "items")
+    assert_equal Api::V1::BatchesController::MAX_LINE_ITEMS, batch_items.fetch("maxItems")
+    assert_equal 1, batch_items.dig("items", "properties", "quantity", "default")
     assert_equal %w[hedera:testnet hedera:mainnet],
       spec.dig("components", "schemas", "OpenBooksStats", "properties", "network", "enum")
   end

@@ -114,17 +114,29 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
     # verify_url / share_card_url carry the unguessable verify_slug, not cert_id.
     assert(body.fetch("licenses").all? do |item|
       slug = License.find_by!(cert_id: item["cert_id"]).verify_slug
-      item["verify_url"].include?(slug) && item["share_card_url"].include?(slug)
+      item["verify_url"].include?(slug) && item["share_card_url"].include?(slug) &&
+        item["certificate_pdf_url"].include?("#{slug}/certificate.pdf")
     end)
     assert(body.fetch("licenses").all? do |item|
       License.find_signed(item.dig("receipt", "token"), purpose: "purchase-receipt").cert_id == item["cert_id"]
     end)
-    assert(body.fetch("licenses").all? do |item|
-      License.find_signed(item.dig("print_feedback", "receipt_token"), purpose: "print-feedback").cert_id == item["cert_id"]
-    end)
-    assert(body.fetch("licenses").all? do |item|
-      License.find_signed(item.dig("model_updates", "receipt_token"), purpose: "model-updates").cert_id == item["cert_id"]
-    end)
+    # Each item carries the file and a summary; the bulky per-license extras
+    # (proof bundle, print-feedback and model-update capabilities) are fetched
+    # from the durable receipt instead of inlined N times.
+    assert(body.fetch("licenses").none? { |item| item.key?("proof_bundle") })
+    first = body.fetch("licenses").first
+    get first.dig("receipt", "files_url"), params: { token: first.dig("receipt", "token") }
+    assert_response :success
+    receipt = response.parsed_body
+    assert_equal first["cert_id"], receipt["cert_id"]
+    assert_equal first["files"].map { |file| file["kind"] }, receipt["files"].map { |file| file["kind"] }
+    assert_equal first["cert_id"],
+      License.find_signed(receipt.dig("print_feedback", "receipt_token"), purpose: "print-feedback").cert_id
+    assert_equal first["cert_id"],
+      License.find_signed(receipt.dig("model_updates", "receipt_token"), purpose: "model-updates").cert_id
+    get first.fetch("bundle_url")
+    assert_response :success
+    assert_equal first["cert_id"], response.parsed_body.dig("certificate", "cert_id")
     assert_equal [ "delivered" ], Purchase.distinct.pluck(:status)
     assert_equal 3, Purchase.count
     assert_equal [ "0.0.7162784@1784457000.123456789" ], Purchase.distinct.pluck(:payment_tx_id)
@@ -232,13 +244,113 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "malformed, empty, and oversized batches fail without a reservation" do
-    [ nil, [], Array.new(21) { @items.first }, [ { model_id: "nope" } ] ].each do |items|
+    oversized_lines = Array.new(Api::V1::BatchesController::MAX_LINE_ITEMS + 1) { @items.first }
+    oversized_units = [ @items.first.merge(quantity: Api::V1::BatchesController::MAX_UNITS + 1) ]
+    bad_quantities = [ [ @items.first.merge(quantity: 0) ], [ @items.first.merge(quantity: "two") ],
+                       [ @items.first.merge(quantity: -3) ] ]
+    ([ nil, [], oversized_lines, oversized_units, [ { model_id: "nope" } ] ] + bad_quantities).each do |items|
       post api_v1_batches_path, params: { items: items }, as: :json
       assert_response :bad_request
       assert_equal "invalid_batch", response.parsed_body["error"]
     end
     assert_equal 0, PurchaseBatch.count
     assert_equal 0, Purchase.count
+  end
+
+  test "quantity buys N licenses on one line, priced and allocated as N" do
+    items = [ { model_id: @model.id, license: "commercial_unit", quantity: 3 } ]
+    quote = challenge(items: items)
+    usdc = quote.fetch("accepts").find { |option| option["asset"] == X402::Requirements.usdc_asset }
+
+    # Same money and same licence count as spelling the line out three times.
+    assert_equal "750000", usdc.fetch("amount")
+    assert_equal 3, quote.dig("batch", "license_count")
+
+    payload = payment_payload(usdc)
+    stub_verify(payload, usdc)
+    stub_settle(payload, usdc)
+    post api_v1_batches_path, params: { items: items }, as: :json,
+      headers: { "PAYMENT-SIGNATURE" => encode(payload) }
+
+    assert_response :success
+    licenses = response.parsed_body.fetch("licenses")
+    assert_equal 3, licenses.length
+    assert_equal [ 1, 2, 3 ], licenses.map { |item| item["serial"] }.sort
+    assert_equal 3, licenses.map { |item| item["cert_id"] }.uniq.length
+    assert_equal 750_000, Purchase.sum { |purchase| purchase.amount_base_units.to_i }
+  end
+
+  # MAX_UNITS is derived from per-licence delivery cost, so it is only honest
+  # while that cost holds. Measured at ~62ms/licence locally; this asserts a
+  # 4x-slack budget so ordinary CI noise does not fail it, but a change that
+  # makes delivery several times more expensive per licence does — at which
+  # point MAX_UNITS stops fitting in one response and has to move with it.
+  test "per-licence delivery cost stays within the budget MAX_UNITS was set from" do
+    units = 40
+    items = [ { model_id: @model.id, license: "commercial_unit", quantity: units } ]
+    usdc = challenge(items: items).fetch("accepts")
+      .find { |option| option["asset"] == X402::Requirements.usdc_asset }
+    payload = payment_payload(usdc)
+    stub_verify(payload, usdc)
+    stub_settle(payload, usdc)
+
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    post api_v1_batches_path, params: { items: items }, as: :json,
+      headers: { "PAYMENT-SIGNATURE" => encode(payload) }
+    per_licence_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000 / units
+
+    assert_response :success
+    assert_equal units, response.parsed_body.fetch("licenses").length
+    assert_operator per_licence_ms, :<, 250,
+      "delivery costs #{per_licence_ms.round}ms/licence; MAX_UNITS=#{Api::V1::BatchesController::MAX_UNITS} " \
+      "assumes ~62ms and a settle that finishes inside one response"
+  end
+
+  test "an uncapped offer takes a quantity no cart-shaped constant would allow" do
+    items = [ { model_id: @model.id, license: "commercial_unit", quantity: 120 } ]
+
+    quote = challenge(items: items)
+
+    assert_equal 120, quote.dig("batch", "license_count")
+    assert_equal "30000000", quote.fetch("accepts")
+      .find { |option| option["asset"] == X402::Requirements.usdc_asset }.fetch("amount")
+  end
+
+  test "quantity is still refused past the designer's max_units, before any payment" do
+    @offer.update!(max_units: 2)
+
+    post api_v1_batches_path, params: { items: [ { model_id: @model.id, license: "commercial_unit", quantity: 3 } ] },
+      as: :json
+
+    assert_response :gone
+    assert_equal "sold_out", response.parsed_body["error"]
+  end
+
+  # The unpaid quote path must not scale its query count with the order: it used
+  # to run one find_by! per item, which was the only real argument for keeping
+  # batches small.
+  test "quoting a large batch costs a constant number of offer lookups" do
+    models = Array.new(8) do
+      model = designers(:one).models3d.create!(
+        title: "Bulk #{SecureRandom.hex(3)}", slug: "bulk-#{SecureRandom.hex(4)}",
+        status: "published", file_hash: "sha256:#{'b' * 64}"
+      )
+      model.license_offers.create!(kind: "commercial_unit", price_cents: 25, currency: "USDC")
+      model
+    end
+    items = models.map { |model| { model_id: model.id, license: "commercial_unit", quantity: 5 } }
+
+    queries = 0
+    counter = ->(_name, _start, _finish, _id, payload) do
+      queries += 1 if payload[:sql].include?("license_offers") && !payload[:name].to_s.include?("SCHEMA")
+    end
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      post api_v1_batches_path, params: { items: items }, as: :json
+    end
+
+    assert_response :payment_required
+    assert_equal 40, response.parsed_body.dig("batch", "license_count")
+    assert_operator queries, :<=, 2, "offer lookups should not grow with the batch"
   end
 
   test "HBAR quote drift is distributed exactly across child licenses" do

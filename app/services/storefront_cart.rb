@@ -1,5 +1,4 @@
 class StorefrontCart
-  MAX_ITEMS = 20
   Entry = Data.define(:offer, :quantity) do
     def subtotal_cents = offer.price_cents * quantity
   end
@@ -39,9 +38,12 @@ class StorefrontCart
   def total_cents = entries.sum(&:subtotal_cents)
   def empty? = entries.empty?
 
+  # One line per offer, with its quantity — the same shape the batch API takes.
+  # This used to repeat a line per licence because the API had no quantity, so a
+  # 40-unit order became a 40-element array and hit the batch's item ceiling.
   def payment_items
-    entries.flat_map do |entry|
-      Array.new(entry.quantity) { { model_id: entry.offer.model3d_id, license: entry.offer.kind } }
+    entries.map do |entry|
+      { model_id: entry.offer.model3d_id, license: entry.offer.kind, quantity: entry.quantity }
     end
   end
 
@@ -82,13 +84,16 @@ class StorefrontCart
   def replace!(offer, quantity)
     raise Invalid, "That listing is no longer available for new purchases." unless offer.model3d.published?
 
-    limit = offer.kind == "personal" ? 1 : [ offer.units_remaining || MAX_ITEMS, MAX_ITEMS ].min
-    raise Invalid, "Only #{limit} units remain for this offer." if quantity > limit
+    # The only ceiling on units is the one the designer opted into. An uncapped
+    # offer is uncapped: this used to fall back to a cart-shaped constant and
+    # then tell the buyer "only 20 units remain for this offer", which was not
+    # true of the offer and not true of anything else either.
+    remaining = offer.units_remaining
+    if remaining && quantity > remaining
+      raise Invalid, "Only #{remaining} #{'unit'.pluralize(remaining)} left for this offer."
+    end
 
     candidate = @quantities.merge(offer.id.to_s => quantity)
-    total = candidate.values.sum
-    raise Invalid, "A cart can contain at most #{MAX_ITEMS} licenses." if total > MAX_ITEMS
-
     candidate_offers = LicenseOffer.active.includes(model3d: :designer).where(id: candidate.keys)
     payees = candidate_offers.map { |item| X402::Requirements.pay_to_for(item) }.uniq
     if payees.many?

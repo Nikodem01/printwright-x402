@@ -36,11 +36,11 @@
             </div>
             <div class="cart-line-actions">
               <% if offer.kind == "commercial_unit" %>
-                <% maximum = [ offer.units_remaining || StorefrontCart::MAX_ITEMS, StorefrontCart::MAX_ITEMS ].min %>
                 <%= form_with url: cart_item_path(offer), method: :patch, class: "cart-quantity-form" do %>
                   <label for="quantity_<%= offer.id %>">Units</label>
-                  <input id="quantity_<%= offer.id %>" type="number" name="quantity"
-                         min="1" max="<%= maximum %>" value="<%= entry.quantity %>" required>
+                  <%# max only when the designer actually capped the offer; an uncapped offer takes any quantity %>
+                  <%= tag.input id: "quantity_#{offer.id}", type: "number", name: "quantity",
+                        min: 1, max: offer.units_remaining, value: entry.quantity, required: true %>
                   <button class="btn" type="submit">Update</button>
                 <% end %>
               <% else %>

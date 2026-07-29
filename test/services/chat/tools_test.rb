@@ -16,14 +16,16 @@ class Chat::ToolsTest < ActiveSupport::TestCase
   end
 
   test "search_models trims each hit to what's useful and caps the result count" do
-    models = Array.new(8) do |i|
+    over_limit = Chat::Tools::RESULT_LIMIT + 3
+    models = Array.new(over_limit) do |i|
       { "id" => i, "title" => "Model #{i}", "designer" => { "name" => "Demo" },
         "slug" => "model-#{i}", "render_url" => "http://localhost:3000/render-#{i}.png",
         "url" => "http://localhost:3000/api/v1/models/#{i}", "description" => "long unwanted text",
         "license_offers" => [ { "kind" => "personal", "price_cents" => 100, "currency" => "USDC" } ] }
     end
     stub_request(:get, "http://localhost:3000/api/v1/models?q=widget")
-      .to_return(body: { models: models, count: 8 }.to_json, headers: { "content-type" => "application/json" })
+      .to_return(body: { models: models, count: over_limit }.to_json,
+        headers: { "content-type" => "application/json" })
 
     result = Chat::Tools.search_models("widget")
     assert_equal Chat::Tools::RESULT_LIMIT, result[:models].length

@@ -16,7 +16,7 @@ const SERVER = fileURLToPath(new URL("../server.mjs", import.meta.url));
 // license_offers off of.
 const MODELS = {
   10: { id: 10, license_offers: [ { kind: "commercial_unit", price_cents: 200 } ] }, // no "personal" offer
-  20: { id: 20, license_offers: [ { kind: "personal", price_cents: 600 } ] },        // over the default 500c cap
+  20: { id: 20, license_offers: [ { kind: "personal", price_cents: 3000 } ] },       // over the default 2500c cap
   30: { id: 30, license_offers: [ { kind: "personal", price_cents: 1 } ] },          // cheap, but not free
 };
 
@@ -144,10 +144,10 @@ test("refuses when the model has no offer of the requested license kind", async 
   assert.match(result.content[0].text, /model 10 has no personal offer/);
 });
 
-test("refuses when the offer price exceeds MAX_SPEND_CENTS (default 500)", async () => {
+test("refuses when the offer price exceeds MAX_SPEND_CENTS (default 2500)", async () => {
   const result = await callBuyLicense(DUMMY_CREDS, { model_id: 20, license: "personal", confirm: true });
   assert.equal(result.isError, true);
-  assert.match(result.content[0].text, /offer is 600c, over the MAX_SPEND_CENTS=500 guardrail/);
+  assert.match(result.content[0].text, /offer is 3000c, over the MAX_SPEND_CENTS=2500 guardrail/);
 });
 
 test("MAX_SPEND_CENTS=0 boots and refuses every priced offer", async () => {

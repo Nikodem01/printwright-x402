@@ -8,9 +8,14 @@ module Chat
   module Tools
     BASE_URL = ENV.fetch("PRINTWRIGHT_URL", "http://localhost:3000")
     TIMEOUT_SECONDS = 5
-    # Trimmed hard: a chat answer names a couple of options, not the catalog —
-    # and every extra model is tokens the model has to read before answering.
-    RESULT_LIMIT = 5
+    # A context budget, not a limit on what a buyer may find: the whole catalog
+    # stays reachable through /api/v1/models, which this is a thin chat view
+    # over. `summarize` emits ~250 bytes per model, so 12 results is ~3KB of the
+    # prompt — enough for the shopkeeper to actually compare options and say
+    # "here are three brackets and a jig", where 5 forced it to answer from a
+    # slice of the shelf. Raising it further buys worse answers, not better
+    # ones: the model starts summarizing the list instead of recommending.
+    RESULT_LIMIT = 12
 
     module_function
 

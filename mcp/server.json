@@ -48,7 +48,7 @@
           "format": "number",
           "isRequired": false,
           "isSecret": false,
-          "default": "500"
+          "default": "2500"
         }
       ]
     }

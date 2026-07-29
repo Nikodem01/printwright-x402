@@ -18,14 +18,22 @@ const client = new PrintwrightClient({
   sandbox: SANDBOX,
 });
 
-// The spend cap is the only thing standing between an autonomous agent and an
-// unbounded purchase, so a malformed value must never silently disable it:
-// Number("abc") is NaN, and `price > NaN` is false, which would wave every
-// offer through. Refuse to start instead.
+// The operator's own rail on autonomous spending — not the marketplace
+// rationing anyone. It belongs here, on the buyer's side, and it stays.
+//
+// A malformed value must never silently disable it: Number("abc") is NaN, and
+// `price > NaN` is false, which would wave every offer through. Refuse to start
+// instead.
+//
+// The default used to be 500c, which is marketplace-shaped: catalog licences
+// run 25c-260c, so a $5 default sat close enough to real prices that an
+// ordinary purchase could be refused by a number the operator never chose.
+// 2500c keeps roughly 10x headroom over any single licence on offer while
+// still stopping a loop from draining a wallet on one call.
 export const MAX_SPEND_CENTS = parseSpendCap(process.env.MAX_SPEND_CENTS);
 
 function parseSpendCap(raw) {
-  if (raw === undefined || raw === "") return 500;
+  if (raw === undefined || raw === "") return 2500;
   const cap = Number(raw);
   if (!Number.isFinite(cap) || cap < 0) {
     console.error(`MAX_SPEND_CENTS must be a non-negative number of cents (got ${JSON.stringify(raw)})`);
@@ -108,7 +116,8 @@ server.registerTool(
     const offer = model.license_offers.find((o) => o.kind === license);
     if (!offer) return fail(`model ${model_id} has no ${license} offer`);
     if (offer.price_cents > MAX_SPEND_CENTS) {
-      return fail(`offer is ${offer.price_cents}c, over the MAX_SPEND_CENTS=${MAX_SPEND_CENTS} guardrail`);
+      return fail(`offer is ${offer.price_cents}c, over the MAX_SPEND_CENTS=${MAX_SPEND_CENTS} guardrail. ` +
+        `This is your own spend ceiling, not a marketplace limit: raise MAX_SPEND_CENTS to buy this.`);
     }
 
     const result = await client.buy({ modelId: model_id, license, asset });
