@@ -28,7 +28,7 @@
     Pinning <code>topic-id</code> means a bundle anchored anywhere else cannot pass.</p>
   <pre class="mono t-small code-block"><code>&lt;script defer src="<%= request.base_url %>/printwright-verify-widget.js"&gt;&lt;/script&gt;
 &lt;printwright-verify bundle-url="<%= request.base_url %>/api/v1/certificates/YOUR-CERT-ID"
-  topic-id="<%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %>" network="<%= Hedera::Network.name %>"&gt;
+  topic-id="<%= Hedera::Network.hcs_topic_id %>" network="<%= Hedera::Network.name %>"&gt;
 &lt;/printwright-verify&gt;</code></pre>
   <p class="t-small"><%= link_to "Open the plain HTML example", "/widget-example.html" %>.</p>
 </div>

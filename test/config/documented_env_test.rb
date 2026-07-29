@@ -29,7 +29,10 @@ class DocumentedEnvTest < ActiveSupport::TestCase
   end
 
   test "the sign-in buttons and .env.example agree on which variables gate them" do
-    gating = env_vars_read_in("app/views/rodauth/_omniauth.html.erb")
+    # The buttons render from ApplicationHelper#configured_oauth_providers; the
+    # view itself reads no ENV, so that helper is where the gate now lives.
+    gating = env_vars_read_in("app/helpers/application_helper.rb")
+      .grep(/_CLIENT_ID\z/)
 
     assert_equal %w[GITHUB_CLIENT_ID GOOGLE_CLIENT_ID], gating.sort
     assert_empty gating - documented,

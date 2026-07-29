@@ -26,7 +26,7 @@ module OpenBooks
     private
 
     def hcs_snapshot
-      topic_id = ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069")
+      topic_id = Hedera::Network.hcs_topic_id
       raise Hedera::Network::Unavailable, "invalid topic id" unless topic_id.match?(/\A\d+\.\d+\.\d+\z/)
 
       Rails.cache.fetch([ "open-books-hcs", Hedera::Network.name, topic_id ], expires_in: 1.minute) do
@@ -67,7 +67,7 @@ module OpenBooks
       # The topic carries opaque license commitments and model-version events;
       # either is a genuine Printwright record. Nothing readable is asserted —
       # the commitment reveals no certificate content by design.
-      valid = message.fetch("topic_id") == ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") &&
+      valid = message.fetch("topic_id") == Hedera::Network.hcs_topic_id &&
         sequence.positive? &&
         (Certificates::Commitment.envelope?(payload) || payload["schema"] == "pwv-1")
       raise ArgumentError, "latest message is not a Printwright HCS record" unless valid

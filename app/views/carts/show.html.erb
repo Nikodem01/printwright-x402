@@ -57,7 +57,7 @@
              data-checkout-batch-url-value="<%= api_v1_batches_path %>"
              data-checkout-items-value="<%= @cart.payment_items.to_json %>"
              data-checkout-completion-url-value="<%= cart_path %>"
-             <% if (wallet_url = ENV["DEMO_WALLET_URL"].presence) %>data-checkout-wallet-url-value="<%= wallet_url %>"<% end %>>
+             <% if (wallet_url = demo_wallet_url) %>data-checkout-wallet-url-value="<%= wallet_url %>"<% end %>>
         <p class="eyebrow"><%= pluralize(@cart.count, "license") %></p>
         <h2>Cart total</h2>
         <p class="cart-total"><%= format_usdc_cents(@cart.total_cents) %></p>

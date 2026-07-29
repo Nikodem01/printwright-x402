@@ -11,10 +11,24 @@ module Hedera
     OPEN_TIMEOUT_SECONDS = 2
     READ_TIMEOUT_SECONDS = 5
     USDC_BY_NETWORK = { "mainnet" => "0.0.456858", "testnet" => "0.0.429274" }.freeze
+    # The license topic every certificate anchors to. Declared here once: it is
+    # rendered in four public views and read by the open-books snapshot, and a
+    # copy that drifts would link readers at a topic we never wrote to.
+    DEFAULT_HCS_TOPIC_ID = "0.0.9585069".freeze
 
     class << self
       def name
         ENV.fetch("HEDERA_NETWORK", "testnet")
+      end
+
+      # Read at call time, not memoized: the suite flips the environment
+      # between cases and expects the app to follow it.
+      def hcs_topic_id
+        ENV.fetch("HEDERA_HCS_TOPIC_ID", DEFAULT_HCS_TOPIC_ID)
+      end
+
+      def hcs_topic_url
+        "#{hashscan_base}/topic/#{hcs_topic_id}"
       end
 
       def caip2

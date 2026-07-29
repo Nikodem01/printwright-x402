@@ -53,7 +53,7 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <% wallet_project_id = ENV["WALLETCONNECT_PROJECT_ID"].presence %>
+  <% wallet_project_id = walletconnect_project_id %>
   <% designer_workspace = content_for?(:designer_workspace) %>
   <body class="<%= designer_workspace ? "designer-workspace" : "marketplace" %>"<% if wallet_project_id %> data-controller="wallet-loader"
     data-wallet-loader-module-url-value="<%= asset_path("hedera_wallet.js") %>"<% end %>>
@@ -164,7 +164,7 @@
       <footer class="site-footer">
       <div class="container">
         License certificates anchor to Hedera Consensus Service topic
-        <a class="mono" href="<%= Hedera::Network.hashscan_base %>/topic/<%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %>"><%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %></a>
+        <a class="mono" href="<%= Hedera::Network.hcs_topic_url %>"><%= Hedera::Network.hcs_topic_id %></a>
         as opaque commitments — verifiable on the public mirror node. Payments via x402 (Hedera <%= Hedera::Network.name %>, HBAR/USDC).
         <span class="footer-links t-small">
           <%= link_to "About", about_path %> · <%= link_to "Pricing", pricing_path %> ·

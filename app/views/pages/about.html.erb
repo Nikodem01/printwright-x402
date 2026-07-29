@@ -22,7 +22,7 @@
   <h2>How the certificate rail works</h2>
   <p>Each license offer carries a price and terms. When a buyer pays, the marketplace submits a
     message to an HCS topic — id
-    <a class="mono" href="<%= Hedera::Network.hashscan_base %>/topic/<%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %>"><%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %></a>
+    <a class="mono" href="<%= Hedera::Network.hcs_topic_url %>"><%= Hedera::Network.hcs_topic_id %></a>
     — recording the model, the unit serial, the license terms hash, and the payment
     transaction. Consensus ordering makes the record tamper-evident; anyone can read it back
     from the public mirror node and compare it against the marketplace's copy, field by field,

@@ -8,6 +8,27 @@ module ApplicationHelper
     link_to tx_id.truncate(22), "#{Hedera::Network.hashscan_base}/transaction/#{tx_id}", class: "mono"
   end
 
+  # The local demo signer stands in for a wallet extension when one is not
+  # configured. Three views need it; none of them should be reading ENV to
+  # find out, and nil here means "no demo signer" everywhere at once.
+  def demo_wallet_url
+    ENV["DEMO_WALLET_URL"].presence
+  end
+
+  # A browser wallet exists only if WalletConnect is configured. Checkout says
+  # so plainly when it is not, rather than offering a button that cannot sign.
+  def walletconnect_project_id
+    ENV["WALLETCONNECT_PROJECT_ID"].presence
+  end
+
+  # Social sign-in buttons render only for providers that are actually wired
+  # up, so a half-configured deployment cannot offer a dead button.
+  def configured_oauth_providers
+    { github: ENV["GITHUB_CLIENT_ID"], google_oauth2: ENV["GOOGLE_CLIENT_ID"] }
+      .select { |_provider, id| id.present? }
+      .keys
+  end
+
   # Ledger amounts are asset base units: USDC has 6 decimals, HBAR 8.
   def format_base_units(amount, asset)
     if asset == "0.0.0"

@@ -5,7 +5,7 @@
              data-checkout-download-url-value="<%= proposal["purchase_path"] %>"
              data-checkout-approval-url-value="<%= approve_chat_purchase_path %>"
              data-checkout-button-prefix-value="Approve and buy"
-             <% if (wallet_url = ENV["DEMO_WALLET_URL"].presence) %>data-checkout-wallet-url-value="<%= wallet_url %>"<% end %>>
+             <% if (wallet_url = demo_wallet_url) %>data-checkout-wallet-url-value="<%= wallet_url %>"<% end %>>
       <p class="eyebrow">Human approval required · Hedera testnet</p>
       <h2 id="chat_purchase_title" class="chat-purchase-title"><%= proposal["title"] %></h2>
       <div data-checkout-target="offer" data-price-cents="<%= proposal["price_cents"] %>"

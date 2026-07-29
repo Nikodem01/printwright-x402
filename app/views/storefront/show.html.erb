@@ -131,7 +131,7 @@
           checkout_download_url_value: "/api/v1/models/#{@model.id}/download",
           checkout_batch_url_value: api_v1_batches_path,
           checkout_model_id_value: @model.id,
-          checkout_wallet_url_value: ENV["DEMO_WALLET_URL"].presence
+          checkout_wallet_url_value: demo_wallet_url
         }.compact do %>
       <%= hidden_field_tag :model_id, @model.id %>
       <h3>Buy a license</h3>

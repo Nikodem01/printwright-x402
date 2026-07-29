@@ -324,7 +324,7 @@ console.log(decision.allowed, decision.reason_code);</pre>
   <pre class="mono t-small" style="overflow-x:auto"># From this checkout (the package is not yet in the npm registry):
 npx --package ./verifier printwright-verify pw-000058
 # Registry command after release:
-npx printwright-verify https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/50</pre>
+npx printwright-verify <%= Hedera::Network.mirror_base %>/api/v1/topics/<%= Hedera::Network.hcs_topic_id %>/messages/50</pre>
   <p class="t-small">The verifier queries Hedera's mirror node directly. A Printwright verify
     URL is accepted only as an ID locator; the CLI never requests the marketplace.</p>
   <p class="t-small">Browser pages can use the dependency-free

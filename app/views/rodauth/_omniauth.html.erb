@@ -1,11 +1,12 @@
-<% if ENV["GITHUB_CLIENT_ID"].present? || ENV["GOOGLE_CLIENT_ID"].present? %>
+<% providers = configured_oauth_providers %>
+<% if providers.any? %>
   <div class="oauth-buttons">
     <p class="t-caption muted">Or continue with</p>
-    <% if ENV["GITHUB_CLIENT_ID"].present? %>
+    <% if providers.include?(:github) %>
       <%= button_to "GitHub", rodauth.omniauth_request_path(:github),
             method: :post, data: { turbo: false }, class: "btn" %>
     <% end %>
-    <% if ENV["GOOGLE_CLIENT_ID"].present? %>
+    <% if providers.include?(:google_oauth2) %>
       <%= button_to "Google", rodauth.omniauth_request_path(:google_oauth2),
             method: :post, data: { turbo: false }, class: "btn" %>
     <% end %>
