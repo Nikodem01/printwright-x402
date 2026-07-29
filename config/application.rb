@@ -23,5 +23,11 @@ module PrintwrightX402
     #
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
+
+    # Every product setting is collected here, once, from config/printwright.yml
+    # (which reads ENV). Application code reads Rails.configuration.x.printwright
+    # and never ENV, so no two files can disagree about a default.
+    # Typing and required-value checks run in config/initializers/printwright_config.rb.
+    config.x.printwright = config_for(:printwright)
   end
 end

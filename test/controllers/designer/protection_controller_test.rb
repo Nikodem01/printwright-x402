@@ -34,7 +34,7 @@ class Designer::ProtectionControllerTest < ActionDispatch::IntegrationTest
   test "shows certificate-bound takedown evidence for delivered licenses only" do
     delivered = Purchase.create!(license_offer: @offer, status: "verified",
       amount_base_units: "250000", asset: X402::Requirements.usdc_asset,
-      replay_key: SecureRandom.hex(32), requirements_json: { "payTo" => ENV.fetch("X402_PAY_TO") })
+      replay_key: SecureRandom.hex(32), requirements_json: { "payTo" => Rails.configuration.x.printwright.x402_pay_to })
     delivered.transition_to!(:settled)
     license = License.allocate!(delivered)
     delivered.transition_to!(:delivered)
@@ -55,7 +55,7 @@ class Designer::ProtectionControllerTest < ActionDispatch::IntegrationTest
     other_offer = other_model.license_offers.create!(kind: "personal", price_cents: 900)
     other_purchase = Purchase.create!(license_offer: other_offer, status: "verified",
       amount_base_units: "900000", asset: X402::Requirements.usdc_asset,
-      replay_key: SecureRandom.hex(32), requirements_json: { "payTo" => ENV.fetch("X402_PAY_TO") })
+      replay_key: SecureRandom.hex(32), requirements_json: { "payTo" => Rails.configuration.x.printwright.x402_pay_to })
     other_purchase.transition_to!(:settled)
     License.allocate!(other_purchase)
     other_purchase.transition_to!(:delivered)

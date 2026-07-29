@@ -2,28 +2,29 @@ module Chat
   # Fail-closed configuration for the only chat operation that can lead to a
   # payment. Prices are US cents; settlement is restricted to exact USDC at
   # approval time so these integer caps are also the signed-amount caps.
+  #
+  # The values arrive already typed from config/initializers/printwright_config.rb,
+  # where a malformed cap becomes 0 — buying off — rather than a guess.
   module PurchasePolicy
     PROPOSAL_LIFETIME = 10.minutes
 
     module_function
 
     def enabled?
-      ENV["CHAT_PURCHASES_ENABLED"] == "true" && max_spend_cents.positive? && daily_spend_cents.positive?
+      config.chat_purchases_enabled && max_spend_cents.positive? && daily_spend_cents.positive?
     end
 
     def max_spend_cents
-      cents("CHAT_MAX_SPEND_CENTS")
+      config.chat_max_spend_cents
     end
 
     def daily_spend_cents
-      value = ENV["CHAT_DAILY_SPEND_CENTS"]
-      value.present? ? cents("CHAT_DAILY_SPEND_CENTS") : max_spend_cents
+      config.chat_daily_spend_cents
     end
 
-    def cents(name)
-      value = ENV[name].to_s
-      value.match?(/\A\d+\z/) ? value.to_i : 0
+    def config
+      Rails.configuration.x.printwright
     end
-    private_class_method :cents
+    private_class_method :config
   end
 end

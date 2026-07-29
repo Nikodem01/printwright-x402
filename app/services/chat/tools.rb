@@ -6,7 +6,6 @@ module Chat
   # the whole point of the shopkeeper door: it proves the public API is good
   # enough to build on.
   module Tools
-    BASE_URL = ENV.fetch("PRINTWRIGHT_URL", "http://localhost:3000")
     TIMEOUT_SECONDS = 5
     # A context budget, not a limit on what a buyer may find: the whole catalog
     # stays reachable through /api/v1/models, which this is a thin chat view
@@ -94,14 +93,18 @@ module Chat
         # The API's own "url" field is the JSON endpoint (an agent's door) — a
         # human told to "visit the model's page" needs the storefront page,
         # where there's actually something to look at and a buy button.
-        url: "#{BASE_URL}/models/#{model['slug']}"
+        url: "#{base_url}/models/#{model['slug']}"
       }
       summary[:description] = model["description"] if detailed && model["description"].present?
       summary
     end
 
+    def base_url
+      Rails.configuration.x.printwright.base_url
+    end
+
     def get(path, params = {})
-      uri = URI("#{BASE_URL}#{path}")
+      uri = URI("#{base_url}#{path}")
       uri.query = URI.encode_www_form(params) if params.present?
 
       response = Net::HTTP.start(

@@ -8,9 +8,7 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
   FACILITATOR = "https://facilitator.test".freeze
 
   setup do
-    ENV["X402_FACILITATOR_URL"] = FACILITATOR
-    ENV["X402_PAY_TO"] = "0.0.9584959"
-    ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "250" # 25c offer => exactly 0.1 HBAR, matching the real fixture
+    set_printwright(demo_hbar_price_cents: "250") # 25c offer => exactly 0.1 HBAR, matching the real fixture
     FacilitatorClient.reset_cache!
     stub_request(:get, "#{FACILITATOR}/supported")
       .to_return(body: fixture("supported.json"), headers: { "content-type" => "application/json" })
@@ -466,7 +464,7 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     # 402 was issued at 250 c/hbar (fixture amount 10000000 tinybars); the
     # rate moves ~3% before the signed retry lands. Payment must still clear,
     # and the purchase must record what the buyer actually signed.
-    ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "257"
+    set_printwright(demo_hbar_price_cents: "257")
     stub_verify_ok
     stub_settle(body: fixture("settle_ok.json"))
 
@@ -474,7 +472,7 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "10000000", Purchase.sole.amount_base_units
   ensure
-    ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "250"
+    set_printwright(demo_hbar_price_cents: "250")
   end
 
   test "HBAR tolerance includes its exact lower boundary" do
@@ -512,13 +510,13 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a quote drift beyond tolerance rejects the payment before any money moves" do
-    ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "125" # rate halved: buyer's amount is now ~50% short
+    set_printwright(demo_hbar_price_cents: "125") # rate halved: buyer's amount is now ~50% short
     get download_path, headers: payment_headers(@payload)
     assert_response :payment_required
     assert_equal "invalid_payment_requirements", response.parsed_body["error"]
     assert_equal 0, Purchase.count
   ensure
-    ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "250"
+    set_printwright(demo_hbar_price_cents: "250")
   end
 
   test "payTo is always the treasury, even for a verified designer (destination-charge model)" do

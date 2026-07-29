@@ -11,20 +11,14 @@ module Hedera
     OPEN_TIMEOUT_SECONDS = 2
     READ_TIMEOUT_SECONDS = 5
     USDC_BY_NETWORK = { "mainnet" => "0.0.456858", "testnet" => "0.0.429274" }.freeze
-    # The license topic every certificate anchors to. Declared here once: it is
-    # rendered in four public views and read by the open-books snapshot, and a
-    # copy that drifts would link readers at a topic we never wrote to.
-    DEFAULT_HCS_TOPIC_ID = "0.0.9585069".freeze
 
     class << self
       def name
-        ENV.fetch("HEDERA_NETWORK", "testnet")
+        config.hedera_network
       end
 
-      # Read at call time, not memoized: the suite flips the environment
-      # between cases and expects the app to follow it.
       def hcs_topic_id
-        ENV.fetch("HEDERA_HCS_TOPIC_ID", DEFAULT_HCS_TOPIC_ID)
+        config.hcs_topic_id
       end
 
       def hcs_topic_url
@@ -39,8 +33,10 @@ module Hedera
         USDC_BY_NETWORK.fetch(name)
       end
 
+      # An explicit mirror URL wins; otherwise it follows the network, so
+      # switching to mainnet cannot leave reads pointed at testnet.
       def mirror_base
-        ENV.fetch("MIRROR_NODE_URL", "https://#{name}.mirrornode.hedera.com")
+        config.mirror_node_url.presence || "https://#{name}.mirrornode.hedera.com"
       end
 
       def hashscan_base
@@ -57,6 +53,12 @@ module Hedera
       rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNREFUSED, Errno::ECONNRESET,
              SocketError, EOFError, Net::HTTPBadResponse, Net::ProtocolError => e
         raise Unavailable, e.message
+      end
+
+      private
+
+      def config
+        Rails.configuration.x.printwright
       end
     end
   end

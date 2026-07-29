@@ -5,9 +5,9 @@ class Chat::ToolLoopTest < ActiveSupport::TestCase
   GEMINI = %r{\Ahttps://generativelanguage\.googleapis\.com/v1beta/models/gemini-3\.1-flash-lite:generateContent}
 
   setup do
-    ENV["CHAT_PURCHASES_ENABLED"] = "true"
-    ENV["CHAT_MAX_SPEND_CENTS"] = "500"
-    ENV["CHAT_DAILY_SPEND_CENTS"] = "1000"
+    set_printwright(chat_purchases_enabled: true)
+    set_printwright(chat_max_spend_cents: 500)
+    set_printwright(chat_daily_spend_cents: 1000)
   end
 
   teardown do

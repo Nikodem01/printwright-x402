@@ -11,10 +11,8 @@ class Model3dSearchTest < ActiveSupport::TestCase
     )
     Model3d.create!(designer: designers(:one), title: "Calibration Cube", slug: "c-#{SecureRandom.hex(3)}",
                     tags: %w[calibration], status: "published")
-    @was_key = ENV["GOOGLE_GENERATIVE_AI_API_KEY"]
   end
 
-  teardown { ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = @was_key }
 
   test "misspelled query falls back to trigram similarity and finds the beaver" do
     assert_equal [ @beaver.id ], Model3d.search("beavr").pluck(:id)
@@ -46,13 +44,13 @@ class Model3dSearchTest < ActiveSupport::TestCase
   end
 
   test "without an API key, semantic_search is a no-op and search falls straight to fuzzy" do
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = nil
+    set_printwright(gemini_api_key: nil)
     assert_empty Model3d.semantic_search("something to organize my desk cables")
     assert_not_requested :post, ENDPOINT
   end
 
   test "semantic pass finds a model with no exact/fuzzy overlap, when embeddings are close" do
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
+    set_printwright(gemini_api_key: "test-key")
     organizer = Model3d.create!(
       designer: designers(:one), title: "Hexagon Desk Organizer", slug: "org-#{SecureRandom.hex(3)}",
       description: "Stackable hexagonal desk organizer cell.", tags: %w[organizer desk hexagon], status: "published"
@@ -71,7 +69,7 @@ class Model3dSearchTest < ActiveSupport::TestCase
   end
 
   test "distance threshold excludes an off-topic query instead of returning the least-bad match" do
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
+    set_printwright(gemini_api_key: "test-key")
     stored = Array.new(768, 0.0)
     stored[0] = 1.0
     @beaver.update_columns(embedding: stored)
@@ -88,7 +86,7 @@ class Model3dSearchTest < ActiveSupport::TestCase
   end
 
   test "query embeddings are cached briefly — a repeat search doesn't re-call the provider" do
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
+    set_printwright(gemini_api_key: "test-key")
     vector = Array.new(768, 0.0)
     vector[5] = 1.0
     @beaver.update_columns(embedding: vector)

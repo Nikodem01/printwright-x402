@@ -3,9 +3,7 @@ require "webmock/minitest"
 
 class HardeningTest < ActionDispatch::IntegrationTest
   setup do
-    ENV["X402_FACILITATOR_URL"] = "https://facilitator.test"
-    ENV["X402_PAY_TO"] = "0.0.9584959"
-    ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "250"
+    set_printwright(demo_hbar_price_cents: "250")
     FacilitatorClient.reset_cache!
     stub_request(:get, "https://facilitator.test/supported").to_return(
       body: { kinds: [ { scheme: "exact", network: "hedera:testnet", extra: { feePayer: "0.0.7162784" } } ] }.to_json,
@@ -25,7 +23,7 @@ class HardeningTest < ActionDispatch::IntegrationTest
 
   test "API over the limit gets a machine-readable 429 with Retry-After" do
     RateLimitStore.backend = ActiveSupport::Cache::MemoryStore.new
-    ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "250"
+    set_printwright(demo_hbar_price_cents: "250")
 
     (Api::V1::DownloadsController::RATE_LIMIT + 1).times { get "/api/v1/models/#{@model.id}/download", headers: { accept: "application/json" } }
     assert_response :too_many_requests
@@ -73,7 +71,6 @@ end
 class FacilitatorBreakerTest < ActiveSupport::TestCase
   setup do
     require "webmock/minitest"
-    ENV["X402_FACILITATOR_URL"] = "https://facilitator.test"
     FacilitatorClient.reset_cache!
   end
 

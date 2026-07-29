@@ -12,19 +12,20 @@ module ApplicationHelper
   # configured. Three views need it; none of them should be reading ENV to
   # find out, and nil here means "no demo signer" everywhere at once.
   def demo_wallet_url
-    ENV["DEMO_WALLET_URL"].presence
+    Rails.configuration.x.printwright.demo_wallet_url
   end
 
   # A browser wallet exists only if WalletConnect is configured. Checkout says
   # so plainly when it is not, rather than offering a button that cannot sign.
   def walletconnect_project_id
-    ENV["WALLETCONNECT_PROJECT_ID"].presence
+    Rails.configuration.x.printwright.walletconnect_project_id
   end
 
   # Social sign-in buttons render only for providers that are actually wired
   # up, so a half-configured deployment cannot offer a dead button.
   def configured_oauth_providers
-    { github: ENV["GITHUB_CLIENT_ID"], google_oauth2: ENV["GOOGLE_CLIENT_ID"] }
+    config = Rails.configuration.x.printwright
+    { github: config.github_client_id, google_oauth2: config.google_client_id }
       .select { |_provider, id| id.present? }
       .keys
   end

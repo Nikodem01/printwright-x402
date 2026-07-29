@@ -2,8 +2,6 @@ require "test_helper"
 
 class StorefrontCartTest < ActiveSupport::TestCase
   setup do
-    @old_pay_to = ENV["X402_PAY_TO"]
-    ENV["X402_PAY_TO"] = "0.0.9584959"
     @designer = designers(:one)
     @designer.update!(payout_account_verified_at: nil)
     @personal = create_offer("Cart Personal", "personal", 100)
@@ -13,7 +11,6 @@ class StorefrontCartTest < ActiveSupport::TestCase
   end
 
   teardown do
-    @old_pay_to.nil? ? ENV.delete("X402_PAY_TO") : ENV["X402_PAY_TO"] = @old_pay_to
   end
 
   test "combines different models into one batch API line per offer, carrying quantity" do

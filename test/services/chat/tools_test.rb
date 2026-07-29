@@ -3,16 +3,9 @@ require "webmock/minitest"
 
 class Chat::ToolsTest < ActiveSupport::TestCase
   setup do
-    @chat_env = ENV.values_at("CHAT_PURCHASES_ENABLED", "CHAT_MAX_SPEND_CENTS", "CHAT_DAILY_SPEND_CENTS")
-    ENV["CHAT_PURCHASES_ENABLED"] = "true"
-    ENV["CHAT_MAX_SPEND_CENTS"] = "500"
-    ENV["CHAT_DAILY_SPEND_CENTS"] = "1000"
-  end
-
-  teardown do
-    %w[CHAT_PURCHASES_ENABLED CHAT_MAX_SPEND_CENTS CHAT_DAILY_SPEND_CENTS].zip(@chat_env).each do |name, value|
-      value.nil? ? ENV.delete(name) : ENV[name] = value
-    end
+    set_printwright(chat_purchases_enabled: true)
+    set_printwright(chat_max_spend_cents: 500)
+    set_printwright(chat_daily_spend_cents: 1000)
   end
 
   test "search_models trims each hit to what's useful and caps the result count" do
@@ -115,11 +108,11 @@ class Chat::ToolsTest < ActiveSupport::TestCase
   end
 
   test "propose_purchase fails closed when disabled, malformed, or over cap" do
-    ENV["CHAT_PURCHASES_ENABLED"] = "false"
+    set_printwright(chat_purchases_enabled: false)
     assert_equal "purchases_disabled", Chat::Tools.propose_purchase("5", "personal")[:error]
     assert_not_requested :get, %r{/api/v1/models/5}
 
-    ENV["CHAT_PURCHASES_ENABLED"] = "true"
+    set_printwright(chat_purchases_enabled: true)
     assert_equal "invalid_model_id", Chat::Tools.propose_purchase("5/../6", "personal")[:error]
 
     stub_request(:get, "http://localhost:3000/api/v1/models/5").to_return(
@@ -129,8 +122,12 @@ class Chat::ToolsTest < ActiveSupport::TestCase
     assert_equal "spend_cap_exceeded", Chat::Tools.propose_purchase("5", "personal")[:error]
   end
 
+  # A malformed cap is normalised to 0 at boot rather than being carried into
+  # the policy as a string, so this asserts the outcome that protects a buyer:
+  # zero means buying is off, never "no limit".
   test "invalid cap configuration refuses a proposal instead of becoming unlimited" do
-    ENV["CHAT_MAX_SPEND_CENTS"] = "not-a-number"
+    assert_equal 0, PrintwrightSettings.integer_or_zero("not-a-number")
+    set_printwright(chat_max_spend_cents: PrintwrightSettings.integer_or_zero("not-a-number"))
 
     assert_not Chat::PurchasePolicy.enabled?
     assert_equal "purchases_disabled", Chat::Tools.propose_purchase("5", "personal")[:error]

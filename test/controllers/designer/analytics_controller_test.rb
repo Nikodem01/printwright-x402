@@ -146,7 +146,7 @@ class Designer::AnalyticsControllerTest < ActionDispatch::IntegrationTest
   test "a settled-but-not-yet-collected sale counts as settled without invented fulfillment" do
     purchase = Purchase.create!(license_offer: @model.license_offers.first, status: "verified",
       amount_base_units: "1000000", asset: X402::Requirements.usdc_asset,
-      replay_key: SecureRandom.hex(32), requirements_json: { "payTo" => ENV.fetch("X402_PAY_TO") })
+      replay_key: SecureRandom.hex(32), requirements_json: { "payTo" => Rails.configuration.x.printwright.x402_pay_to })
     purchase.transition_to!(:settled)
 
     get designer_analytics_path
@@ -162,7 +162,7 @@ class Designer::AnalyticsControllerTest < ActionDispatch::IntegrationTest
   def delivered_purchase(model, amount: "1000000")
     purchase = Purchase.create!(license_offer: model.license_offers.first, status: "verified",
       amount_base_units: amount, asset: X402::Requirements.usdc_asset,
-      replay_key: SecureRandom.hex(32), requirements_json: { "payTo" => ENV.fetch("X402_PAY_TO") })
+      replay_key: SecureRandom.hex(32), requirements_json: { "payTo" => Rails.configuration.x.printwright.x402_pay_to })
     purchase.transition_to!(:settled)
     purchase.transition_to!(:delivered)
     purchase

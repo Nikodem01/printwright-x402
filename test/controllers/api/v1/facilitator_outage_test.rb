@@ -11,8 +11,6 @@ class Api::V1::FacilitatorOutageTest < ActionDispatch::IntegrationTest
   FACILITATOR = "https://facilitator.test".freeze
 
   setup do
-    ENV["X402_FACILITATOR_URL"] = FACILITATOR
-    ENV["X402_PAY_TO"] = "0.0.9584959"
     FacilitatorClient.reset_cache!
     stub_request(:get, "#{FACILITATOR}/supported").to_timeout
 

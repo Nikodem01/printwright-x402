@@ -5,22 +5,15 @@ require_relative "support/test_wallet_controller"
 class ChatPurchaseTest < ApplicationSystemTestCase
   FACILITATOR = "https://facilitator.test".freeze
   GEMINI = %r{\Ahttps://generativelanguage\.googleapis\.com/v1beta/models/gemini-3\.1-flash-lite:generateContent}
-  ENV_NAMES = %w[
-    GOOGLE_GENERATIVE_AI_API_KEY CHAT_PURCHASES_ENABLED CHAT_MAX_SPEND_CENTS CHAT_DAILY_SPEND_CENTS
-    DEMO_WALLET_URL X402_FACILITATOR_URL X402_PAY_TO X402_DEMO_HBAR_PRICE_CENTS
-  ].freeze
 
   setup do
     WebMock.disable_net_connect!(allow_localhost: true)
-    @old_env = ENV_NAMES.index_with { |name| ENV[name] }
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
-    ENV["CHAT_PURCHASES_ENABLED"] = "true"
-    ENV["CHAT_MAX_SPEND_CENTS"] = "100"
-    ENV["CHAT_DAILY_SPEND_CENTS"] = "500"
-    ENV["DEMO_WALLET_URL"] = "/__test_wallet__"
-    ENV["X402_FACILITATOR_URL"] = FACILITATOR
-    ENV["X402_PAY_TO"] = "0.0.9584959"
-    ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "250"
+    set_printwright(gemini_api_key: "test-key")
+    set_printwright(chat_purchases_enabled: true)
+    set_printwright(chat_max_spend_cents: 100)
+    set_printwright(chat_daily_spend_cents: 500)
+    set_printwright(demo_wallet_url: "/__test_wallet__")
+    set_printwright(demo_hbar_price_cents: "250")
     FacilitatorClient.reset_cache!
     TestWalletController.reset!
 
@@ -56,7 +49,6 @@ class ChatPurchaseTest < ApplicationSystemTestCase
   teardown do
     FacilitatorClient.reset_cache!
     TestWalletController.reset!
-    @old_env.each { |name, value| value.nil? ? ENV.delete(name) : ENV[name] = value }
   end
 
   test "proposal requires one human click then uses the existing wallet and receipt path" do

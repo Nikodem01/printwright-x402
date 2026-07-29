@@ -174,9 +174,10 @@ class RodauthMain < Rodauth::Rails::Auth
     # when credentials are configured (see _omniauth partial). GitHub and Google
     # verify email ownership, so rodauth-omniauth links by email to an existing
     # account or creates a fresh, already-verified one.
-    omniauth_provider :github, ENV["GITHUB_CLIENT_ID"].to_s, ENV["GITHUB_CLIENT_SECRET"].to_s,
+    pw_config = Rails.configuration.x.printwright
+    omniauth_provider :github, pw_config.github_client_id.to_s, pw_config.github_client_secret.to_s,
       scope: "user:email"
-    omniauth_provider :google_oauth2, ENV["GOOGLE_CLIENT_ID"].to_s, ENV["GOOGLE_CLIENT_SECRET"].to_s
+    omniauth_provider :google_oauth2, pw_config.google_client_id.to_s, pw_config.google_client_secret.to_s
 
     before_omniauth_create_account do
       account[:display_name] = omniauth_info["name"].presence || omniauth_email.split("@").first

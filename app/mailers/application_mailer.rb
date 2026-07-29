@@ -1,4 +1,4 @@
 class ApplicationMailer < ActionMailer::Base
-  default from: ENV.fetch("MAIL_FROM", "Printwright <no-reply@printwright.local>")
+  default from: -> { Rails.configuration.x.printwright.mail_from }
   layout "mailer"
 end

@@ -5,8 +5,7 @@ class ModelVersionAnchorJobTest < ActiveJob::TestCase
   SIDECAR = "http://localhost:4021".freeze
 
   setup do
-    ENV["SIDECAR_TOKEN"] = "test-sidecar-token"
-    ENV["HEDERA_SIDECAR_URL"] = SIDECAR
+    set_printwright(sidecar_token: "test-sidecar-token")
     model = Model3d.create!(designer: designers(:one), title: "V", slug: "v-#{SecureRandom.hex(4)}",
       status: "published", file_hash: "sha256:#{'a' * 64}")
     @version = model.model_versions.create!(number: 2, file_kind: "stl",

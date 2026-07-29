@@ -2,8 +2,6 @@ require "test_helper"
 
 class CartsControllerTest < ActionDispatch::IntegrationTest
   setup do
-    @old_pay_to = ENV["X402_PAY_TO"]
-    ENV["X402_PAY_TO"] = "0.0.9584959"
     designer = designers(:one)
     designer.update!(payout_account_verified_at: nil)
     @model = designer.models3d.create!(title: "Cart Controller", slug: "cart-controller", status: "published")
@@ -14,7 +12,6 @@ class CartsControllerTest < ActionDispatch::IntegrationTest
   end
 
   teardown do
-    @old_pay_to.nil? ? ENV.delete("X402_PAY_TO") : ENV["X402_PAY_TO"] = @old_pay_to
   end
 
   test "adds, edits, and removes a storefront batch line" do

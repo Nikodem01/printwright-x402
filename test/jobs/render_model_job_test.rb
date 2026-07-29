@@ -37,11 +37,7 @@ class RenderModelJobTest < ActiveJob::TestCase
 
   private
 
-  def with_fake_openscad
-    previous = ENV["OPENSCAD_BIN"]
-    ENV["OPENSCAD_BIN"] = Rails.root.join("test/fixtures/files/fake_openscad").to_s
-    yield
-  ensure
-    ENV["OPENSCAD_BIN"] = previous
+  def with_fake_openscad(&block)
+    with_printwright(openscad_bin: Rails.root.join("test/fixtures/files/fake_openscad").to_s, &block)
   end
 end

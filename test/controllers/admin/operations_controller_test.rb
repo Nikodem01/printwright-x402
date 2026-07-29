@@ -62,8 +62,7 @@ class Admin::OperationsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "operator can preview and execute the existing payout runner" do
-    ENV["X402_PAY_TO"] = "0.0.9584959"
-    ENV["SIDECAR_TOKEN"] = "test-token"
+    set_printwright(sidecar_token: "test-token")
     admin = designers(:one)
     admin.update!(hedera_account_id: "0.0.9604186")
     admin.update!(payout_account_verified_at: Time.current)
@@ -146,7 +145,6 @@ class Admin::OperationsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "operator panel surfaces reconciliation-required payouts without rerunning them" do
-    ENV["X402_PAY_TO"] = "0.0.9584959"
     admin = designers(:one)
     model = admin.models3d.create!(title: "Ambiguous payout", slug: "ambiguous-payout-#{SecureRandom.hex(4)}")
     offer = model.license_offers.create!(kind: "personal", price_cents: 250)

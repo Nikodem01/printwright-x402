@@ -5,12 +5,11 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
   GEMINI = %r{\Ahttps://generativelanguage\.googleapis\.com/v1beta/models/gemini-3\.1-flash-lite:generateContent}
 
   setup do
-    ENV["CHAT_PURCHASES_ENABLED"] = "false"
-    ENV["CHAT_MAX_SPEND_CENTS"] = "0"
-    ENV["CHAT_DAILY_SPEND_CENTS"] = "0"
-    ENV["CHAT_DAILY_MESSAGE_LIMIT"] = "500"
-    ENV["CHAT_DAILY_VISITOR_MESSAGE_LIMIT"] = "25"
-    ENV["CHAT_DAILY_PROVIDER_CALL_LIMIT"] = "500"
+    set_printwright(chat_purchases_enabled: false)
+    set_printwright(chat_max_spend_cents: 0)
+    set_printwright(chat_daily_spend_cents: 0)
+    set_printwright(chat_daily_visitor_message_limit: "25")
+    set_printwright(chat_daily_provider_call_limit: "500")
   end
 
   teardown do
@@ -34,7 +33,7 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "asking a question shows the tool trace before the answer, and the prices match the API" do
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
+    set_printwright(gemini_api_key: "test-key")
     model = Model3d.create!(
       designer: designers(:one), title: "Cable Clip", slug: "cable-clip-#{SecureRandom.hex(4)}",
       status: "published", file_hash: "sha256:#{'a' * 64}"
@@ -68,11 +67,11 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     end
     assert_turbo_stream action: "replace", target: "chat_form"
   ensure
-    ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
+    set_printwright(gemini_api_key: nil)
   end
 
   test "renders an out-of-scope assistant response without inventing a tool action" do
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
+    set_printwright(gemini_api_key: "test-key")
     stub_request(:post, GEMINI).to_return(
       body: { candidates: [ { content: { parts: [
         { text: "I can help with this marketplace catalog, but not that request." }
@@ -86,7 +85,7 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
       assert_select ".chat-msg-assistant", text: /marketplace catalog/
     end
   ensure
-    ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
+    set_printwright(gemini_api_key: nil)
   end
 
   test "a blank message is a no-op, not an error" do
@@ -116,7 +115,7 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "a long conversation persists in the database while the cookie keeps only its id" do
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
+    set_printwright(gemini_api_key: "test-key")
     # A realistic-sized answer, repeated across many exchanges, is exactly
     # what blew the ~4KB cookie budget in manual testing (CookieOverflow).
     long_answer = "Yes, we have several options for that. " * 15
@@ -135,13 +134,13 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     assert_operator JSON.generate(conversation.turns).bytesize, :<=, ChatConversation::MAX_TURNS_BYTES
     assert_operator response.headers["Set-Cookie"].to_s.bytesize, :<, 4096
   ensure
-    ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
+    set_printwright(gemini_api_key: nil)
   end
 
 
   test "a proposal card uses canonical tool data and creates no purchase before approval" do
     enable_purchases
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
+    set_printwright(gemini_api_key: "test-key")
     stub_request(:post, GEMINI).to_return(
       { body: { candidates: [ { content: { parts: [
           { functionCall: { name: "propose_purchase", args: { id: "5", license_kind: "personal" }, id: "p1" } }
@@ -165,7 +164,7 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     assert_not_requested :get, %r{/download}
     assert_not_requested :post, %r{/sign|/verify|/settle}
   ensure
-    ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
+    set_printwright(gemini_api_key: nil)
   end
 
   test "approval ignores forged purchase parameters and returns the stored cap-checked quote" do
@@ -189,7 +188,7 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "oversized input is rejected before Gemini and chat requests are rate limited" do
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
+    set_printwright(gemini_api_key: "test-key")
     post chat_path, params: { message: "x" * (ChatController::MAX_MESSAGE_BYTES + 1) }, as: :turbo_stream
     assert_response :success
     assert_match(/too long/i, ChatConversation.find(session[:chat_conversation_id]).turns.last.dig("parts", 0, "text"))
@@ -201,12 +200,12 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     assert_response :too_many_requests
     assert_equal "60", response.headers["Retry-After"]
   ensure
-    ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
+    set_printwright(gemini_api_key: nil)
   end
 
   test "the per-visitor daily limit stops one person consuming the shared allowance" do
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
-    ENV["CHAT_DAILY_VISITOR_MESSAGE_LIMIT"] = "1"
+    set_printwright(gemini_api_key: "test-key")
+    set_printwright(chat_daily_visitor_message_limit: "1")
     RateLimitStore.backend = ActiveSupport::Cache::MemoryStore.new
     stub_request(:post, GEMINI).to_return(
       body: { candidates: [ { content: { parts: [ { text: "First answer." } ] } } ] }.to_json,
@@ -220,12 +219,12 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     assert_match(/fair-use limit/i, ChatConversation.find(session[:chat_conversation_id]).turns.last.dig("parts", 0, "text"))
     assert_requested :post, GEMINI, times: 1
   ensure
-    ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
+    set_printwright(gemini_api_key: nil)
   end
 
   test "the global provider-call budget fails closed without another Gemini call" do
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
-    ENV["CHAT_DAILY_PROVIDER_CALL_LIMIT"] = "1"
+    set_printwright(gemini_api_key: "test-key")
+    set_printwright(chat_daily_provider_call_limit: "1")
     RateLimitStore.backend = ActiveSupport::Cache::MemoryStore.new
     stub_request(:post, GEMINI).to_return(
       body: { candidates: [ { content: { parts: [
@@ -245,15 +244,15 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
       ChatConversation.find(session[:chat_conversation_id]).turns.last.dig("parts", 0, "text"))
     assert_requested :post, GEMINI, times: 1
   ensure
-    ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
+    set_printwright(gemini_api_key: nil)
   end
 
   private
 
   def enable_purchases
-    ENV["CHAT_PURCHASES_ENABLED"] = "true"
-    ENV["CHAT_MAX_SPEND_CENTS"] = "500"
-    ENV["CHAT_DAILY_SPEND_CENTS"] = "1000"
+    set_printwright(chat_purchases_enabled: true)
+    set_printwright(chat_max_spend_cents: 500)
+    set_printwright(chat_daily_spend_cents: 1000)
   end
 
   def proposal

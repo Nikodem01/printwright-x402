@@ -11,7 +11,7 @@ module Hedera
     class << self
       # cents per 1 HBAR, as a Rational (mirror gives cent/hbar equivalents).
       def cents_per_hbar
-        if (pin = ENV["X402_DEMO_HBAR_PRICE_CENTS"].presence)
+        if (pin = Rails.configuration.x.printwright.demo_hbar_price_cents)
           return Rational(Integer(pin))
         end
         refresh if @fetched_at.nil? || @fetched_at < TTL.ago

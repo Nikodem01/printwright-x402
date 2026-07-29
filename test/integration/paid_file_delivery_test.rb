@@ -12,9 +12,7 @@ class PaidFileDeliveryTest < ActionDispatch::IntegrationTest
   PART_B = "solid part-b\nfacet normal 0 1 0\nendsolid part-b\n".freeze
 
   setup do
-    ENV["X402_FACILITATOR_URL"] = FACILITATOR
-    ENV["X402_PAY_TO"] = "0.0.9584959"
-    ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "250"
+    set_printwright(demo_hbar_price_cents: "250")
     FacilitatorClient.reset_cache!
     stub_request(:get, "#{FACILITATOR}/supported")
       .to_return(body: fixture("supported.json"), headers: { "content-type" => "application/json" })

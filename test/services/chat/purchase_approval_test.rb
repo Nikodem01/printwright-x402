@@ -6,17 +6,10 @@ class Chat::PurchaseApprovalTest < ActiveSupport::TestCase
   PURCHASE_PATH = "/api/v1/models/5/download?license=personal"
 
   setup do
-    @old_env = ENV.values_at("CHAT_PURCHASES_ENABLED", "CHAT_MAX_SPEND_CENTS", "CHAT_DAILY_SPEND_CENTS")
-    ENV["CHAT_PURCHASES_ENABLED"] = "true"
-    ENV["CHAT_MAX_SPEND_CENTS"] = "500"
-    ENV["CHAT_DAILY_SPEND_CENTS"] = "1000"
+    set_printwright(chat_purchases_enabled: true)
+    set_printwright(chat_max_spend_cents: 500)
+    set_printwright(chat_daily_spend_cents: 1000)
     @conversation = ChatConversation.create!(purchase_proposal: proposal)
-  end
-
-  teardown do
-    %w[CHAT_PURCHASES_ENABLED CHAT_MAX_SPEND_CENTS CHAT_DAILY_SPEND_CENTS].zip(@old_env).each do |name, value|
-      value.nil? ? ENV.delete(name) : ENV[name] = value
-    end
   end
 
   test "approval reserves budget and returns an exact-USDC quote plus signed route intent" do
@@ -46,14 +39,14 @@ class Chat::PurchaseApprovalTest < ActiveSupport::TestCase
   end
 
   test "disabled, expired, stale-price, and over-cap proposals fail before signing" do
-    ENV["CHAT_PURCHASES_ENABLED"] = "false"
+    set_printwright(chat_purchases_enabled: false)
     error = assert_raises(Chat::PurchaseApproval::Failure) do
       Chat::PurchaseApproval.call(conversation: @conversation, base_url: BASE_URL)
     end
     assert_equal "purchases_disabled", error.code
     assert_not_requested :get, "#{BASE_URL}#{PURCHASE_PATH}"
 
-    ENV["CHAT_PURCHASES_ENABLED"] = "true"
+    set_printwright(chat_purchases_enabled: true)
     @conversation.update!(purchase_proposal: proposal.merge("expires_at" => 1.minute.ago.iso8601))
     error = assert_raises(Chat::PurchaseApproval::Failure) do
       Chat::PurchaseApproval.call(conversation: @conversation, base_url: BASE_URL)
@@ -147,9 +140,9 @@ class Chat::PurchaseApprovalConcurrencyTest < ActiveSupport::TestCase
 
   setup do
     ChatConversation.delete_all
-    ENV["CHAT_PURCHASES_ENABLED"] = "true"
-    ENV["CHAT_MAX_SPEND_CENTS"] = "100"
-    ENV["CHAT_DAILY_SPEND_CENTS"] = "100"
+    set_printwright(chat_purchases_enabled: true)
+    set_printwright(chat_max_spend_cents: 100)
+    set_printwright(chat_daily_spend_cents: 100)
   end
 
   teardown do

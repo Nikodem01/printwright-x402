@@ -2,7 +2,6 @@ require "application_system_test_case"
 
 class DesignerMoneyTest < ApplicationSystemTestCase
   test "Sales, Payouts, and Analytics remain readable without page-level overflow" do
-    ENV["X402_PAY_TO"] = "0.0.9584959"
     designer = designers(:two)
     designer.update!(hedera_account_id: "0.0.7007")
     designer.update!(payout_account_verified_at: Time.current,

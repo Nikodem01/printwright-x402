@@ -2,7 +2,6 @@ require "test_helper"
 
 class LedgerEntryTest < ActiveSupport::TestCase
   setup do
-    ENV["X402_PAY_TO"] = "0.0.9584959"
     model = Model3d.create!(
       designer: designers(:one), title: "Ledger Test", slug: "ledger-test-#{SecureRandom.hex(4)}"
     )
@@ -73,14 +72,14 @@ class LedgerEntryTest < ActiveSupport::TestCase
   end
 
   test "payTo=treasury marks both legs held_by treasury (share is owed)" do
-    @purchase.update!(requirements_json: { "payTo" => ENV.fetch("X402_PAY_TO", "0.0.9584959") })
+    @purchase.update!(requirements_json: { "payTo" => Rails.configuration.x.printwright.x402_pay_to })
     @purchase.transition_to!(:settled)
 
     assert_equal %w[treasury treasury], LedgerEntry.where(purchase: @purchase).pluck(:held_by)
   end
 
   test "a designer claiming the treasury id still books as treasury" do
-    treasury = ENV.fetch("X402_PAY_TO", "0.0.9584959")
+    treasury = Rails.configuration.x.printwright.x402_pay_to
     @offer.model3d.designer.update!(hedera_account_id: treasury)
     @purchase.update!(requirements_json: { "payTo" => treasury })
     @purchase.transition_to!(:settled)

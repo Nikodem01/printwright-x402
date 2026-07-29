@@ -1,0 +1,84 @@
+# Every deployment-specific value the product itself needs, in one place.
+#
+# Read through Rails.configuration.x.printwright — application code never
+# reaches for ENV directly, so a value cannot drift between the two files that
+# happen to use it, and this list is the whole answer to "what can be
+# configured?".
+#
+# Rules for this file:
+#   * Public identifiers and endpoints carry a working testnet default, so a
+#     fresh clone runs with no configuration at all.
+#   * Secrets carry NO default. They resolve to nil when unset, and
+#     config/initializers/printwright_config.rb refuses to boot production
+#     without them. A default here would be a credential in git.
+#   * Values stay raw here; typing and validation happen in that initializer.
+shared:
+  # --- Hedera ---------------------------------------------------------------
+  hedera_network: <%= ENV.fetch("HEDERA_NETWORK", "testnet") %>
+  # The license topic every certificate anchors to.
+  hcs_topic_id: <%= ENV.fetch("HEDERA_HCS_TOPIC_ID", "0.0.9585069") %>
+  # Blank means "derive from hedera_network", which is what keeps mainnet and
+  # testnet reads pointed at their own mirror without a second setting.
+  mirror_node_url: <%= ENV["MIRROR_NODE_URL"] %>
+  sidecar_url: <%= ENV.fetch("HEDERA_SIDECAR_URL", "http://localhost:4021") %>
+  sidecar_token: <%= ENV["SIDECAR_TOKEN"] %>
+
+  # --- x402 -----------------------------------------------------------------
+  # The treasury every payment lands in. No default anywhere but test: paying
+  # to the wrong account is worse than refusing to start.
+  x402_pay_to: <%= ENV["X402_PAY_TO"] %>
+  x402_facilitator_url: <%= ENV.fetch("X402_FACILITATOR_URL", "https://api.testnet.blocky402.com") %>
+  # Pins the HBAR price used in demos instead of the live exchange rate.
+  demo_hbar_price_cents: <%= ENV["X402_DEMO_HBAR_PRICE_CENTS"] %>
+
+  # --- Buyer-facing ---------------------------------------------------------
+  base_url: <%= ENV.fetch("PRINTWRIGHT_URL", "http://localhost:3000") %>
+  # A browser wallet exists only when WalletConnect is configured; checkout
+  # says so plainly when it is not.
+  walletconnect_project_id: <%= ENV["WALLETCONNECT_PROJECT_ID"] %>
+  # The local demo signer, for exercising browser checkout with no extension.
+  demo_wallet_url: <%= ENV["DEMO_WALLET_URL"] %>
+
+  # --- Sign-in providers (secrets: no defaults) -----------------------------
+  github_client_id: <%= ENV["GITHUB_CLIENT_ID"] %>
+  github_client_secret: <%= ENV["GITHUB_CLIENT_SECRET"] %>
+  google_client_id: <%= ENV["GOOGLE_CLIENT_ID"] %>
+  google_client_secret: <%= ENV["GOOGLE_CLIENT_SECRET"] %>
+
+  # --- Shopkeeper chat ------------------------------------------------------
+  gemini_api_key: <%= ENV["GOOGLE_GENERATIVE_AI_API_KEY"] %>
+  # Chat spending is fail-closed: it needs an explicit opt-in AND a positive
+  # cap, so a half-configured deployment can search but never buy.
+  chat_purchases_enabled: <%= ENV["CHAT_PURCHASES_ENABLED"] %>
+  chat_max_spend_cents: <%= ENV["CHAT_MAX_SPEND_CENTS"] %>
+  chat_daily_spend_cents: <%= ENV["CHAT_DAILY_SPEND_CENTS"] %>
+  chat_daily_visitor_message_limit: <%= ENV["CHAT_DAILY_VISITOR_MESSAGE_LIMIT"] %>
+  chat_daily_provider_call_limit: <%= ENV["CHAT_DAILY_PROVIDER_CALL_LIMIT"] %>
+
+  # --- Rendering ------------------------------------------------------------
+  openscad_bin: <%= ENV.fetch("OPENSCAD_BIN", "openscad") %>
+
+  # --- Mail -----------------------------------------------------------------
+  mail_from: <%= ENV.fetch("MAIL_FROM", "Printwright <no-reply@printwright.local>") %>
+
+  # --- Database backups -----------------------------------------------------
+  # config/storage.yml collects the same S3 settings for Active Storage; it is
+  # left alone because Active Storage owns that file. These exist so the backup
+  # service does not repeat the reads and defaults in application code.
+  backup_s3_prefix: <%= ENV.fetch("BACKUP_S3_PREFIX", "database-backups") %>
+  backup_s3_bucket: <%= ENV["BACKUP_S3_BUCKET"].presence || ENV["S3_BUCKET"] %>
+  s3_endpoint: <%= ENV["S3_ENDPOINT"] %>
+  s3_region: <%= ENV.fetch("S3_REGION", "us-east-1") %>
+  s3_access_key_id: <%= ENV["S3_ACCESS_KEY_ID"] %>
+  s3_secret_access_key: <%= ENV["S3_SECRET_ACCESS_KEY"] %>
+  s3_force_path_style: <%= ENV.fetch("S3_FORCE_PATH_STYLE", "false") %>
+
+test:
+  # The suite is hermetic: it must not depend on a developer's .env, and CI
+  # must not have to supply anything. These are the fixed values the tests
+  # assert against; individual cases override them with `with_printwright`.
+  x402_pay_to: "0.0.9584959"
+  x402_facilitator_url: https://facilitator.test
+  sidecar_url: http://localhost:4021
+  hcs_topic_id: "0.0.9585069"
+  base_url: http://localhost:3000

@@ -11,7 +11,7 @@ module Search
     DIMENSIONS = 768
     TIMEOUT_SECONDS = 3
 
-    def initialize(api_key: ENV["GOOGLE_GENERATIVE_AI_API_KEY"])
+    def initialize(api_key: Rails.configuration.x.printwright.gemini_api_key)
       @api_key = api_key
     end
 

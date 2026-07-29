@@ -8,7 +8,7 @@ class SidecarClient
 
   TIMEOUT_SECONDS = 15
 
-  def initialize(url: ENV.fetch("HEDERA_SIDECAR_URL", "http://localhost:4021"))
+  def initialize(url: Rails.configuration.x.printwright.sidecar_url)
     @base = URI(url)
   end
 
@@ -51,7 +51,7 @@ class SidecarClient
 
   def post(path, payload, ambiguous_on_response_loss: false)
     req = Net::HTTP::Post.new(path, "content-type" => "application/json")
-    req["Authorization"] = "Bearer #{ENV.fetch('SIDECAR_TOKEN')}"
+    req["Authorization"] = "Bearer #{Rails.configuration.x.printwright.sidecar_token!}"
     req.body = JSON.generate(payload)
 
     response = Net::HTTP.start(

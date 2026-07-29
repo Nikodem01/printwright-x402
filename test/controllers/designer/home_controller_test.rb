@@ -3,7 +3,6 @@ require "webmock/minitest"
 
 class Designer::HomeControllerTest < ActionDispatch::IntegrationTest
   setup do
-    ENV["X402_PAY_TO"] = "0.0.9584959"
     stub_request(:get, %r{api\.pwnedpasswords\.com/range/}).to_return(status: 200, body: "")
     @designer = designers(:two)
     sign_in_as @designer
@@ -215,7 +214,7 @@ class Designer::HomeControllerTest < ActionDispatch::IntegrationTest
     offer = model.license_offers.first
     purchase = Purchase.create!(license_offer: offer, status: "verified", amount_base_units: amount,
       asset: X402::Requirements.usdc_asset, replay_key: SecureRandom.hex(32), buyer_hint: buyer_hint,
-      requirements_json: { "payTo" => ENV.fetch("X402_PAY_TO") })
+      requirements_json: { "payTo" => Rails.configuration.x.printwright.x402_pay_to })
     purchase.transition_to!(:settled)
     purchase.transition_to!(:delivered)
     purchase

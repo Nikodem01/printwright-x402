@@ -5,7 +5,6 @@ class Purchases::ReaperTest < ActiveSupport::TestCase
   MIRROR = "https://testnet.mirrornode.hedera.com".freeze
 
   setup do
-    ENV["X402_PAY_TO"] = "0.0.9584959"
     model = Model3d.create!(designer: designers(:one), title: "Reap", slug: "reap-#{SecureRandom.hex(4)}")
     @offer = model.license_offers.create!(kind: "personal", price_cents: 250)
     stub_request(:get, "#{MIRROR}/api/v1/network/nodes?limit=1").to_return(status: 200, body: "{}")

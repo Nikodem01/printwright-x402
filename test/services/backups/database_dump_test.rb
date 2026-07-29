@@ -7,13 +7,7 @@ class Backups::DatabaseDumpTest < ActiveSupport::TestCase
   FakeConfig = Data.define(:database, :host, :configuration_hash)
 
   setup do
-    @env_was = %w[BACKUP_S3_BUCKET BACKUP_S3_PREFIX S3_BUCKET].index_with { |name| ENV[name] }
-    ENV["S3_BUCKET"] = "private-models"
-    ENV["BACKUP_S3_PREFIX"] = "database-backups"
-  end
-
-  teardown do
-    @env_was.each { |name, value| value.nil? ? ENV.delete(name) : ENV[name] = value }
+    set_printwright(backup_s3_bucket: "private-models", backup_s3_prefix: "database-backups")
   end
 
   test "creates a custom dump without putting the password in argv and uploads it encrypted" do
@@ -50,7 +44,7 @@ class Backups::DatabaseDumpTest < ActiveSupport::TestCase
   end
 
   test "refuses a traversal backup prefix before uploading" do
-    ENV["BACKUP_S3_PREFIX"] = "../outside"
+    set_printwright(backup_s3_prefix: "../outside")
     runner = Object.new
     runner.define_singleton_method(:capture3) do |_environment, *arguments|
       File.binwrite(arguments.fetch(arguments.index("--file") + 1), "PGDMP")

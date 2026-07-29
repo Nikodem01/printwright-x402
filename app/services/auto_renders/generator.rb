@@ -23,7 +23,7 @@ module AutoRenders
       # cover image rendered inside a publish request — does not wait for all
       # twelve, and can hold a shorter timeout while it does.
       def call(bytes:, views: VIEWS, timeout: DEFAULT_TIMEOUT,
-               executable: ENV.fetch("OPENSCAD_BIN", "openscad"))
+               executable: Rails.configuration.x.printwright.openscad_bin)
         Dir.mktmpdir("printwright-render-") do |directory|
           source = File.join(directory, "source.stl")
           scene = File.join(directory, "scene.scad")

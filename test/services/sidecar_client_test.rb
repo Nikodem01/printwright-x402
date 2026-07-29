@@ -4,7 +4,7 @@ require "webmock/minitest"
 class SidecarClientTest < ActiveSupport::TestCase
   SIDECAR = "http://localhost:4021".freeze
 
-  setup { ENV["SIDECAR_TOKEN"] = "test-token" }
+  setup { set_printwright(sidecar_token: "test-token") }
 
   test "payout treats a sidecar Hedera error as an ambiguous transfer result" do
     stub_request(:post, "#{SIDECAR}/payout")

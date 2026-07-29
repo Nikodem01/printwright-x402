@@ -5,8 +5,7 @@ class CertMintJobTest < ActiveJob::TestCase
   SIDECAR = "http://localhost:4021".freeze
 
   setup do
-    ENV["SIDECAR_TOKEN"] = "test-sidecar-token"
-    ENV["HEDERA_SIDECAR_URL"] = SIDECAR
+    set_printwright(sidecar_token: "test-sidecar-token")
     model = Model3d.create!(
       designer: designers(:one), title: "C", slug: "c-#{SecureRandom.hex(4)}",
       file_hash: "sha256:abc", status: "published"

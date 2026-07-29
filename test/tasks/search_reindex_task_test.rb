@@ -8,7 +8,6 @@ class SearchReindexTaskTest < ActiveSupport::TestCase
   setup do
     Rails.application.load_tasks unless Rake::Task.task_defined?("search:reindex")
     Rake::Task["search:reindex"].reenable
-    @was_key = ENV["GOOGLE_GENERATIVE_AI_API_KEY"]
     @model = Model3d.create!(
       designer: designers(:one), title: "Reindex Me", slug: "ri-#{SecureRandom.hex(4)}",
       description: "A model for the reindex task test.", tags: %w[reindex]
@@ -16,7 +15,6 @@ class SearchReindexTaskTest < ActiveSupport::TestCase
   end
 
   teardown do
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = @was_key
     ENV.delete("FORCE")
   end
 
@@ -27,14 +25,14 @@ class SearchReindexTaskTest < ActiveSupport::TestCase
   end
 
   test "no API key: no-op, no request" do
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = nil
+    set_printwright(gemini_api_key: nil)
     run_task
     assert_nil @model.reload.embedding
     assert_not_requested :post, ENDPOINT
   end
 
   test "embeds the catalog, then skips unchanged models on a re-run (idempotent)" do
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
+    set_printwright(gemini_api_key: "test-key")
     vector = Array.new(768) { 0.4 }
     stub_request(:post, ENDPOINT)
       .to_return(body: JSON.generate(embedding: { values: vector }), headers: { "content-type" => "application/json" })
@@ -48,7 +46,7 @@ class SearchReindexTaskTest < ActiveSupport::TestCase
   end
 
   test "FORCE=1 re-embeds even when the text hasn't changed" do
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
+    set_printwright(gemini_api_key: "test-key")
     vector = Array.new(768) { 0.4 }
     stub_request(:post, ENDPOINT)
       .to_return(body: JSON.generate(embedding: { values: vector }), headers: { "content-type" => "application/json" })

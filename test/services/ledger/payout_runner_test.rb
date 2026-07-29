@@ -5,8 +5,7 @@ class Ledger::PayoutRunnerTest < ActiveSupport::TestCase
   SIDECAR = "http://localhost:4021".freeze
 
   setup do
-    ENV["X402_PAY_TO"] = "0.0.9584959"
-    ENV["SIDECAR_TOKEN"] = "test-token"
+    set_printwright(sidecar_token: "test-token")
     @paid_designer = designers(:one)
     @paid_designer.update!(hedera_account_id: "0.0.9604186")
     @paid_designer.update!(payout_account_verified_at: Time.current)

@@ -19,7 +19,8 @@ Rails.application.configure do
       https://explorer-api.walletconnect.com
     ]
     connect_sources = [ :self, *wallet_connect ]
-    connect_sources << ENV["DEMO_WALLET_URL"] if ENV["DEMO_WALLET_URL"].present?
+    demo_wallet_url = Rails.configuration.x.printwright.demo_wallet_url
+    connect_sources << demo_wallet_url if demo_wallet_url.present?
     policy.default_src :self
     policy.font_src    :self, "https://fonts.reown.com"
     policy.img_src     :self, :data, :blob,

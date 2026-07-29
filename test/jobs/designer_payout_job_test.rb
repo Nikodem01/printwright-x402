@@ -9,8 +9,7 @@ class DesignerPayoutJobTest < ActiveJob::TestCase
   SIDECAR = "http://localhost:4021".freeze
 
   setup do
-    ENV["X402_PAY_TO"] = "0.0.9584959"
-    ENV["SIDECAR_TOKEN"] = "test-token"
+    set_printwright(sidecar_token: "test-token")
     @designer = designers(:one)
     @designer.update!(hedera_account_id: "0.0.9604186") # separate updates: setting the
     @designer.update!(payout_account_verified_at: Time.current) # account id resets verification

@@ -51,7 +51,7 @@ module Backups
 
     def object_key
       @object_key ||= begin
-        prefix = ENV.fetch("BACKUP_S3_PREFIX", "database-backups").delete_prefix("/").delete_suffix("/")
+        prefix = config.backup_s3_prefix.to_s.delete_prefix("/").delete_suffix("/")
         raise Error, "BACKUP_S3_PREFIX is invalid" if prefix.blank? || prefix.include?("..")
 
         "#{prefix}/printwright-#{clock.now.utc.strftime('%Y%m%dT%H%M%SZ')}.dump"
@@ -59,7 +59,11 @@ module Backups
     end
 
     def bucket
-      ENV["BACKUP_S3_BUCKET"].presence || ENV.fetch("S3_BUCKET")
+      config.backup_s3_bucket!
+    end
+
+    def config
+      Rails.configuration.x.printwright
     end
 
     def client
@@ -68,11 +72,11 @@ module Backups
 
     def s3_options
       {
-        endpoint: ENV["S3_ENDPOINT"].presence,
-        region: ENV.fetch("S3_REGION", "us-east-1"),
-        access_key_id: ENV.fetch("S3_ACCESS_KEY_ID"),
-        secret_access_key: ENV.fetch("S3_SECRET_ACCESS_KEY"),
-        force_path_style: ENV.fetch("S3_FORCE_PATH_STYLE", "false") == "true"
+        endpoint: config.s3_endpoint,
+        region: config.s3_region,
+        access_key_id: config.s3_access_key_id!,
+        secret_access_key: config.s3_secret_access_key!,
+        force_path_style: config.s3_force_path_style
       }.compact
     end
 

@@ -10,12 +10,12 @@ class Hedera::ExchangeRateTest < ActiveSupport::TestCase
   end
 
   teardown do
-    ENV["X402_DEMO_HBAR_PRICE_CENTS"] = @pin_was
+    set_printwright(demo_hbar_price_cents: @pin_was)
     Hedera::ExchangeRate.reset!
   end
 
   test "env pin overrides the live rate" do
-    ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "25"
+    set_printwright(demo_hbar_price_cents: "25")
     assert_equal Rational(25), Hedera::ExchangeRate.cents_per_hbar
     assert_equal 100_000_000, Hedera::ExchangeRate.tinybars_for_cents(25) # 25c = 1 hbar
   end

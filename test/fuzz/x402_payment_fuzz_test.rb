@@ -6,8 +6,7 @@ class X402PaymentFuzzTest < ActiveSupport::TestCase
   ITERATIONS = 2_000
 
   setup do
-    ENV["X402_PAY_TO"] = "0.0.9584959"
-    ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "250"
+    set_printwright(demo_hbar_price_cents: "250")
     @model = Model3d.create!(
       designer: designers(:one), title: "Fuzz model", slug: "fuzz-#{SecureRandom.hex(4)}"
     )

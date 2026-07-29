@@ -5,15 +5,13 @@ class EmbedModelJobTest < ActiveSupport::TestCase
   ENDPOINT = %r{\Ahttps://generativelanguage\.googleapis\.com/v1beta/models/gemini-embedding-001:embedContent}
 
   setup do
-    @was_key = ENV["GOOGLE_GENERATIVE_AI_API_KEY"]
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = "test-key"
+    set_printwright(gemini_api_key: "test-key")
     @model = Model3d.create!(
       designer: designers(:one), title: "Snap Cable Clip", slug: "clip-#{SecureRandom.hex(4)}",
       description: "Snap-fit cable clip.", tags: %w[cable clip], status: "published"
     )
   end
 
-  teardown { ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = @was_key }
 
   def stub_embedding(vector = Array.new(768) { 0.2 })
     stub_request(:post, ENDPOINT)
@@ -51,7 +49,7 @@ class EmbedModelJobTest < ActiveSupport::TestCase
   end
 
   test "no API key: no-op, no request" do
-    ENV["GOOGLE_GENERATIVE_AI_API_KEY"] = nil
+    set_printwright(gemini_api_key: nil)
     EmbedModelJob.perform_now(@model.id)
     assert_nil @model.reload.embedding
     assert_not_requested :post, ENDPOINT

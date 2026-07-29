@@ -10,7 +10,7 @@ module Chat
     TIMEOUT_SECONDS = 15
     MAX_RESPONSE_BYTES = 32.kilobytes
 
-    def initialize(api_key: ENV["GOOGLE_GENERATIVE_AI_API_KEY"])
+    def initialize(api_key: Rails.configuration.x.printwright.gemini_api_key)
       @api_key = api_key
     end
 

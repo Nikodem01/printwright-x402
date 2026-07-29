@@ -6,7 +6,7 @@ class Designer::PayoutDestinationsControllerTest < ActionDispatch::IntegrationTe
   MIRROR = "https://testnet.mirrornode.hedera.com".freeze
 
   setup do
-    ENV["SIDECAR_TOKEN"] = "test-token"
+    set_printwright(sidecar_token: "test-token")
     @designer = designers(:two)
     @designer.update!(hedera_account_id: nil, payout_account_verified_at: nil)
     clear_enqueued_jobs

@@ -11,16 +11,10 @@ class CheckoutTest < ApplicationSystemTestCase
 
   FACILITATOR = "https://facilitator.test".freeze
 
-  # Saved/restored around each test so a value in the developer's shell survives.
-  X402_ENV = %w[X402_FACILITATOR_URL X402_PAY_TO X402_DEMO_HBAR_PRICE_CENTS DEMO_WALLET_URL TEST_WALLET_MODE].freeze
-
   setup do
     WebMock.disable_net_connect!(allow_localhost: true)
-    @env_was = X402_ENV.index_with { |k| ENV[k] }
-    ENV["DEMO_WALLET_URL"] = "/__test_wallet__"
-    ENV["X402_FACILITATOR_URL"] = FACILITATOR
-    ENV["X402_PAY_TO"] = "0.0.9584959"
-    ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "250" # 25c offer => exactly 0.1 HBAR, matching the fixture
+    set_printwright(demo_wallet_url: "/__test_wallet__")
+    set_printwright(demo_hbar_price_cents: "250") # 25c offer => exactly 0.1 HBAR, matching the fixture
     FacilitatorClient.reset_cache!
     TestWalletController.reset!
     ActionMailer::Base.deliveries.clear
@@ -39,7 +33,6 @@ class CheckoutTest < ApplicationSystemTestCase
   teardown do
     FacilitatorClient.reset_cache!
     TestWalletController.reset!
-    @env_was.each { |k, v| v.nil? ? ENV.delete(k) : ENV[k] = v }
   end
 
   test "buying in the browser walks the x402 states and lands on a receipt" do
@@ -130,7 +123,8 @@ class CheckoutTest < ApplicationSystemTestCase
   # they could not have taken — and it appeared alongside the true reason, which
   # contradicted it. Only the configuration statement is true here.
   test "an unconfigured wallet says so instead of blaming the buyer for declining" do
-    ENV.delete("DEMO_WALLET_URL") # and no WALLETCONNECT_PROJECT_ID, so no loader is attached
+    # and no walletconnect_project_id, so no loader is attached either
+    set_printwright(demo_wallet_url: nil)
 
     visit model_page_path(@model.slug)
     assert_no_changes -> { Purchase.count } do

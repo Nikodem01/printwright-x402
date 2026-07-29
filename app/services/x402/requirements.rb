@@ -14,7 +14,9 @@ module X402
     # x402 rail can't split at source (V1 kill-test), so the split lives in the
     # ledger, not on the settle transaction.
     def self.pay_to_for(_offer)
-      ENV.fetch("X402_PAY_TO")
+      # Bang: a blank treasury must raise, never quietly become a challenge
+      # that asks a buyer to pay nobody.
+      Rails.configuration.x.printwright.x402_pay_to!
     end
     USDC_BASE_UNITS_PER_CENT = 10_000 # 6 decimals: $0.01 = 10_000 units
     MAX_TIMEOUT_SECONDS = 180

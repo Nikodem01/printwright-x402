@@ -52,7 +52,7 @@ class FacilitatorClient
     breaker_ok!
   end
 
-  def initialize(url: ENV.fetch("X402_FACILITATOR_URL", "https://api.testnet.blocky402.com"))
+  def initialize(url: Rails.configuration.x.printwright.x402_facilitator_url)
     @base = URI(url)
   end
 

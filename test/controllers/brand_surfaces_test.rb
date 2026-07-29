@@ -70,8 +70,7 @@ class BrandSurfacesTest < ActionDispatch::IntegrationTest
   end
 
   test "configured browser wallet is local, lazy, and names its Hedera network" do
-    previous = ENV["WALLETCONNECT_PROJECT_ID"]
-    ENV["WALLETCONNECT_PROJECT_ID"] = "public-test-project"
+    set_printwright(walletconnect_project_id: "public-test-project")
 
     get root_url
 
@@ -80,8 +79,6 @@ class BrandSurfacesTest < ActionDispatch::IntegrationTest
     assert_select '[data-hedera-wallet][data-network="testnet"]'
     assert_select "button[data-wallet-connect]", text: "Connect wallet"
     assert_no_match(/<script[^>]+src=[^>]+hedera_wallet/, response.body)
-  ensure
-    ENV["WALLETCONNECT_PROJECT_ID"] = previous
   end
 
   test "generated brand images retain their contract dimensions" do

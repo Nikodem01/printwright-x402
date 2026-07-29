@@ -6,8 +6,7 @@ class OpenBooks::SnapshotTest < ActiveSupport::TestCase
   MIRROR = "https://testnet.mirrornode.hedera.com"
 
   setup do
-    @old_topic = ENV["HEDERA_HCS_TOPIC_ID"]
-    ENV["HEDERA_HCS_TOPIC_ID"] = TOPIC
+    set_printwright(hcs_topic_id: TOPIC)
     Rails.cache.clear
     model = Model3d.create!(
       designer: designers(:one), title: "Open books", slug: "open-books-#{SecureRandom.hex(4)}"
@@ -24,7 +23,6 @@ class OpenBooks::SnapshotTest < ActiveSupport::TestCase
   end
 
   teardown do
-    ENV["HEDERA_HCS_TOPIC_ID"] = @old_topic
     Rails.cache.clear
   end
 

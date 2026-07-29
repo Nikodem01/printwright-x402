@@ -3,7 +3,6 @@ require "csv"
 
 class Designer::SalesControllerTest < ActionDispatch::IntegrationTest
   setup do
-    ENV["X402_PAY_TO"] = "0.0.9584959"
     @designer = designers(:one)
     @designer.update!(hedera_account_id: "0.0.9604186")
     model = Model3d.create!(designer: @designer, title: "Ledger Lamp", slug: "lamp-#{SecureRandom.hex(4)}")

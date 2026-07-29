@@ -18,12 +18,13 @@ module Chat
     end
 
     def daily_visitor_messages
-      positive_integer_env("CHAT_DAILY_VISITOR_MESSAGE_LIMIT", DEFAULT_DAILY_VISITOR_MESSAGES)
+      positive_integer(Rails.configuration.x.printwright.chat_daily_visitor_message_limit,
+        DEFAULT_DAILY_VISITOR_MESSAGES)
     end
 
     def daily_provider_calls
-      value = ENV["CHAT_DAILY_PROVIDER_CALL_LIMIT"] || ENV["CHAT_DAILY_MESSAGE_LIMIT"]
-      positive_integer(value, DEFAULT_DAILY_PROVIDER_CALLS)
+      positive_integer(Rails.configuration.x.printwright.chat_daily_provider_call_limit,
+        DEFAULT_DAILY_PROVIDER_CALLS)
     end
 
     def visitor_limit_message
@@ -38,11 +39,6 @@ module Chat
       count.nil? || count <= limit
     end
     private_class_method :consume
-
-    def positive_integer_env(name, default)
-      positive_integer(ENV[name], default)
-    end
-    private_class_method :positive_integer_env
 
     def positive_integer(value, default)
       value = default.to_s if value.nil?

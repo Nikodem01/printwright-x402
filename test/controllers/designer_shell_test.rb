@@ -50,8 +50,7 @@ class DesignerShellTest < ActionDispatch::IntegrationTest
   end
 
   test "designer payout pages keep the local wallet loader without a buyer wallet control" do
-    previous = ENV["WALLETCONNECT_PROJECT_ID"]
-    ENV["WALLETCONNECT_PROJECT_ID"] = "public-test-project"
+    set_printwright(walletconnect_project_id: "public-test-project")
 
     get designer_payouts_path
 
@@ -60,7 +59,5 @@ class DesignerShellTest < ActionDispatch::IntegrationTest
     assert_select 'body[data-wallet-loader-module-url-value*="hedera_wallet"]'
     assert_select "[data-hedera-wallet]", count: 0
     assert_select "form[action=?]", designer_payout_destination_path
-  ensure
-    ENV["WALLETCONNECT_PROJECT_ID"] = previous
   end
 end

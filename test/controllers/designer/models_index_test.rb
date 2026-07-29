@@ -74,7 +74,7 @@ class Designer::ModelsIndexTest < ActionDispatch::IntegrationTest
     offer = @published.license_offers.create!(kind: "personal", price_cents: 250)
     purchase = Purchase.create!(license_offer: offer, status: "verified", buyer_hint: "0.0.777888",
       amount_base_units: "250000", asset: X402::Requirements.usdc_asset,
-      replay_key: SecureRandom.hex(32), requirements_json: { "payTo" => ENV.fetch("X402_PAY_TO") })
+      replay_key: SecureRandom.hex(32), requirements_json: { "payTo" => Rails.configuration.x.printwright.x402_pay_to })
     purchase.transition_to!(:settled)
     License.allocate!(purchase)
     purchase.transition_to!(:delivered)

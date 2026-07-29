@@ -5,9 +5,7 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
   FACILITATOR = "https://facilitator.test".freeze
 
   setup do
-    ENV["X402_FACILITATOR_URL"] = FACILITATOR
-    ENV["X402_PAY_TO"] = "0.0.9584959"
-    ENV["X402_DEMO_HBAR_PRICE_CENTS"] = "250"
+    set_printwright(demo_hbar_price_cents: "250")
     FacilitatorClient.reset_cache!
     stub_request(:get, "#{FACILITATOR}/supported").to_return(
       body: file_fixture("x402/supported.json").read,

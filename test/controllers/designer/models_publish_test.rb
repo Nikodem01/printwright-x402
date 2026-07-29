@@ -40,15 +40,12 @@ class Designer::ModelsPublishTest < ActionDispatch::IntegrationTest
     attach_stl(@model, box_stl)
     analyze!
 
-    previous = ENV["OPENSCAD_BIN"]
-    ENV["OPENSCAD_BIN"] = "/nonexistent/openscad"
+    set_printwright(openscad_bin: "/nonexistent/openscad")
     publish!
 
     assert_predicate @model.reload, :draft?
     follow_redirect!
     assert_match(/preview image/i, response.body)
-  ensure
-    ENV["OPENSCAD_BIN"] = previous
   end
 
   test "a designer image publishes without invoking the renderer at all" do
@@ -58,23 +55,16 @@ class Designer::ModelsPublishTest < ActionDispatch::IntegrationTest
                        filename: "designer.png", content_type: "image/png")
     analyze!
 
-    previous = ENV["OPENSCAD_BIN"]
-    ENV["OPENSCAD_BIN"] = "/nonexistent/openscad"
+    set_printwright(openscad_bin: "/nonexistent/openscad")
     publish!
 
     assert_predicate @model.reload, :published?
     assert_equal [ "designer.png" ], @model.render_files.map { |file| file.file.filename.to_s }
-  ensure
-    ENV["OPENSCAD_BIN"] = previous
   end
 
   private
 
-  def with_fake_openscad
-    previous = ENV["OPENSCAD_BIN"]
-    ENV["OPENSCAD_BIN"] = Rails.root.join("test/fixtures/files/fake_openscad").to_s
-    yield
-  ensure
-    ENV["OPENSCAD_BIN"] = previous
+  def with_fake_openscad(&block)
+    with_printwright(openscad_bin: Rails.root.join("test/fixtures/files/fake_openscad").to_s, &block)
   end
 end

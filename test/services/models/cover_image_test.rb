@@ -40,21 +40,15 @@ class Models::CoverImageTest < ActiveSupport::TestCase
   test "a renderer failure reports no cover rather than raising into the request" do
     attach_stl(@model, box_stl)
 
-    previous = ENV["OPENSCAD_BIN"]
-    ENV["OPENSCAD_BIN"] = "/nonexistent/openscad"
-    assert_not Models::CoverImage.ensure!(@model)
-    assert_empty @model.reload.render_files
-  ensure
-    ENV["OPENSCAD_BIN"] = previous
+    with_printwright(openscad_bin: "/nonexistent/openscad") do
+      assert_not Models::CoverImage.ensure!(@model)
+      assert_empty @model.reload.render_files
+    end
   end
 
   private
 
-  def with_fake_openscad
-    previous = ENV["OPENSCAD_BIN"]
-    ENV["OPENSCAD_BIN"] = Rails.root.join("test/fixtures/files/fake_openscad").to_s
-    yield
-  ensure
-    ENV["OPENSCAD_BIN"] = previous
+  def with_fake_openscad(&block)
+    with_printwright(openscad_bin: Rails.root.join("test/fixtures/files/fake_openscad").to_s, &block)
   end
 end

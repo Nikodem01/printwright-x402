@@ -43,7 +43,8 @@ class LedgerEntry < ApplicationRecord
     pay_to = purchase.requirements_json["payTo"]
     landed_with_designer = pay_to.present? &&
       pay_to == designer.hedera_account_id &&
-      pay_to != ENV["X402_PAY_TO"] # treasury is treasury, whoever claims its id
+      # treasury is treasury, whoever claims its id
+      pay_to != Rails.configuration.x.printwright.x402_pay_to
     held_by = landed_with_designer ? "designer" : "treasury"
     # requires_new: a savepoint, so losing the duplicate race (rescued below)
     # can't poison the caller's transaction (transition_to! wraps this).

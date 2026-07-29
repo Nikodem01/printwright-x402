@@ -10,6 +10,7 @@ ENV.delete("GOOGLE_GENERATIVE_AI_API_KEY")
 require_relative "../config/environment"
 require "rails/test_help"
 require_relative "test_helpers/session_test_helper"
+require_relative "test_helpers/printwright_config_test_helper"
 
 module ActiveSupport
   class TestCase
@@ -18,6 +19,11 @@ module ActiveSupport
 
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all
+
+    include PrintwrightConfigTestHelper
+    # Any configuration a test changed goes back before the next one runs, so a
+    # forgotten restore cannot silently change what a later test is asserting.
+    teardown { restore_printwright }
 
     # Add more helper methods to be used by all tests here...
   end
