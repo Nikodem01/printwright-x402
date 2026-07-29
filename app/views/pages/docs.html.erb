@@ -67,22 +67,32 @@ curl -i "http://localhost:3000/api/v1/models/5/download?license=personal" \
     mesh checks and the publish warranty.</p>
 
   <h2>Batch purchase</h2>
-  <p class="t-small">Print farms can acquire up to 20 licenses with one x402 negotiation and one
-    settlement. Probe and retry the identical <code class="mono">POST /api/v1/batches</code>
-    body. Every item receives its own serial, file grant, PWC-1 certificate, and verify URL. Items
+  <p class="t-small">Print farms can acquire up to 200 line items and 250 licenses with one x402
+    negotiation and one settlement, using <code class="mono">quantity</code> for repeat units of
+    one offer. Probe and retry the identical <code class="mono">POST /api/v1/batches</code>
+    body. Every license receives its own serial, file grant, PWC-1 certificate, and verify URL. Items
     settle to Printwright's treasury through one <code class="mono">payTo</code>, including
     mixed-designer batches. Designer shares are recorded per item and paid after delivery;
     designer payout never changes the buyer's certificate or delivery result.</p>
   <pre class="mono t-small" style="overflow-x:auto">curl -i -X POST http://localhost:3000/api/v1/batches \
   -H "Content-Type: application/json" \
   -d '{"items":[
-    {"model_id":5,"license":"commercial_unit"},
-    {"model_id":5,"license":"commercial_unit"},
-    {"model_id":5,"license":"commercial_unit"}
+    {"model_id":5,"license":"commercial_unit","quantity":3}
   ]}'
 # 402: one PaymentRequired whose amount is the exact sum
 # Retry this POST and identical JSON with PAYMENT-SIGNATURE: &lt;base64 PaymentPayload&gt;
-# 200: {"transaction_id":"...","licenses":[{"cert_id":"pw-...","verify_url":"..."}, ...]}</pre>
+# 200: {"transaction_id":"...","licenses":[{"cert_id":"pw-...","files":[...],"receipt":{...}}, ...]}</pre>
+
+  <h2>Getting the file back</h2>
+  <p class="t-small">The purchase is the file, so a paid response always carries
+    <code class="mono">files</code>; it is never <code class="mono">200</code> with an empty list.
+    Those URLs ride a download grant that expires, so keep the
+    <code class="mono">receipt</code> capability returned alongside them — its token does not
+    expire and needs no account.
+    <code class="mono">GET {receipt.files_url}?token=…</code> re-lists the files with fresh
+    download URLs at any time, <code class="mono">{receipt.download_url}?token=…&amp;f=N</code>
+    fetches one part, and <code class="mono">{receipt.url}?token=…</code> opens the human receipt
+    page. Payments are final, so store that token with the certificate id at settlement.</p>
 
   <h2>Signed lifecycle webhooks</h2>
   <p class="t-small">Webhooks are outbound notifications for licenses already paid through x402;
@@ -355,7 +365,7 @@ claude mcp add printwright \
   --env PRINTWRIGHT_URL=http://localhost:3000 \
   --env BUYER_ACCOUNT_ID=0.0.xxxxxxx \
   --env BUYER_PRIVATE_KEY=0x... \
-  --env MAX_SPEND_CENTS=500 \
+  --env MAX_SPEND_CENTS=2500 \
   -- node mcp/server.mjs</pre>
   <p class="t-small">Five tools: <code class="mono">search_models</code>,
     <code class="mono">get_model</code>, <code class="mono">buy_license</code> (refuses without

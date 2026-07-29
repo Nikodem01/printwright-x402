@@ -37,7 +37,7 @@ account with Printwright, no card — just a funded Hedera testnet account.
 | `PRINTWRIGHT_URL` | no | `http://localhost:3000` | Base URL of the Printwright marketplace API. |
 | `BUYER_ACCOUNT_ID` | for `buy_license` | — | Funded Hedera account that pays for licenses (e.g. `0.0.xxxxxxx`). `HEDERA_ACCOUNT_ID` is accepted as a fallback name. |
 | `BUYER_PRIVATE_KEY` | for `buy_license` | — | That account's hex ECDSA private key, used locally to sign the payment — never sent anywhere but the Hedera network. `HEDERA_PRIVATE_KEY` is accepted as a fallback name. |
-| `MAX_SPEND_CENTS` | no | `500` | Hard cap, in USD cents, on any single `buy_license` purchase. **Any offer priced above this is refused.** A malformed value (non-numeric or negative) makes the server refuse to start at all, printing why — this exists so a typo can never silently disable the cap. Set to `0` to refuse every priced offer (a deliberate "buying is off" setting, not a fallback). |
+| `MAX_SPEND_CENTS` | no | `2500` | Hard cap, in USD cents, on any single `buy_license` purchase. **Any offer priced above this is refused.** A malformed value (non-numeric or negative) makes the server refuse to start at all, printing why — this exists so a typo can never silently disable the cap. Set to `0` to refuse every priced offer (a deliberate "buying is off" setting, not a fallback). |
 | `HEDERA_NETWORK` | no | `testnet` | `testnet` or `mainnet`. Selects the signing network and the USDC token id (`0.0.429274` testnet / `0.0.456858` mainnet), the same switch the rest of the project derives from. Anything other than `mainnet` is treated as testnet. |
 | `PRINTWRIGHT_SANDBOX` | no | `false` | Set exactly `true` to use Printwright's local mock facilitator and throwaway topic. No buyer credentials or funds are needed; receipts and artifacts are labeled sandbox and have no on-chain or license value. |
 
@@ -55,7 +55,7 @@ claude mcp add printwright \
   --env PRINTWRIGHT_URL=http://localhost:3000 \
   --env BUYER_ACCOUNT_ID=0.0.xxxxxxx \
   --env BUYER_PRIVATE_KEY=0x... \
-  --env MAX_SPEND_CENTS=500 \
+  --env MAX_SPEND_CENTS=2500 \
   -- node mcp/server.mjs
 ```
 
@@ -71,7 +71,7 @@ npm install
 PRINTWRIGHT_URL=http://localhost:3000 \
 BUYER_ACCOUNT_ID=0.0.xxxxxxx \
 BUYER_PRIVATE_KEY=0x... \
-MAX_SPEND_CENTS=500 \
+MAX_SPEND_CENTS=2500 \
   node server.mjs
 ```
 

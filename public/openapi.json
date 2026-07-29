@@ -5,7 +5,7 @@
     "version": "1.9.1",
     "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; every purchase anchors an opaque HCS commitment to a license certificate the buyer receives as a portable proof bundle.",
     "contact": { "url": "https://github.com/Nikodem01/printwright-x402" },
-    "x-guidance": "Search GET /api/v1/models, inspect offers, then buy one license with GET /api/v1/models/{id}/download or up to 20 licenses with POST /api/v1/batches. An unpaid request returns an x402 v2 challenge; sign one exact payment option and retry the identical request. Paid requests settle to Printwright's treasury; designer payout happens separately after delivery and does not change buyer rights. For a zero-funds rehearsal, send X-Sandbox: true on both requests; sandbox artifacts are explicitly not payments or licenses."
+    "x-guidance": "Search GET /api/v1/models, inspect offers, then buy one license with GET /api/v1/models/{id}/download or many with POST /api/v1/batches (up to 200 line items and 250 licenses; per-line quantity buys N licenses). An unpaid request returns an x402 v2 challenge; sign one exact payment option and retry the identical request. Delivery always carries `files`: a paid request never returns 200 without one, and a settled purchase that cannot be delivered returns 503 no_deliverable_file and stays claimable. KEEP the `receipt` capability — the `files` URLs ride a download grant that expires, but GET {receipt.files_url}?token={receipt.token} re-lists live download URLs indefinitely, with no account. There are no refunds, so store receipt.token at settlement. Paid requests settle to Printwright's treasury; designer payout happens separately after delivery and does not change buyer rights. For a zero-funds rehearsal, send X-Sandbox: true on both requests; sandbox artifacts are explicitly not payments or licenses."
   },
   "servers": [{ "url": "/api/v1" }],
   "paths": {
@@ -50,7 +50,7 @@
           "410": { "description": "At least one requested offer is sold out, or error: listing_retired before a new reservation", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
           "422": { "description": "incompatible_payees or invalid_webhook", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
           "429": { "$ref": "#/components/responses/RateLimited" },
-          "503": { "description": "facilitator_unavailable; retry the identical signed batch", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "503": { "description": "facilitator_unavailable, or no_deliverable_file (+ recoverable: true, batch_id, transaction_id, model_ids) when the batch settled but a model in it has no downloadable file. Either way, retry the identical signed batch; nothing is paid again.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },
@@ -146,7 +146,7 @@
           },
           "429": { "$ref": "#/components/responses/RateLimited" },
           "503": {
-            "description": "error: \"facilitator_unavailable\" (+ retry_after: 5) — facilitator down or its circuit breaker is open. The purchase is kept alive; retry the same signed payment.",
+            "description": "error: \"facilitator_unavailable\" (+ retry_after: 5) — facilitator down or its circuit breaker is open. The purchase is kept alive; retry the same signed payment. Or error: \"no_deliverable_file\" (+ recoverable: true, cert_id, transaction_id, receipt) — the payment settled and the license is issued, but the model has no downloadable file right now. Retry the same signed payment once it is back, or use the returned receipt capability later; nothing is paid again.",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
           }
         }
@@ -547,12 +547,14 @@
         "additionalProperties": false,
         "properties": {
           "items": {
-            "type": "array", "minItems": 1, "maxItems": 20,
+            "type": "array", "minItems": 1, "maxItems": 200,
+            "description": "At most 200 lines totalling at most 250 licenses. These bound server work, not buying: how many units an offer sells is the designer's max_units or nothing at all.",
             "items": {
               "type": "object", "required": ["model_id"], "additionalProperties": false,
               "properties": {
                 "model_id": { "type": "integer", "minimum": 1 },
-                "license": { "type": "string", "enum": ["personal", "commercial_unit"], "default": "personal" }
+                "license": { "type": "string", "enum": ["personal", "commercial_unit"], "default": "personal" },
+                "quantity": { "type": "integer", "minimum": 1, "default": 1, "description": "licenses to buy on this line; each is its own certificate and serial" }
               }
             }
           },
@@ -577,6 +579,7 @@
           "hashscan_url": { "type": ["string", "null"] },
           "licenses": {
             "type": "array",
+            "description": "One summary per license, not the full single-license payload repeated. `files` stays inline because the file is the purchase; fetch the proof bundle from bundle_url, and the print-feedback and model-update capabilities from receipt.files_url.",
             "items": {
               "type": "object",
               "properties": {
@@ -584,13 +587,13 @@
                 "cert_id": { "type": "string" }, "serial": { "type": "integer" },
                 "max_units": { "type": ["integer", "null"] }, "remaining_units": { "type": ["integer", "null"] },
                 "verify_url": { "type": "string" },
-                "proof_bundle": { "$ref": "#/components/schemas/ProofBundle" },
-                "bundle_url": { "type": "string" },
+                "bundle_url": { "type": "string", "description": "fetch the portable proof bundle here" },
+                "certificate_pdf_url": { "type": "string" },
                 "share_card_url": { "type": "string" },
                 "receipt": { "$ref": "#/components/schemas/ReceiptCapability" },
-                "print_feedback": { "$ref": "#/components/schemas/PrintFeedbackCapability" },
-                "model_updates": { "$ref": "#/components/schemas/ModelUpdatesCapability" },
-                "files": { "type": "array", "items": { "type": "object" } }
+                "files": { "type": "array", "description": "one entry per deliverable part of this license's model", "items": { "type": "object", "properties": {
+                  "kind": { "type": "string" }, "url": { "type": "string" },
+                  "expires_at": { "type": ["string", "null"] } } } }
               }
             }
           }
@@ -599,7 +602,7 @@
       "Delivery": {
         "type": "object",
         "properties": {
-          "files": { "type": "array", "items": { "type": "object", "properties": {
+          "files": { "type": "array", "description": "One entry per printable part that is actually downloadable. Never empty on a 200: a settled purchase with no deliverable file returns 503 no_deliverable_file with the cert_id and receipt, and stays claimable by replaying the same signed payment.", "items": { "type": "object", "properties": {
             "kind": { "type": "string" }, "url": { "type": "string" },
             "expires_at": { "type": ["string", "null"] }, "sandbox": { "type": "boolean" } } } },
           "license": { "type": "object", "properties": {
@@ -622,11 +625,15 @@
       },
       "ReceiptCapability": {
         "type": "object",
-        "description": "Private durable paid-receipt capability. Never returned by sandbox.",
-        "required": ["url", "token"],
+        "description": "The durable delivery path, and the only handle that outlives the download grant in `files`. The token does not expire and needs no account. GET {files_url}?token= returns this license's files with fresh download URLs plus its print-feedback and model-update capabilities; GET {download_url}?token= redirects to the first part (&f=N selects one); GET {url}?token= is the human receipt page. Never returned by sandbox.",
+        "required": ["url", "files_url", "download_url", "token"],
         "properties": {
-          "url": { "type": "string", "format": "uri" },
-          "token": { "type": "string", "writeOnly": true }
+          "url": { "type": "string", "format": "uri", "description": "human receipt page" },
+          "files_url": { "type": "string", "format": "uri", "description": "the same receipt as JSON" },
+          "download_url": { "type": "string", "format": "uri", "description": "302 to a part; ?f=N selects one" },
+          "token": { "type": "string", "writeOnly": true },
+          "expires_at": { "type": "null", "description": "always null — this capability is durable" },
+          "note": { "type": "string" }
         },
         "additionalProperties": false
       },

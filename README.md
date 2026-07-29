@@ -76,6 +76,35 @@ buyer key. Only a successful facilitator settlement creates the local books and 
 Certificate anchoring then retries independently, so a temporary sidecar or HCS failure cannot
 turn a paid download into a false failure.
 
+### What a purchase delivers, and how to get it back
+
+The purchase **is** the file. A paid response always carries `files` — one download URL per
+printable part — and there is no path on which a settled purchase returns `200` with an empty
+list. If the bytes genuinely cannot be served, the response is `503 no_deliverable_file` with the
+certificate id and the receipt below; the licence is still issued and the same signed payment
+still claims the file once it is back. Payments are final and never refunded, so delivery has to
+stay recoverable rather than merely succeeding once.
+
+Those `files` URLs ride a download grant that expires. The durable handle is the **`receipt`
+capability** in the same response — a signed token that does not expire and needs no account:
+
+```bash
+# the file list again, with fresh download URLs, months later
+curl "$(jq -r .receipt.files_url purchase.json)?token=$(jq -r .receipt.token purchase.json)"
+
+# or go straight to a part (&f=1 for the second part of a multi-part bundle)
+curl -L "$(jq -r .receipt.download_url purchase.json)?token=$(jq -r .receipt.token purchase.json)"
+```
+
+The same JSON carries the print-feedback and model-update capabilities, and `receipt.url` opens
+the human receipt page from the same token. **Store `receipt.token` with the certificate id at
+settlement** — it is the one handle that outlives everything else in the response. Buyers keep
+access across model versions too: `model_updates` serves the newest deliverable bundle while the
+original certified files stay reachable.
+
+Batch responses carry the same `files` and `receipt` per licence, with the bulky proof bundle
+fetched from `bundle_url` rather than repeated inline.
+
 ### One core, several entry modes
 
 | Entry | Repository path | Role |

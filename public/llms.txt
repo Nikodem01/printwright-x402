@@ -25,13 +25,31 @@ provenance. Creative Commons, public-domain, missing, and unknown licenses are b
    holding USDC is all that is needed, gas is sponsored by the facilitator
 3. Sign a Hedera TransferTransaction (transactionId.accountId = feePayer, buyer signature
    only) and retry with the base64 PaymentPayload in the PAYMENT-SIGNATURE header
-4. 200 → file download grants, license serial, certificate id, HashScan transaction link,
-   a portable proof_bundle (+ bundle_url to re-fetch it once anchored), plus a private receipt
-   capability for a durable receipt/re-download (real paid flow only)
+4. 200 → `files[]` (one download URL per printable part), license serial, certificate id,
+   HashScan transaction link, a portable proof_bundle (+ bundle_url to re-fetch it once
+   anchored), a certificate_pdf_url holding the same certificate as a PDF document, and the
+   `receipt` capability (real paid flow only)
 
-For 1-20 licenses sharing one payTo, POST {"items":[{"model_id":1,"license":"commercial_unit"}, ...]}
-to /api/v1/batches. Probe and retry the identical JSON body. One aggregate x402 settlement returns
-one certificate and verify_url per item; mixed direct-pay destinations are rejected.
+KEEP `receipt`. The `files[]` URLs ride a download grant that expires in 30 days; `receipt` does
+not expire and needs no account, so it is how you get the files back later:
+
+    GET {receipt.files_url}?token={receipt.token}     → JSON: files[] with fresh download URLs
+    GET {receipt.download_url}?token={receipt.token}  → 302 to the first part (&f=N for part N)
+    GET {receipt.url}?token={receipt.token}           → the human receipt page
+
+The same JSON also carries the print_feedback and model_updates capabilities. There are no
+refunds, so store `receipt.token` with the certificate id the moment a purchase settles: it is
+the only handle that survives the grant. A settled purchase that cannot be delivered returns
+503 {"error":"no_deliverable_file","recoverable":true} with the cert_id and receipt — never a
+200 with an empty files[].
+
+For 1-200 line items sharing one payTo, POST
+{"items":[{"model_id":1,"license":"commercial_unit","quantity":3}, ...]} to /api/v1/batches.
+`quantity` defaults to 1 and buys N separate licenses on one line; the batch totals at most 250
+licenses. Probe and retry the identical JSON body. One aggregate x402 settlement returns one
+certificate, files[] and verify_url per license; mixed direct-pay destinations are rejected.
+Batch items carry a summary rather than the full single-license payload: fetch the proof bundle
+from `bundle_url`, and everything else from `receipt.files_url` as above.
 An optional `webhook` object (`url` public HTTPS, `secret` 32-256 bytes) in both identical batch
 bodies receives a signed certificate.anchored event only after each paid certificate lands on HCS.
 Designer-configured endpoints receive sale.completed only after paid delivery. Webhooks report
@@ -57,10 +75,10 @@ licenses.
 
 Every endpoint returns 429 {"error":"rate_limited","retry_after":60} (and a `Retry-After: 60`
 header) once its per-minute limit is exceeded: /models and /models/{id} and
-/certificates/{cert_id}, /licenses/{id}/can, and /stats allow 120/min, /models/{id}/download allows 30/min, /files/{token}
-and /licenses/{cert_id}/latest-version allow 60/min, /licenses/{cert_id}/print_reports allows
-20/min, and /batches allows 15/min. Back off
-and retry after the given number of seconds.
+/certificates/{cert_id}, /licenses/{id}/can, /stats and /models/{id}/download allow 120/min,
+/files/{token} allows 240/min, /licenses/{cert_id}/latest-version and /batches allow 60/min, and
+/licenses/{cert_id}/print_reports allows 20/min. These are sized so a sequential agent run does
+not hit them. Back off and retry after the given number of seconds.
 
 ## Endpoints
 
@@ -71,7 +89,8 @@ and retry after the given number of seconds.
   scale). These are slicing estimates, not physical-print guarantees.
 - /api/v1/models/{id}: full metadata incl. license offers and terms
 - /api/v1/models/{id}/download: the paid endpoint (x402)
-- /api/v1/batches: up to 20 licenses, one aggregate x402 payment, one certificate per item
+- /api/v1/batches: up to 200 line items and 250 licenses, one aggregate x402 payment, one
+  certificate per license; per-line `quantity` buys N licenses
 - /api/v1/certificates/{cert_id}: the proof bundle for one certificate — revealed certificate,
   blinding nonce, commitment, licensed terms text, and HCS mirror/HashScan coordinates. The
   cert_id is an unguessable token: holding it is the disclosure.
@@ -93,7 +112,9 @@ and retry after the given number of seconds.
 - /api/v1/sandbox/*: explicitly fake transaction, receipt, and local topic-message artifacts
 - /verify/{cert_id}: human-readable certificate verification page
 - /verify/{cert_id}/share-card: receipt-linked 1200x630 SVG certificate card
-- /receipts/{cert_id}: private signed paid-receipt capability; re-download and optional email-library opt-in
+- /receipts/{cert_id}: the durable re-download path. `?token=` for the human page, `.json?token=`
+  for files[] with fresh download URLs, /download?token=[&f=N] to fetch a part. Never expires,
+  no account. Also offers optional email-library opt-in.
 - /library/sign-in: enumeration-safe email magic-link entry for previously saved paid receipts
 - /pwc-1.schema.json: normative frozen PWC-1 contract — the on-chain commitment envelope, the
   certificate it commits to, and the proof bundle that reveals it
