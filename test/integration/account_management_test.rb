@@ -271,7 +271,7 @@ class AccountManagementTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "dd", text: /Personal/
     get purchase_receipt_download_path(license.cert_id), params: { token: receipt_token }
-    assert_redirected_to api_v1_file_path(DownloadGrant.order(:id).last.token)
+    assert_redirected_to api_v1_file_path(DownloadGrant.order(:id).last.token, f: 0)
     get verify_path(license.verify_slug)
     assert_response :success
     assert_select ".cert-model", text: /Historical Studio/

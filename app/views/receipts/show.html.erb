@@ -18,8 +18,11 @@
       class: "mono", target: "_blank", rel: "noopener noreferrer" %></dd>
   </dl>
 
-  <p><%= link_to "Re-download model file", purchase_receipt_download_path(@license.cert_id, token: params[:token]),
-    class: "btn btn-primary", data: { turbo: false } %></p>
+  <% @files.each_with_index do |(index, file), position| %>
+    <p><%= link_to "Re-download #{file.kind.upcase}#{" (part #{position + 1} of #{@files.length})" if @files.many?}",
+      purchase_receipt_download_path(@license.cert_id, token: params[:token], f: index),
+      class: "btn #{position.zero? ? 'btn-primary' : ''}", data: { turbo: false } %></p>
+  <% end %>
 
   <section style="margin-top: var(--s7)">
     <h2>Optional license library</h2>

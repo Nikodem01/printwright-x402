@@ -41,8 +41,8 @@ class ReceiptsAndLibraryTest < ActionDispatch::IntegrationTest
       get purchase_receipt_download_path(@license.cert_id), params: { token: @token }
     end
     grant = DownloadGrant.order(:id).last
-    assert_redirected_to api_v1_file_path(grant.token)
-    get api_v1_file_path(grant.token)
+    assert_redirected_to api_v1_file_path(grant.token, f: 0)
+    get api_v1_file_path(grant.token, f: 0)
     assert_response :redirect
 
     get verify_path(@license.verify_slug)
@@ -59,20 +59,57 @@ class ReceiptsAndLibraryTest < ActionDispatch::IntegrationTest
     assert_response :redirect
   end
 
-  test "paid receipt capability renders no-store facts and reissues a download grant" do
+  test "paid receipt capability renders no-store facts and re-mints a download grant on demand" do
     get purchase_receipt_path(@license.cert_id), params: { token: @token }
 
     assert_response :success
     assert_equal "no-store", response.headers["Cache-Control"]
     assert_select 'meta[name="robots"][content="noindex,nofollow"]'
     assert_select "h1", text: "Purchase receipt"
-    assert_select "a", text: "Re-download model file"
+    assert_select "a", text: "Re-download STL"
     assert_select "form[action=?]", receipt_library_membership_path(@license.cert_id)
 
     assert_difference -> { DownloadGrant.count }, 1 do
       get purchase_receipt_download_path(@license.cert_id), params: { token: @token }
     end
-    assert_redirected_to api_v1_file_path(DownloadGrant.order(:id).last.token)
+    first_grant = DownloadGrant.order(:id).last
+    assert_redirected_to api_v1_file_path(first_grant.token, f: 0)
+
+    # A second visit rides the grant that is already live rather than piling up
+    # tokens; once that one lapses, the receipt mints a fresh one. This is what
+    # makes the receipt — not the purchase response — the durable path.
+    assert_no_difference -> { DownloadGrant.count } do
+      get purchase_receipt_download_path(@license.cert_id), params: { token: @token }
+    end
+    assert_redirected_to api_v1_file_path(first_grant.token, f: 0)
+
+    travel DownloadGrant::LIFETIME + 1.day do
+      assert_difference -> { DownloadGrant.count }, 1 do
+        get purchase_receipt_download_path(@license.cert_id), params: { token: @token }
+      end
+      fresh = DownloadGrant.order(:id).last
+      assert_not_equal first_grant.token, fresh.token
+      get api_v1_file_path(fresh.token, f: 0)
+      assert_response :redirect
+    end
+  end
+
+  # The receipt page is a browser affordance; the same URL and token have to
+  # answer an agent too, or the durable path is humans-only.
+  test "the receipt answers JSON with live download URLs for every part" do
+    get purchase_receipt_path(@license.cert_id, format: :json), params: { token: @token }
+
+    assert_response :success
+    body = response.parsed_body
+    assert_equal @license.cert_id, body["cert_id"]
+    assert_equal @model.title, body.dig("model", "title")
+    assert_equal 1, body["files"].length
+    assert_equal "stl", body["files"].first["kind"]
+
+    get body["files"].first["url"]
+    assert_response :redirect
+    follow_redirect! while response.redirect? # grant -> blob redirect -> disk service
+    assert_equal "solid library\nendsolid library\n", response.body
   end
 
   test "receipt rejects a wrong capability and every sandbox license" do

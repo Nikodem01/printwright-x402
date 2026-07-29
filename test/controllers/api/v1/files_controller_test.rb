@@ -22,17 +22,31 @@ class Api::V1::FilesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "expired grant is 410" do
-    travel 25.hours do
+    travel DownloadGrant::LIFETIME + 1.hour do
       get api_v1_file_url(@grant.token)
       assert_response :gone
       assert_equal "grant_expired", response.parsed_body["error"]
     end
   end
 
-  test "exhausted grant is 410" do
-    @grant.update!(uses: @grant.max_uses)
+  # A buyer already owns these bytes and may copy them freely, so re-downloading
+  # is never refused. The grant counts uses; it does not ration them.
+  test "a live grant keeps serving the file however many times it is redeemed" do
+    30.times do
+      get api_v1_file_url(@grant.token)
+      assert_response :redirect
+    end
+
+    assert_equal 30, @grant.reload.uses
+  end
+
+  test "a detached file is 404, never a redirect to a sibling part" do
+    model = @grant.license.purchase.model3d
+    model.printable_files.first.file.purge
+
     get api_v1_file_url(@grant.token)
-    assert_response :gone
+    assert_response :not_found
+    assert_equal "file_not_found", response.parsed_body["error"]
   end
 
   test "unknown token is 404" do

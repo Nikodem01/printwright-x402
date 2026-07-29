@@ -183,6 +183,15 @@ class Model3d < ApplicationRecord
     model_files.select { |f| %w[stl 3mf step].include?(f.kind) }
   end
 
+  # What a paid delivery can actually hand over: the printable parts whose bytes
+  # are really in storage, each paired with its index in the stable
+  # printable_files order. That index is what /api/v1/files/:token?f=N resolves,
+  # so it must stay put when a part is detached — a missing part has to 404,
+  # never silently serve its neighbour's geometry.
+  def deliverable_files
+    printable_files.each_with_index.filter_map { |file, index| [ index, file ] if file.file.attached? }
+  end
+
   def mesh_analysis_errors
     Array(mesh_analysis["errors"])
   end

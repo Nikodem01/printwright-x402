@@ -72,7 +72,7 @@ class CheckoutTest < ApplicationSystemTestCase
     click_link "Open durable receipt"
     assert_current_path purchase_receipt_path(purchase.license.cert_id), ignore_query: true
     assert_text "Purchase receipt"
-    assert_link "Re-download model file"
+    assert_link "Re-download STL"
 
     fill_in "Email address", with: "browser-buyer@example.com"
     perform_enqueued_jobs(only: ActionMailer::MailDeliveryJob) do
@@ -85,12 +85,17 @@ class CheckoutTest < ApplicationSystemTestCase
     assert_text "Your license library"
     assert_text "Browser Buy"
 
-    grant_count = DownloadGrant.uncached { DownloadGrant.count }
+    grant = DownloadGrant.uncached { DownloadGrant.order(:id).last }
+    uses = grant.uses
     click_link "Re-download"
     Timeout.timeout(Capybara.default_max_wait_time) do
-      sleep 0.05 until DownloadGrant.uncached { DownloadGrant.count } == grant_count + 1
+      sleep 0.05 until DownloadGrant.uncached { grant.reload.uses } > uses
     end
-    assert_equal grant_count + 1, DownloadGrant.uncached { DownloadGrant.count }
+
+    # The buyer really pulled the file down again, and the grant already issued
+    # at purchase was reused rather than piling up a token per click. The
+    # durable thing is the receipt capability, not the grant.
+    assert_equal 1, DownloadGrant.uncached { DownloadGrant.count }
   end
 
   test "facilitator rejection surfaces the failed state with a human message, retry button, and the raw reason" do

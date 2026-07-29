@@ -203,6 +203,11 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
                  bundle["commitment"]
     assert_includes body["bundle_url"], "/api/v1/certificates/#{body.dig('license', 'cert_id')}"
     assert_includes body["share_card_url"], "/share-card"
+    # The certificate as a keepable document, addressed by the unguessable
+    # verify_slug like verify_url and share_card_url. That it actually renders
+    # is covered by test/controllers/certificate_pdf_test.rb.
+    assert_includes body["certificate_pdf_url"],
+      "#{License.find_by!(cert_id: body.dig('license', 'cert_id')).verify_slug}/certificate.pdf"
     receipt = body.fetch("receipt")
     assert_includes receipt["url"], "/receipts/#{body.dig('license', 'cert_id')}"
     assert_equal body.dig("license", "cert_id"),

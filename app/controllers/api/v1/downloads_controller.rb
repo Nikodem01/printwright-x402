@@ -2,7 +2,14 @@
 # Implements plan legs 1-4 and the full error table. Facilitator timeouts
 # NEVER fail a purchase — the tx may have settled; we reconcile via mirror.
 class Api::V1::DownloadsController < Api::V1::BaseController
-  rate_limit to: 30, within: 1.minute, store: RateLimitStore, with: :api_rate_limited
+  # Every purchase costs two requests here — the 402 probe and the signed retry
+  # — so 30/min meant an agent working sequentially through a shopping list
+  # stalled at 15 models, which is a normal size for one. The unpaid probe is
+  # the only free work (a handful of queries and a JSON render); the paid leg is
+  # gated by the facilitator, not by us. Set well above any sequential agent
+  # run, low enough that an anonymous flood of probes cannot occupy the app.
+  RATE_LIMIT = 120
+  rate_limit to: RATE_LIMIT, within: 1.minute, store: RateLimitStore, with: :api_rate_limited
   after_action :record_payment_request
 
   def show
@@ -120,6 +127,8 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     end
     case purchase.status
     when "delivered"
+      return undeliverable(purchase, purchase.license) unless deliverable?(purchase)
+
       complete_chat_purchase_intent!
       render json: delivery_payload(purchase), status: :conflict
     when "settled" # paid but delivery previously crashed — finish the job
@@ -193,6 +202,8 @@ class Api::V1::DownloadsController < Api::V1::BaseController
 
   def deliver(purchase, settlement)
     license = purchase.license || License.allocate!(purchase)
+    return undeliverable(purchase, license) unless deliverable?(purchase)
+
     Sandbox::Topic.anchor!(license) if purchase.sandbox? && !license.anchored?
     purchase.transition_to!(:delivered)
     CertMintJob.perform_later(license.id) unless purchase.sandbox?
@@ -212,6 +223,37 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     render json: { error: "sold_out", transaction_id: purchase.payment_tx_id }, status: :gone
   end
 
+  # The file is the sale. A model whose parts are all missing or detached cannot
+  # be delivered, and money has already moved — we never refund — so this can
+  # never be dressed up as a 200 with an empty `files` array.
+  def deliverable?(purchase)
+    purchase.sandbox? || purchase.model3d.deliverable_files.any?
+  end
+
+  # Stay in `settled`: the replay path retries delivery from there, so the same
+  # signed payment claims the file once an operator reattaches it. Hand back the
+  # durable handles with the failure so the buyer's recovery does not depend on
+  # them having kept this response.
+  def undeliverable(purchase, license)
+    purchase.update!(error_reason: "no_deliverable_file")
+    Rails.logger.error(
+      "delivery_failed purchase=#{purchase.id} license=#{license.cert_id} " \
+      "model=#{purchase.model3d.id} tx=#{purchase.payment_tx_id} reason=no_deliverable_file"
+    )
+    render json: {
+      error: "no_deliverable_file",
+      message: "Payment settled, but this model has no downloadable file right now. " \
+               "Your license is issued and the file is owed to you: retry this exact signed " \
+               "payment, or fetch it later from the receipt below.",
+      recoverable: true,
+      retry_after: 60,
+      cert_id: license.cert_id,
+      transaction_id: purchase.payment_tx_id,
+      receipt: receipt_capability(license),
+      verify_url: "#{request.base_url}/verify/#{license.verify_slug}"
+    }, status: :service_unavailable
+  end
+
   def delivery_payload(purchase)
     license = purchase.license
     return sandbox_delivery_payload(purchase, license) if purchase.sandbox?
@@ -220,11 +262,11 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     # proof bundle is complete and independently verifiable the instant the
     # agent receives it; CertMintJob then just anchors the commitment.
     license.update!(cert_json: Certificates::Builder.call(license)) if license.cert_json.blank?
-    grant = license.download_grants.detect(&:usable?) || DownloadGrant.issue!(license)
+    grant = DownloadGrant.for(license)
     model = purchase.model3d
     {
-      files: model.printable_files.each_with_index.map do |f, i|
-        { kind: f.kind, url: api_v1_file_url(grant.token, f: i), expires_at: grant.expires_at.iso8601 }
+      files: model.deliverable_files.map do |index, file|
+        { kind: file.kind, url: api_v1_file_url(grant.token, f: index), expires_at: grant.expires_at.iso8601 }
       end,
       license: license_summary(license),
       certificate: license.cert_json.presence,
@@ -234,6 +276,10 @@ class Api::V1::DownloadsController < Api::V1::BaseController
       proof_bundle: Certificates::Bundle.for(license),
       bundle_url: api_v1_certificate_url(license.cert_id),
       verify_url: "#{request.base_url}/verify/#{license.verify_slug}",
+      # The certificate as a keepable document, rendered server-side so an agent
+      # never needs a browser. Not part of the proof bundle: PWC-1 is frozen and
+      # closed, and the PDF proves nothing the bundle does not already carry.
+      certificate_pdf_url: verify_certificate_pdf_url(license.verify_slug),
       share_card_url: verify_share_card_url(license.verify_slug),
       receipt: receipt_capability(license),
       print_feedback: {
@@ -265,6 +311,9 @@ class Api::V1::DownloadsController < Api::V1::BaseController
       proof_bundle: Certificates::Bundle.for(license),
       bundle_url: api_v1_certificate_url(license.cert_id),
       verify_url: "#{request.base_url}/verify/#{license.verify_slug}",
+      # Rendered too, and it says SANDBOX REHEARSAL on its face — a rehearsal
+      # must exercise the same shape the paid flow returns.
+      certificate_pdf_url: verify_certificate_pdf_url(license.verify_slug),
       transaction_id: purchase.payment_tx_id,
       hashscan_url: nil,
       sandbox_url: api_v1_sandbox_transaction_url(purchase.payment_tx_id)
@@ -282,10 +331,20 @@ class Api::V1::DownloadsController < Api::V1::BaseController
     }
   end
 
+  # THE durable delivery path, not a footnote. The `files` URLs above ride a
+  # download grant that eventually lapses; this token does not expire and needs
+  # no account, so it is how a buyer or their agent gets the same files back
+  # next month. Both URLs take `?token=`: `url` is the human receipt page,
+  # `files_url` the same thing as JSON for an agent.
   def receipt_capability(license)
     {
       url: purchase_receipt_url(license.cert_id),
-      token: license.signed_id(purpose: "purchase-receipt")
+      files_url: purchase_receipt_url(license.cert_id, format: :json),
+      download_url: purchase_receipt_download_url(license.cert_id),
+      token: license.signed_id(purpose: "purchase-receipt"),
+      expires_at: nil,
+      note: "Durable: append ?token=<token> to re-download this license's files at any time, " \
+            "with no account. Pass ?f=<index> to download_url for a specific part."
     }
   end
 
