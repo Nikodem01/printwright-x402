@@ -63,7 +63,7 @@ class CreateRodauthBaseVerifyAccountResetPasswordVerifyLoginChangeRememberLockou
     end
 
     # Used by the active sessions feature
-    create_table :account_active_session_keys, primary_key: [:account_id, :session_id] do |t|
+    create_table :account_active_session_keys, primary_key: [ :account_id, :session_id ] do |t|
       t.references :account, foreign_key: { to_table: :designers }
       t.string :session_id
       t.datetime :created_at, null: false, default: -> { "CURRENT_TIMESTAMP" }
@@ -80,7 +80,7 @@ class CreateRodauthBaseVerifyAccountResetPasswordVerifyLoginChangeRememberLockou
     end
 
     # Used by the recovery codes feature
-    create_table :account_recovery_codes, primary_key: [:id, :code] do |t|
+    create_table :account_recovery_codes, primary_key: [ :id, :code ] do |t|
       t.bigint :id
       t.foreign_key :designers, column: :id
       t.string :code
@@ -97,7 +97,7 @@ class CreateRodauthBaseVerifyAccountResetPasswordVerifyLoginChangeRememberLockou
       t.references :account, null: false, foreign_key: { to_table: :designers, on_delete: :cascade }
       t.string :provider, null: false
       t.string :uid, null: false
-      t.index [:provider, :uid], unique: true
+      t.index [ :provider, :uid ], unique: true
     end
   end
 
