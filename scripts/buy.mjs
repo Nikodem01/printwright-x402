@@ -71,6 +71,13 @@ step(args.sandbox
   : "payment settled on Hedera — downloading deliverables");
 const dir = join("purchases", model.slug);
 mkdirSync(dir, { recursive: true });
+// The whole paid response, saved before anything else can fail. It carries the
+// receipt capability — the non-expiring token that re-downloads the files with
+// no account — which outlives the download grants in `files`. Losing it is the
+// one loss this script cannot undo, so it is written first.
+const purchasePath = join(dir, "purchase.json");
+writeFileSync(purchasePath, JSON.stringify(body, null, 2));
+console.log(`   purchase:    ${purchasePath} (keep this — it holds receipt.token)`);
 for (const file of body.files) {
   const res = await fetch(file.url);
   if (!res.ok) die(`file download failed: ${res.status}`);
