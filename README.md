@@ -142,8 +142,8 @@ These are public records, not screenshots:
 | **Separate designer payout** | [USDC payout on HashScan ↗](https://hashscan.io/testnet/transaction/0.0.9067781@1784242883.124267302) |
 | **Separate model-version provenance** | [`pwv-1` submit on HashScan ↗](https://hashscan.io/testnet/transaction/0.0.9067781@1785078563.036978424) · [exact Mirror message #70](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/70) |
 
-The dated 2026-07-25 reproducibility snapshot, including what had and had not been externally
-validated at that point, is in [`docs/VALIDATION.md`](docs/VALIDATION.md).
+The dated 2026-07-29 reproducibility snapshot, including a full cold-clone run of every door and
+what has and has not been externally validated, is in [`docs/VALIDATION.md`](docs/VALIDATION.md).
 
 ## Run the demo
 
