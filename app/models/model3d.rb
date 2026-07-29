@@ -179,10 +179,6 @@ class Model3d < ApplicationRecord
     model_files.select { |f| f.kind == "render" }
   end
 
-  def preview_file
-    model_files.detect { |f| f.kind == "preview" }
-  end
-
   def printable_files
     model_files.select { |f| %w[stl 3mf step].include?(f.kind) }
   end

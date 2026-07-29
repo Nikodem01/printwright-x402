@@ -24,7 +24,6 @@ class ModelPreviewTest < ApplicationSystemTestCase
         filename: "gear-toy-#{index + 2}.png", content_type: "image/png"
       )
     end
-    PreviewMeshes::Attacher.call(@model)
     @model.license_offers.create!(kind: "personal", price_cents: 100)
   end
 

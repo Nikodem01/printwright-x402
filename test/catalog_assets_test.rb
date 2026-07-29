@@ -41,10 +41,6 @@ class CatalogAssetsTest < ActiveSupport::TestCase
     seeded_models.each do |seeded_model|
       assert_includes Model3d::CATEGORIES.keys, seeded_model.category
       assert_empty seeded_model.collections - Model3d::COLLECTIONS.keys
-      preview = seeded_model.preview_file
-      assert_predicate preview.file, :attached?, "#{seeded_model.slug} has no preview"
-      assert preview.file.download.start_with?(PreviewMeshes::Generator::HEADER)
-      assert_not_includes seeded_model.printable_files, preview
     end
   end
 end

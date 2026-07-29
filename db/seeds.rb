@@ -338,7 +338,6 @@ DESIGNERS = { studio: studio, atelier: atelier, workshop: workshop }.freeze
     render.file.attach(io: StringIO.new(render_bytes), filename: render_name, content_type: "image/png")
   end
 
-  PreviewMeshes::Attacher.call(model)
   AnalyzeModelMeshJob.perform_now(model.id)
 
   spec[:offers].each do |offer_spec|

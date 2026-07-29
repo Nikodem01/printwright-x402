@@ -149,7 +149,6 @@ class Designer::ModelsController < Designer::BaseController
         alert: "Add a preview image before publishing — buyers decide from it, and we could not render one from this bundle."
     end
 
-    PreviewMeshes::Attacher.call(@model)
     @model.update!(file_hash: digest, status: "published",
                    warranty_accepted_at: Time.current)
     RenderModelJob.perform_later(@model.id)
