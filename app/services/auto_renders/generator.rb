@@ -45,6 +45,7 @@ module AutoRenders
       def render(executable, scene, output, angle, timeout)
         _stdout, stderr, status = Open3.capture3(
           { "QT_QPA_PLATFORM" => "offscreen" },
+          *display_prefix,
           "timeout", timeout, executable, "-q", "--imgsize=#{WIDTH},#{HEIGHT}",
           "--autocenter", "--viewall", "--render", "--projection=o",
           "--camera=0,0,0,65,0,#{angle},0", "--colorscheme=Tomorrow",
@@ -54,6 +55,15 @@ module AutoRenders
 
         detail = stderr.to_s.lines.last.to_s.strip.presence || "renderer exited #{status.exitstatus}"
         raise Error, "OpenSCAD thumbnail failed: #{detail}"
+      end
+
+      # OpenSCAD builds its image through GLX, so it needs an X display even
+      # with Qt offscreen — without one it exits "Can't create OpenGL
+      # OffscreenView" and writes no file. A server container and a CI runner
+      # both lack a display, which would silently make every listing
+      # unpublishable, so supply a virtual one when there is none.
+      def display_prefix
+        ENV["DISPLAY"].present? ? [] : [ "xvfb-run", "-a" ]
       end
 
       def validate_png!(bytes)

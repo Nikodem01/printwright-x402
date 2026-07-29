@@ -14,9 +14,12 @@ FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
 # Rails app lives here
 WORKDIR /rails
 
-# Install base packages
+# Install base packages. xvfb accompanies openscad deliberately: OpenSCAD
+# renders the preview image every listing needs through GLX, so it requires an
+# X display even headless. A container has none, and without this no designer
+# could publish.
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libvips openscad postgresql-client && \
+    apt-get install --no-install-recommends -y curl libjemalloc2 libvips openscad postgresql-client xvfb && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 

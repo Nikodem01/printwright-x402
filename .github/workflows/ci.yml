@@ -32,11 +32,12 @@ jobs:
           bundler-cache: true
       # A listing cannot go live without a preview image, and the only way to
       # get one from an STL alone is to render it. OpenSCAD is a documented
-      # prerequisite of the app; without it here, publishing silently fails and
-      # the suite passes only on machines that happen to have it installed.
-      # Rendering is headless (QT_QPA_PLATFORM=offscreen), so no X server.
+      # prerequisite; without it the suite passes only on machines that happen
+      # to have it. xvfb comes with it because OpenSCAD renders through GLX and
+      # so needs a display even headless — the generator supplies a virtual one
+      # when DISPLAY is unset.
       - name: Install OpenSCAD (preview rendering)
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends openscad
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends openscad xvfb
       - name: Prepare database
         run: bin/rails db:test:prepare
       - name: Lint (rubocop)
