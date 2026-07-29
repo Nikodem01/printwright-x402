@@ -8,10 +8,14 @@ class AnalyzeModelVersionMeshJob < ApplicationJob
     version = ModelVersion.find_by(id: model_version_id)
     return unless version&.file&.attached?
 
-    # Analyze the whole bundle. A version predating multi-file bundles has no
-    # version_files yet, so it falls back to its single `file` — the exact
-    # behavior this job had before bundles existed.
-    files = version.version_files.any? ? version.analyzer_inputs : [ version.analyzer_input ]
+    # Analyze the whole bundle. Every version has one: the controller creates at
+    # least one on upload, and a migration backfilled every version predating
+    # multi-file bundles (those with no attached file returned above, and they
+    # are exactly the ones the backfill skipped). If that ever stops being true,
+    # stop rather than guess: leaving the status `pending` keeps the version out
+    # of `deliverable`, so a bundle we could not inspect never reaches a buyer.
+    files = version.analyzer_inputs
+    return if files.empty?
 
     # A file the analyzer cannot read speaks only for itself. Every STL and 3MF
     # in the bundle is inspected regardless of what sits beside it, so a STEP

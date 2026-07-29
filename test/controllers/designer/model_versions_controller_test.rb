@@ -87,6 +87,11 @@ class Designer::ModelVersionsControllerTest < ActionDispatch::IntegrationTest
       file_hash: "sha256:#{'b' * 64}", changelog: "CAD source refresh.",
       changelog_hash: "sha256:#{'c' * 64}", published_at: Time.current)
     version.file.attach(io: StringIO.new("STEP-BYTES"), filename: "part.step", content_type: "model/step")
+    # Mirror what #create actually persists: every version carries its bundle,
+    # even a one-file one. Without this the version is in a state no upload can
+    # produce, and the job is asked to judge a bundle it was never given.
+    version.version_files.create!(position: 0, kind: "step", file_hash: version.file_hash)
+      .file.attach(version.file.blob)
 
     assert_enqueued_with(job: ModelVersionAnchorJob) do
       AnalyzeModelVersionMeshJob.perform_now(version.id)

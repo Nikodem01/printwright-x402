@@ -355,7 +355,7 @@
         </div>
       </section>
 
-      <% if model.source_url.present? || model.file_hash.present? || model.preview_file&.file&.attached? %>
+      <% if model.source_url.present? || model.file_hash.present? %>
         <details id="advanced" class="editor-advanced">
           <summary>Provenance and technical evidence</summary>
           <% if model.source_url.present? %>
@@ -366,7 +366,6 @@
           <% end %>
           <% if model.file_hash.present? %><p class="mono">Certified bundle <%= model.file_hash %></p><% end %>
           <% if model.geometry_hash.present? %><p class="mono">Geometry <%= model.geometry_hash %></p><% end %>
-          <% if model.preview_file&.file&.attached? %><p>Generated interactive preview is attached.</p><% end %>
         </details>
       <% end %>
 

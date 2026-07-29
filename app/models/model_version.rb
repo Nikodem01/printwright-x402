@@ -38,13 +38,9 @@ class ModelVersion < ApplicationRecord
   # backfilled one for versions that predate multi-file bundles.
   def bundle_files = version_files.ordered
 
-  # Adapts this single-file version to the shape MeshAnalysis::Analyzer reads
-  # from a ModelFile (it keys on `kind` and `file`). Kept for backward safety
-  # alongside `analyzer_inputs` below.
-  def analyzer_input = Struct.new(:kind, :file).new(file_kind, file)
-
-  # The version_files already have that shape, so the whole bundle can be
-  # analyzed together.
+  # ModelVersionFile already has the shape MeshAnalysis::Analyzer reads from a
+  # ModelFile (it keys on `kind` and `file`), so the whole bundle is analyzed
+  # together.
   def analyzer_inputs = version_files.ordered
 
   def anchored?

@@ -70,6 +70,18 @@ class AnalyzeModelVersionMeshJobTest < ActiveSupport::TestCase
     assert_equal "passed", version.reload.mesh_analysis_status
   end
 
+  # `skipped` counts as deliverable, so a bundle the job cannot see must not
+  # take that branch — it stays pending and is withheld instead.
+  test "a version with no bundle files is withheld rather than passed as skipped" do
+    version = build_version([ [ "cube.stl", "stl", box_stl ] ])
+    version.version_files.destroy_all
+
+    AnalyzeModelVersionMeshJob.perform_now(version.id)
+
+    assert_equal "pending", version.reload.mesh_analysis_status
+    assert_not_predicate version, :deliverable?
+  end
+
   private
 
   def open_box_stl
