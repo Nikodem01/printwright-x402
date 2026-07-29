@@ -32,7 +32,12 @@ One real paid request: `GET /premium` → `402` → partially-signed `TransferTr
 - `client.mjs` — buyer client, driven leg-by-leg so every byte is logged
 - `facilitator-proxy.mjs` — transparent logging proxy in front of Blocky402 (`/verify`, `/settle` captures)
 - `create-treasury.mjs` — one-time treasury account setup
-- `wire-log/*.jsonl` — raw captures from the successful run (no secrets travel on the wire)
+- `multileg-verify.mjs` — the V1 kill-test: proves `/verify` rejects a split or extra-recipient
+  transfer, which is why payment lands in one treasury and the designer's share is paid out by
+  `DesignerPayoutJob` instead of at settle. Cited from `app/services/x402/requirements.rb`.
+- `wire-log/*.jsonl` — raw captures from those runs (no secrets travel on the wire). These seeded
+  `test/fixtures/files/x402/`, which are now standalone copies — editing a capture here changes
+  no test.
 
 ## Run it
 

@@ -1,0 +1,18 @@
+---
+# Keep the local gate identical to the one that blocks merges. Without this,
+# `bin/brakeman` scans the .rb files vendored inside npm packages (React
+# Native ships CocoaPods scripts under wallet/node_modules) and reports 22
+# warnings that CI never sees, because CI passes these same paths as
+# --skip-files. Anything listed here is third-party or generated, never ours.
+:skip_files:
+  - node_modules/
+  - client/node_modules/
+  - conformance/node_modules/
+  - mcp/node_modules/
+  - selfhost-facilitator/node_modules/
+  - sidecar/node_modules/
+  - verifier/node_modules/
+  - wallet/node_modules/
+  - scripts/spike/
+  - app/assets/javascripts/hedera_wallet.js
+:ignore_file: config/brakeman.ignore

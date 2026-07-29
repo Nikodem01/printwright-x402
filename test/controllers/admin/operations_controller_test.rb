@@ -98,6 +98,53 @@ class Admin::OperationsControllerTest < ActionDispatch::IntegrationTest
     assert_requested stub, times: 1
   end
 
+  # Certificate retry is the operator's only lever when an HCS anchor fails, and
+  # it was the one money-adjacent admin action with no coverage at all.
+  test "operator can requeue an unanchored certificate, and cannot requeue an anchored one" do
+    admin = designers(:one)
+    license = unanchored_license(admin, slug: "retry-cert")
+    sign_in_as admin
+
+    assert_enqueued_with(job: CertMintJob, args: [ license.id ]) do
+      post retry_certificate_admin_license_path(license)
+    end
+
+    assert_redirected_to admin_root_path
+    follow_redirect!
+    assert_select ".flash-ok", text: /#{license.cert_id} queued for retry/
+    assert_equal %w[certificate_retry_requested certificate_retry_enqueued],
+                 AdminAuditLog.order(:id).last(2).map(&:action)
+
+    # Anchoring is final: a second run must not double-anchor the same license.
+    license.update!(hcs_topic_id: "0.0.9585069", hcs_sequence_number: 42)
+
+    assert_no_enqueued_jobs only: CertMintJob do
+      post retry_certificate_admin_license_path(license)
+    end
+
+    assert_redirected_to admin_root_path
+    follow_redirect!
+    assert_select ".flash-bad", text: /#{license.cert_id} is already anchored/
+    audit = AdminAuditLog.order(:id).last
+    assert_equal "certificate_retry_refused", audit.action
+    assert_equal "already_anchored", audit.details["reason"]
+  end
+
+  test "a sandbox certificate is not reachable by the operator retry lever" do
+    admin = designers(:one)
+    license = unanchored_license(admin, slug: "retry-sandbox", sandbox: true)
+    sign_in_as admin
+
+    assert_no_enqueued_jobs only: CertMintJob do
+      post retry_certificate_admin_license_path(license)
+    end
+
+    assert_redirected_to admin_root_path
+    follow_redirect!
+    assert_select ".flash-bad", text: /Certificate retry failed/
+    assert_equal "certificate_retry_failed", AdminAuditLog.order(:id).last.action
+  end
+
   test "operator panel surfaces reconciliation-required payouts without rerunning them" do
     ENV["X402_PAY_TO"] = "0.0.9584959"
     admin = designers(:one)
@@ -117,5 +164,17 @@ class Admin::OperationsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h2", text: "Payout attention"
     assert_select ".facts-table", text: /Ambiguous payout|#{admin.display_name}.*purchase-#{purchase.id}.*0\.22 USDC.*Reconciliation required.*ambiguous_result/m
     assert_not_requested :post, "http://localhost:4021/payout"
+  end
+
+  private
+
+  def unanchored_license(designer, slug:, sandbox: false)
+    model = Model3d.create!(designer: designer, title: slug.titleize,
+      slug: "#{slug}-#{SecureRandom.hex(4)}", status: "published", file_hash: "sha256:#{'a' * 64}")
+    offer = model.license_offers.create!(kind: "personal", price_cents: 250, terms_md: "T.")
+    purchase = Purchase.create!(license_offer: offer, status: "settled", sandbox: sandbox,
+      replay_key: SecureRandom.hex(32), buyer_hint: "0.0.9067781",
+      payment_tx_id: "0.0.7162784@111.222")
+    License.allocate!(purchase).tap { purchase.transition_to!(:delivered) }
   end
 end
