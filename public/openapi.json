@@ -12,7 +12,7 @@
     "/batches": {
       "post": {
         "operationId": "buyLicenseBatch",
-        "summary": "Buy up to 20 licenses with one x402 settlement",
+        "summary": "Buy many licenses with one x402 settlement",
         "description": "Send the same JSON body for both legs. The first returns one aggregate x402 challenge to Printwright's treasury; the signed retry settles once and returns one independently verifiable certificate per item, including mixed-designer batches. Designer payout happens separately after delivery. An optional buyer webhook reports certificate.anchored only after the paid certificate lands on HCS; it never creates a license.",
         "security": [],
         "x-payment-info": {
