@@ -86,9 +86,13 @@ still claims the file once it is back. Payments are final and never refunded, so
 stay recoverable rather than merely succeeding once.
 
 Those `files` URLs ride a download grant that expires. The durable handle is the **`receipt`
-capability** in the same response — a signed token that does not expire and needs no account:
+capability** in the same response — a signed token that does not expire and needs no account.
+`scripts/buy.mjs` writes the whole paid response to `purchases/<slug>/purchase.json` for exactly
+this reason, so the token survives the terminal session (`jq` is used below only to read it):
 
 ```bash
+cd purchases/cable-clip
+
 # the file list again, with fresh download URLs, months later
 curl "$(jq -r .receipt.files_url purchase.json)?token=$(jq -r .receipt.token purchase.json)"
 
@@ -150,6 +154,7 @@ payment and topic identifiers. It never returns paid geometry, creates a real li
 Hedera.
 
 Prerequisites: Ruby 3.3, PostgreSQL 16 with pgvector, Node.js 20+, and OpenSCAD 2021.01+.
+(`jq` is only needed for the re-download snippets above.)
 
 ```bash
 cp .env.example .env
@@ -205,6 +210,28 @@ curl -X POST http://localhost:4021/create-topic \
 Copy the returned topic ID to `HEDERA_HCS_TOPIC_ID` in the root `.env`, restart the app and
 sidecar, then run the paid buyer command above. The hosted testnet facilitator is the default;
 [`selfhost-facilitator/`](selfhost-facilitator/) is the reproducible fallback.
+
+</details>
+
+<details>
+<summary><strong>Buying in the browser without a wallet extension</strong></summary>
+
+The storefront cart and the chat approval button both sign through a browser wallet. With
+`WALLETCONNECT_PROJECT_ID` set, that is HashPack; without it, checkout says so plainly and
+points at the API instead of failing silently. To exercise the browser path with no extension,
+run the local demo signer — a separate process that holds only the buyer key, so the marketplace
+still never sees it:
+
+```bash
+node scripts/demo-wallet.mjs          # signs on :4022
+```
+
+Then set `DEMO_WALLET_URL=http://localhost:4022` in the root `.env` and restart the app. The
+cart's **Approve cart** button now settles for real on testnet.
+
+Chat purchases are additionally fail-closed: they need both `CHAT_PURCHASES_ENABLED=true` and a
+positive `CHAT_MAX_SPEND_CENTS`, and the shopkeeper can only *propose* — the approval button is
+the human's, and it is re-priced and cap-checked server-side before anything is signed.
 
 </details>
 
