@@ -1,6 +1,11 @@
 require "prawn"
 require "rqrcode"
 
+# We use the built-in AFM fonts deliberately (no font file to vendor or keep in
+# sync) and handle their Windows-1252 limit ourselves in #drawable, so Prawn's
+# standing warning about it is noise on every render.
+Prawn::Fonts::AFM.hide_m17n_warning = true
+
 module Certificates
   # A designed, self-contained PDF license certificate for the paid deliverable.
   # Pure Ruby (Prawn) — no headless browser — so it renders identically wherever
@@ -142,8 +147,8 @@ module Certificates
     end
 
     def statement_text
-      unit = "unit ##{@license.serial} of #{@model.title}"
-      designer = @model.designer.display_name
+      unit = "unit ##{@license.serial} of #{drawable(@model.title)}"
+      designer = drawable(@model.designer.display_name)
       if @sandbox
         "This locally simulates #{unit} by #{designer}. It grants no rights and certifies no payment or license."
       else
@@ -160,6 +165,22 @@ module Certificates
 
     def sandbox_note
       "This is a local rehearsal. No commitment was published to Hedera and no funds moved."
+    end
+
+    # A model title and a studio name are chosen by people, and Prawn's built-in
+    # fonts speak only Windows-1252 — an accent is fine, a Han character raises.
+    # A certificate must render for every designer we have, so keep whatever
+    # that set can represent (é, ø, £) and transliterate the rest to its nearest
+    # ASCII, falling back to "?" only when there is no sensible stand-in. The
+    # facts a verifier actually recomputes — cert id, hashes, tx, URLs — are
+    # ASCII by construction and pass through untouched.
+    def drawable(text)
+      text.to_s.each_char.map do |char|
+        char.encode(Encoding::Windows_1252)
+        char
+      rescue Encoding::UndefinedConversionError
+        ActiveSupport::Inflector.transliterate(char, "?")
+      end.join
     end
 
     def color(doc, hex)

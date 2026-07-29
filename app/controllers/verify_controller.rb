@@ -34,9 +34,23 @@ class VerifyController < ApplicationController
 
   # Print-styled certificate (browser print-to-PDF prints it clean): the cert
   # facts, the QR to the live verify check, and the raw URLs in text form —
-  # paper must not depend on this site staying up.
+  # paper must not depend on this site staying up. The .pdf rendering is the
+  # same document made server-side, so a buyer's agent gets a file it can keep
+  # without driving a browser.
   def certificate
     @license = License.includes(purchase: { license_offer: :model3d }).find_by(verify_slug: params[:cert_id])
+
+    # A PDF has no "sorry" page to render, so every refusal on that branch is a
+    # bare 404: unknown slug, or a licence whose certificate is not written yet
+    # (delivery writes cert_json; the HCS anchor follows asynchronously).
+    if request.format.pdf?
+      return head :not_found if @license.nil? || @license.cert_json.blank?
+
+      return send_data Certificates::Pdf.render(@license, verify_url: verify_url(@license.verify_slug)),
+        filename: "printwright-certificate-#{@license.cert_id}.pdf",
+        type: "application/pdf", disposition: "inline"
+    end
+
     return render :not_found, status: :not_found unless @license
 
     @model = @license.purchase.license_offer.model3d

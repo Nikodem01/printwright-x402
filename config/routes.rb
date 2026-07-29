@@ -147,7 +147,11 @@ Rails.application.routes.draw do
   get "verify/:cert_id/badge", to: "verify#badge", as: :verify_badge, defaults: { format: :svg }
   get "verify/:cert_id/share-card", to: "verify#share_card", as: :verify_share_card,
       defaults: { format: :svg }
+  # Same certificate, two renderings: the print-styled page, and a server-made
+  # PDF the buyer receives a link to at purchase.
   get "verify/:cert_id/certificate", to: "verify#certificate", as: :verify_certificate
+  get "verify/:cert_id/certificate.pdf", to: "verify#certificate", as: :verify_certificate_pdf,
+      defaults: { format: :pdf }
   get "receipts/:cert_id", to: "receipts#show", as: :purchase_receipt
   get "receipts/:cert_id/download", to: "receipts#download", as: :purchase_receipt_download
   post "receipts/:cert_id/library", to: "library_memberships#create", as: :receipt_library_membership
