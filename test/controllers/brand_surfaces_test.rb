@@ -67,6 +67,7 @@ class BrandSurfacesTest < ActionDispatch::IntegrationTest
     assert_select ".hero-shopkeeper form[action=?]", chat_path
     assert_select ".hero-shopkeeper a[href=?]", chat_path, text: /Open full chat/
     assert_select ".hero-shopkeeper .prompt-chip", minimum: 2
+    assert_select ".trust-strip a[href='/widget-example.html']", text: /portable live proof/
   end
 
   test "configured browser wallet is local, lazy, and names its Hedera network" do
