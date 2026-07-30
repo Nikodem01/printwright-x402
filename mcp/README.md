@@ -36,7 +36,7 @@ account with Printwright, no card — just a funded Hedera testnet account.
 |---|---|---|---|
 | `PRINTWRIGHT_URL` | no | `http://localhost:3000` | Base URL of the Printwright marketplace API. |
 | `BUYER_ACCOUNT_ID` | for `buy_license` | — | Funded Hedera account that pays for licenses (e.g. `0.0.xxxxxxx`). `HEDERA_ACCOUNT_ID` is accepted as a fallback name. |
-| `BUYER_PRIVATE_KEY` | for `buy_license` | — | That account's hex ECDSA private key, used locally to sign the payment — never sent anywhere but the Hedera network. `HEDERA_PRIVATE_KEY` is accepted as a fallback name. |
+| `BUYER_PRIVATE_KEY` | for `buy_license` | — | That account's hex ECDSA private key, used only in this process to sign the payment. The private key is never transmitted; only signed transaction bytes reach Printwright and the facilitator. `HEDERA_PRIVATE_KEY` is accepted as a fallback name. |
 | `MAX_SPEND_CENTS` | no | `2500` | Hard cap, in USD cents, on any single `buy_license` purchase. **Any offer priced above this is refused.** A malformed value (non-numeric or negative) makes the server refuse to start at all, printing why — this exists so a typo can never silently disable the cap. Set to `0` to refuse every priced offer (a deliberate "buying is off" setting, not a fallback). |
 | `HEDERA_NETWORK` | no | `testnet` | `testnet` or `mainnet`. Selects the signing network and the USDC token id (`0.0.429274` testnet / `0.0.456858` mainnet), the same switch the rest of the project derives from. Anything other than `mainnet` is treated as testnet. |
 | `PRINTWRIGHT_SANDBOX` | no | `false` | Set exactly `true` to use Printwright's local mock facilitator and throwaway topic. No buyer credentials or funds are needed; receipts and artifacts are labeled sandbox and have no on-chain or license value. |
@@ -83,17 +83,12 @@ to stderr.
 `package.json` declares a `printwright-mcp` bin, so `npx printwright-mcp` works as an entry
 point once the runtime dependencies are installed. **This package is not published to npm
 yet** — there is no `npx printwright-mcp` that fetches from the registry. Until it is
-published, run it from a local checkout or tarball:
+published, run it from a local checkout:
 
 ```bash
 # from a checkout, in place:
 cd mcp && npm install && npx printwright-mcp
-
-# or from a packed tarball, anywhere:
-cd mcp && npm pack
-npm install /path/to/printwright-mcp-0.1.0.tgz   # in some scratch project
-npx printwright-mcp
 ```
 
-Either way, set the environment variables above before running — `claude mcp add` (above) can
-pass `--env` flags directly to whichever form you use, including `-- npx printwright-mcp`.
+Set the environment variables above before running — `claude mcp add` can pass `--env` flags
+directly to this local command.

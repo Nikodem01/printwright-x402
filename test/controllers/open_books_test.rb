@@ -33,7 +33,8 @@ class OpenBooksTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "Open books", response.body
-    assert_match "License commitments on HCS", response.body
+    assert_match "Total messages on HCS", response.body
+    assert_match "reused historical topic", response.body
     assert_match "90.0%", response.body
     assert_match "Raw latest-message query", response.body
     assert_match api_v1_stats_path, response.body

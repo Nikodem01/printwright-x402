@@ -28,10 +28,10 @@ def seed_attachment_current?(attachment, bytes)
     attachment.blob.service.exist?(attachment.blob.key)
 end
 
-# Designers with their own funded testnet account (SEED_*_ACCOUNT_ID env)
-# receive sales directly once the publish-time mirror check passes; the rest
-# demonstrate treasury custody + owed balance. Never default to the treasury
-# account here — a designer "owning" the treasury id corrupts held_by.
+# Optional SEED_*_ACCOUNT_ID values prefill an unverified demo destination for
+# operator testing. They do not change checkout: all purchases settle to the
+# treasury, and payout remains owed until the normal destination verification
+# completes. Never default a designer to the treasury account.
 def demo_designer(email, name, bio, account_env: nil)
   designer = Designer.find_or_create_by!(email_address: email) do |d|
     d.password = SecureRandom.base58(24)

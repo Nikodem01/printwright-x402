@@ -22,15 +22,15 @@
       door.</li>
     <li>Network fees — a fraction of a cent per purchase — are paid by the facilitator, not
       added to the offer price.</li>
-    <li>The license certificate anchored to Hedera Consensus Service costs roughly $0.0001 to
-      submit; that cost is absorbed by the platform, not billed separately.</li>
+    <li>The opaque licence commitment submitted to Hedera Consensus Service costs about $0.0008
+      plus payload-byte extras at the current published fee schedule; that cost is absorbed by
+      the platform, not billed separately.</li>
   </ul>
 
   <h2>Settlement</h2>
   <p>Buyer settlement is separate from buyer delivery and designer payout. A pending or held
-    designer payout does not delay or revoke the buyer's delivered license. Every payment and
-    every certificate is a real transaction on Hedera
-    <%= Hedera::Network.name %> — see the <%= link_to "API docs", docs_path %> for the exact
-    negotiation, or <%= link_to "verify a certificate", verify_path(cert_id: "pw-000038") %>
-    against the public mirror node.</p>
+    designer payout does not delay or revoke the buyer's delivered licence. Every real payment is
+    a Hedera <%= Hedera::Network.name %> transaction; after delivery, a separate asynchronous
+    transaction anchors the licence's opaque commitment. See the <%= link_to "API docs", docs_path %>
+    for the exact negotiation.</p>
 </div>

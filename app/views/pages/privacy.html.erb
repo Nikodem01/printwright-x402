@@ -14,10 +14,10 @@
     <li><strong>Designer early access:</strong> if you submit the landing-page form, we store the
       email only to confirm the request and tell you when designer onboarding opens. It does not
       create an account, newsletter subscription, or public profile.</li>
-    <li><strong>On-chain:</strong> license certificates (model hash, license type, unit
-      serial, buyer account hint, payment tx, terms hash) are published permanently to a
-      public Hedera Consensus Service topic — that is the product. Do not buy a license
-      from an account you do not want publicly associated with the purchase.</li>
+    <li><strong>On-chain:</strong> the payment transfer is public on Hedera. The current licence
+      writer separately publishes only an opaque commitment to a public Hedera Consensus Service
+      topic; the certificate, nonce, model, buyer hint, terms, and payment transaction remain in
+      the holder's private proof bundle. A holder may choose to disclose that bundle.</li>
   </ul>
 
   <h2>What we don't do</h2>
@@ -38,5 +38,6 @@
     to keep existing receipts, downloads, certificates, and rights valid. Those listings are
     retired from all new sales. Closure is blocked while a real-money purchase or owed payout is
     unresolved. Optional buyer-library email and early-access addresses can be removed by email;
-    on-chain certificates are permanent by design. Questions: see the repository README for contact.</p>
+    on-chain payment and commitment records are permanent by design. Questions: see the repository
+    README for contact.</p>
 </div>

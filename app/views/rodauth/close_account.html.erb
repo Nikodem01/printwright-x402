@@ -26,7 +26,7 @@
       ledger rows remain immutable; the payout destination is removed, so no later payout can be sent.</li>
     <li>Preserves existing buyers' license terms, certified bundle, receipts, certificates,
       downloads, and entitled model versions.</li>
-    <li>Cancels no completed purchase and changes no historical ledger or on-chain certificate.</li>
+    <li>Cancels no completed purchase and changes no historical ledger, payment, or HCS commitment.</li>
   </ul>
 
   <% if owed.any? || in_flight.positive? %>

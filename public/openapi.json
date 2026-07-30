@@ -3,7 +3,7 @@
   "info": {
     "title": "Printwright API",
     "version": "1.9.1",
-    "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; every purchase anchors an opaque HCS commitment to a license certificate the buyer receives as a portable proof bundle.",
+    "description": "Agent-buyable marketplace for licensed 3D-printable models. Paid downloads use the x402 protocol (HTTP 402) settling on Hedera testnet in HBAR or USDC; each delivery returns a portable license proof bundle and queues its opaque HCS commitment for asynchronous anchoring.",
     "contact": { "url": "https://github.com/Nikodem01/printwright-x402" },
     "x-guidance": "Search GET /api/v1/models, inspect offers, then buy one license with GET /api/v1/models/{id}/download or many with POST /api/v1/batches (up to 200 line items and 250 licenses; per-line quantity buys N licenses). An unpaid request returns an x402 v2 challenge; sign one exact payment option and retry the identical request. Delivery always carries `files`: a paid request never returns 200 without one, and a settled purchase that cannot be delivered returns 503 no_deliverable_file and stays claimable. KEEP the `receipt` capability — the `files` URLs ride a download grant that expires, but GET {receipt.files_url}?token={receipt.token} re-lists live download URLs indefinitely, with no account. There are no refunds, so store receipt.token at settlement. Paid requests settle to Printwright's treasury; designer payout happens separately after delivery and does not change buyer rights. For a zero-funds rehearsal, send X-Sandbox: true on both requests; sandbox artifacts are explicitly not payments or licenses."
   },
@@ -13,7 +13,7 @@
       "post": {
         "operationId": "buyLicenseBatch",
         "summary": "Buy many licenses with one x402 settlement",
-        "description": "Send the same JSON body for both legs. The first returns one aggregate x402 challenge to Printwright's treasury; the signed retry settles once and returns one independently verifiable certificate per item, including mixed-designer batches. Designer payout happens separately after delivery. An optional buyer webhook reports certificate.anchored only after the paid certificate lands on HCS; it never creates a license.",
+        "description": "Send the same JSON body for both legs. The first returns one aggregate x402 challenge to Printwright's treasury; the signed retry settles once and returns one independently verifiable certificate per item, including mixed-designer batches. Designer payout happens separately after delivery. An optional buyer webhook reports certificate.anchored only after the paid commitment lands on HCS; it never creates a license.",
         "security": [],
         "x-payment-info": {
           "price": { "mode": "dynamic", "currency": "USD", "min": "0.01", "max": "200000.00" },
@@ -175,7 +175,7 @@
         "description": "Returns a machine-decidable interpretation only when its canonical v1 prose matches the certificate's anchored terms_hash. The prose remains the legal grant. Sandbox receipts always return allowed=false.",
         "security": [],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "pw-000036", "description": "public certificate id" },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "pw-000036", "description": "certificate disclosure id returned to the paid holder" },
           { "name": "use", "in": "query", "required": true, "schema": { "type": "string", "enum": ["personal_print", "commercial_print", "resell_files", "share_files", "personal_remix", "commercial_remix", "transfer_license", "sublicense"] } },
           { "name": "qty", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 1000000, "default": 1 } }
         ],
@@ -250,8 +250,8 @@
     "/stats": {
       "get": {
         "operationId": "getOpenBooks",
-        "summary": "Public HCS certificate and immutable revenue-ledger metrics",
-        "description": "Separates the durable certificate-topic message count fetched from Hedera's mirror node from the settlement totals retained in this deployment's immutable ledger. Amounts are exact asset base units; sandbox rehearsals are excluded.",
+        "summary": "Configured HCS topic and immutable revenue-ledger metrics",
+        "description": "Separates the configured HCS topic's latest public message sequence from the settlement totals retained in this deployment's immutable ledger. A reused historical topic can contain superseded certificate formats as well as current commitments and model-version events. Amounts are exact asset base units; sandbox rehearsals are excluded.",
         "security": [],
         "responses": {
           "200": { "description": "Current open-books snapshot; hcs.status=unavailable labels mirror outages without presenting a local count as on-chain", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OpenBooksStats" } } } },
@@ -391,8 +391,8 @@
             } } },
             "designer": { "type": "object", "properties": {
               "name": { "type": "string" }, "verified": { "type": "boolean" },
-              "payout_destination_verified": { "type": "boolean", "description": "Platform-verified payout destination state. The destination account id itself is private; each license certificate records the sale-time designer account immutably." },
-              "hedera_account_id": { "type": ["string", "null"], "deprecated": true, "description": "Always null. The current payout destination is the studio's private financial detail; use the license certificate's designer field for the sale-time account." } } },
+              "payout_destination_verified": { "type": "boolean", "description": "Platform-verified payout destination state. The destination account id itself is private; each license certificate records only the stable studio id." },
+              "hedera_account_id": { "type": ["string", "null"], "deprecated": true, "description": "Always null. The current payout destination is the studio's private financial detail; the license certificate's designer field is a stable studio id, not a payout account." } } },
             "download_url": { "type": "string" } } }
         ]
       },
@@ -624,7 +624,7 @@
       },
       "ReceiptCapability": {
         "type": "object",
-        "description": "The durable delivery path, and the only handle that outlives the download grant in `files`. The token does not expire and needs no account. GET {files_url}?token= returns this license's files with fresh download URLs plus its print-feedback and model-update capabilities; GET {download_url}?token= redirects to the first part (&f=N selects one); GET {url}?token= is the human receipt page. Never returned by sandbox.",
+        "description": "The durable no-account delivery path that outlives the download grant in `files`. The token does not expire and needs no account. GET {files_url}?token= returns this license's files with fresh download URLs plus its print-feedback and model-update capabilities; GET {download_url}?token= redirects to the first part (&f=N selects one); GET {url}?token= is the human receipt page. Never returned by sandbox.",
         "required": ["url", "files_url", "download_url", "token"],
         "properties": {
           "url": { "type": "string", "format": "uri", "description": "human receipt page" },

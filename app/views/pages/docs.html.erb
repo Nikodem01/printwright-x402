@@ -1,9 +1,9 @@
 <% content_for :title, "API docs — Printwright" %>
 <div class="container">
   <h1>API docs</h1>
-  <p class="t-small muted">Everything below is either rendered live from <%= link_to "/openapi.json", "/openapi.json" %>
-    or grep-verified against this running app — nothing here can quietly drift from the real
-    contract. Machine-readable summary: <%= link_to "/llms.txt", "/llms.txt" %>.</p>
+  <p class="t-small muted">Human-readable reference. Machine-readable contract:
+    <%= link_to "/openapi.json", "/openapi.json" %>. Agent summary:
+    <%= link_to "/llms.txt", "/llms.txt" %>.</p>
 
   <h2>Quickstart</h2>
   <p class="t-small">A purchase is one HTTP negotiation: probe, get a <code>402</code>, sign a
@@ -43,13 +43,13 @@ curl -i "http://localhost:3000/api/v1/models/5/download?license=personal" \
   <h2>Durable receipts and optional library</h2>
   <p class="t-small">Every real paid delivery includes a private <code class="mono">receipt</code>
     capability. Its URL plus token opens a no-store receipt and can reissue a model download after
-    the original 24-hour grant expires. Sandbox responses never receive this capability. Treat the
+    the original 30-day grant expires. Sandbox responses never receive this capability. Treat the
     token like the downloadable license it protects; do not log or send it to an AI provider.</p>
   <p class="t-small">A buyer may optionally save the license under an email from that receipt.
     This creates no buyer account or password. A 30-minute magic link establishes an encrypted,
     HttpOnly 30-day browser library and immediately redirects to a clean token-free URL. Returning
     sign-in gives the same response for known and unknown emails. The library lists saved paid
-    receipts and can reissue downloads; the permanent public PWC-1 certificate remains independent
+    receipts and can reissue downloads; the portable PWC-1 certificate remains independent
     of the email and library.</p>
 
   <h2 id="external-profile">External designer profiles</h2>
@@ -101,7 +101,7 @@ curl -i "http://localhost:3000/api/v1/models/5/download?license=personal" \
     public HTTPS endpoint under <strong>Designer → Webhooks</strong> and receives
     <code class="mono">sale.completed</code> after paid delivery. A batch buyer can include the
     optional callback below in the body used for both the 402 probe and signed retry; it receives
-    <code class="mono">certificate.anchored</code> only after each PWC-1 certificate lands on HCS.
+    <code class="mono">certificate.anchored</code> only after each PWC-1 commitment lands on HCS.
     Sandbox purchases emit neither event.</p>
   <pre class="mono t-small" style="overflow-x:auto">{
   "items": [{"model_id": 5, "license": "commercial_unit"}],
@@ -130,7 +130,7 @@ export function verifyPrintwrightWebhook(rawBody, headers, secret) {
 
   <h2>JavaScript client</h2>
   <p class="t-small"><code class="mono">@printwright/client</code> wraps catalog reads, the
-    x402 Hedera signature, optional first-use USDC association, and HCS certificate comparison.
+    x402 Hedera signature, optional first-use USDC association, and proof-bundle/HCS comparison.
     From this repository install it with <code class="mono">npm install ./client</code>; the
     registry command after release is <code class="mono">npm install @printwright/client</code>.
     This five-line read-only quickstart needs no funded account:</p>
@@ -247,8 +247,10 @@ console.log(receipt.warning, await sandbox.verify(receipt.license.cert_id));</pr
     <code class="mono">Retry-After</code> is always 60): <code class="mono">/models</code> and
     <code class="mono">/models/{id}</code>, <code class="mono">/certificates/{cert_id}</code>,
     <code class="mono">/licenses/{id}/can</code>, and <code class="mono">/stats</code>
-    120/min, <code class="mono">/models/{id}/download</code> 30/min,
-    <code class="mono">/files/{token}</code> 60/min, successful-print reports 20/min.</p>
+    120/min, <code class="mono">/models/{id}/download</code> 120/min,
+    <code class="mono">/files/{token}</code> 240/min,
+    <code class="mono">/licenses/{cert_id}/latest-version</code> and
+    <code class="mono">/batches</code> 60/min, successful-print reports 20/min.</p>
 
   <h2>Machine-readable license decisions</h2>
   <p class="t-small">An agent never needs to parse legal prose to answer a bounded usage question.
@@ -303,34 +305,35 @@ console.log(decision.allowed, decision.reason_code);</pre>
     same certificate id and receipt capability. Sandbox receipts do not receive update access.</p>
 
   <h2 id="pwc-1">PWC-1 certificate standard</h2>
-  <p class="t-small"><strong>PWC-1</strong> is the frozen version-1 JSON payload stored as one
-    Hedera Consensus Service message for each issued print license. Its normative
-    <%= link_to "JSON Schema", "/pwc-1.schema.json", class: "mono" %> fixes the eleven fields,
-    types, identifier patterns, hashes, and allowed license kinds. Unknown fields are invalid;
-    incompatible changes require a new <code class="mono">v</code> and a new schema.</p>
+  <p class="t-small"><strong>PWC-1</strong> is the frozen version-1 proof-bundle contract. Its
+    normative <%= link_to "JSON Schema", "/pwc-1.schema.json", class: "mono" %> fixes the private
+    certificate, exact terms, blinding nonce, commitment, and HCS coordinates. Unknown fields are
+    invalid. The full bundle stays with its holder; Hedera stores only the opaque commitment
+    envelope shown below.</p>
   <pre class="mono t-small" style="overflow-x:auto">{
-  "v": 1, "cert_id": "pw-000058", "model_id": 48,
-  "model_hash": "sha256:…", "designer": "0.0.9604186",
-  "license_type": "commercial_unit", "unit_serial": 2,
-  "buyer_hint": "0.0.9067781", "payment_tx": "0.0.7162784@…",
-  "issued_at": "2026-07-19T08:29:37Z", "terms_hash": "sha256:…"
+  "type": "printwright-license-commitment",
+  "version": 1,
+  "algorithm": "sha256-jcs-v1",
+  "commitment": "64 lowercase hex characters"
 }</pre>
-  <p class="t-small">Transport: UTF-8 JSON is base64-encoded by the mirror REST response at
+  <p class="t-small">The mirror REST response base64-encodes that UTF-8 JSON at
     <code class="mono" style="overflow-wrap: anywhere">/api/v1/topics/{topic}/messages/{sequence}</code>.
-    A verifier must validate
-    the mirror topic and sequence, decode the message strictly, validate PWC-1, and match a
-    requested <code class="mono">cert_id</code>. Consensus proves that payload occupied that
-    immutable topic position. It does not prove the buyer still controls an account, interpret
-    the prose, validate geometry, or independently replay the payment transaction.</p>
+    A verifier validates the disclosed bundle, hashes its terms, recomputes
+    <code class="mono">SHA-256(domain || nonce || JCS(certificate))</code>, derives the public
+    Mirror Node URL from the reported network/topic/sequence, and requires the decoded envelope
+    to carry that exact commitment. Consensus proves the commitment occupied that immutable topic
+    position. It does not prove the buyer still controls an account, interpret the prose, validate
+    geometry, or independently replay the payment transaction.</p>
   <pre class="mono t-small" style="overflow-x:auto"># From this checkout (the package is not yet in the npm registry):
-npx --package ./verifier printwright-verify pw-000058
-# Registry command after release:
-npx printwright-verify <%= Hedera::Network.mirror_base %>/api/v1/topics/<%= Hedera::Network.hcs_topic_id %>/messages/50</pre>
-  <p class="t-small">The verifier queries Hedera's mirror node directly. A Printwright verify
-    URL is accepted only as an ID locator; the CLI never requests the marketplace.</p>
+npx --package ./verifier printwright-verify public/widget-example.bundle.json</pre>
+  <p class="t-small">Input may instead be a paid <code class="mono">bundle_url</code> or
+    <code class="mono">-</code> for stdin. A URL input fetches that untrusted bundle JSON once;
+    a local file or stdin needs only the public Mirror Node. In either case the verifier derives
+    its own Mirror Node URL and never trusts Printwright's verification verdict.</p>
   <p class="t-small">Browser pages can use the dependency-free
-    <%= link_to "verification widget", badge_docs_path %>. Its custom element scans the specified
-    topic and validates PWC-1 using only the selected Hedera mirror; the
+    <%= link_to "verification widget", badge_docs_path %>. Its custom element accepts an inline
+    bundle or fetches the specified bundle URL, then validates PWC-1 against the selected Hedera
+    mirror; the
     <%= link_to "plain HTML example", "/widget-example.html", class: "mono" %> also works from a
     static web server while this Rails application is stopped.</p>
 
@@ -368,10 +371,11 @@ claude mcp add printwright \
   --env BUYER_PRIVATE_KEY=0x... \
   --env MAX_SPEND_CENTS=2500 \
   -- node mcp/server.mjs</pre>
-  <p class="t-small">Five tools: <code class="mono">search_models</code>,
+  <p class="t-small">Six tools: <code class="mono">search_models</code>,
     <code class="mono">get_model</code>, <code class="mono">buy_license</code> (refuses without
     <code class="mono">confirm: true</code>, capped by <code class="mono">MAX_SPEND_CENTS</code>),
     <code class="mono">check_license</code> (machine-decidable use + quantity),
+    <code class="mono">get_latest_version</code> (private paid-holder update access),
     and <code class="mono">verify_certificate</code> (reads the HCS message from the public
     mirror and diffs it against the marketplace copy).</p>
 

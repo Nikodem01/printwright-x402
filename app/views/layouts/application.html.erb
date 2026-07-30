@@ -5,7 +5,7 @@
         visually. In <title> and meta there is no visual context and a cold
         reader might think real-estate agent, so those say "AI agents". %>
     <% page_title = content_for(:title) || "Printwright — the 3D model store for AI agents" %>
-    <% page_description = content_for(:description) || "Licensed 3D-printable models an AI agent, an assistant, or a person can buy over plain HTTP. Pay in HBAR or USDC on Hedera; every purchase mints a verifiable certificate." %>
+    <% page_description = content_for(:description) || "Licensed 3D-printable models an AI agent, an assistant, or a person can buy over plain HTTP. Real purchases settle in HBAR or USDC on Hedera and return private proof with an asynchronous HCS commitment." %>
     <% social_image = content_for(:social_image) || "#{request.base_url}/og-printwright.png" %>
     <% social_image_alt = content_for(:social_image_alt) || "Printwright — the 3D model store for agents. Rights anchored on Hedera." %>
     <title><%= page_title %></title>
@@ -163,7 +163,7 @@
     <% else %>
       <footer class="site-footer">
       <div class="container">
-        License certificates anchor to Hedera Consensus Service topic
+        Licence commitments anchor to Hedera Consensus Service topic
         <a class="mono" href="<%= Hedera::Network.hcs_topic_url %>"><%= Hedera::Network.hcs_topic_id %></a>
         as opaque commitments — verifiable on the public mirror node. Payments via x402 (Hedera <%= Hedera::Network.name %>, HBAR/USDC).
         <span class="footer-links t-small">

@@ -315,7 +315,7 @@ Boot check without spending: start the app with `HEDERA_NETWORK=mainnet` and
 
 | operation | fee | when |
 |---|---|---|
-| HCS message (the certificate) | $0.0001 | every purchase |
+| HCS message (the opaque commitment) | about $0.0008 plus payload-byte extras | every purchase |
 | token transfer (settle leg) | $0.0001–0.001 | every purchase (facilitator pays) |
 | token association (first USDC payout) | $0.05 | once per designer, paid by the operator |
 | account create (demo/testing) | $0.05 | rare |

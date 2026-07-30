@@ -2,8 +2,7 @@
 
 Printwright uses the hosted [Blocky402](https://blocky402.com) facilitator by default —
 nothing to run. This directory is the **self-host fallback**: a minimal facilitator you can
-run yourself so the marketplace depends on no single provider. x402 is permissionless; the more
-independent Hedera facilitators exist, the healthier the rail.
+run yourself so the marketplace is not tied to one hosted facilitator provider.
 
 It is the Hedera slice of the [x402-foundation reference facilitator](https://github.com/x402-foundation/x402/blob/main/examples/typescript/facilitator/advanced/all_networks.ts),
 standalone on the published [`@x402/core`](https://www.npmjs.com/package/@x402/core) +
@@ -47,23 +46,27 @@ Use three distinct accounts: buyer → payTo, fee-payer sponsors.
 ## Exposure
 
 `/verify` and `/settle` are unauthenticated — facilitators are public by design, and the hosted
-one is open access too. The fee-payer never gains or loses value (it submits the *buyer's* signed
-transfer), so the worst a stranger can do is burn its network fees, a few hundredths of a cent at
-a time. Still, treat the port as a spend surface: keep it on localhost or behind your proxy unless
-you mean to run a public facilitator, and fund the fee-payer with operating float, not a treasury.
+one is open access too. The fee-payer is not a party to the purchase-value transfer, but it does
+pay the network fee. Repeated strangers can therefore drain its operating float. Treat the port
+as a spend surface: keep it on localhost or behind your proxy unless you mean to run a public
+facilitator, add rate controls at that boundary, and fund the fee-payer with operating float, not
+a treasury.
 
 ## Verified (Hedera testnet)
 
-Real settles driven end-to-end through this facilitator (`scripts/buy.mjs` → app → here), one
-per asset. In each, the mirror confirms the value moved buyer → designer and the fee-payer
-`0.0.9067781` moved **zero** value, paying only the network fee:
+Historical settles from the earlier direct-pay configuration, driven end-to-end through this
+facilitator (`scripts/buy.mjs` → app → here), one per asset. In each, the mirror confirms the
+value moved buyer → that version's configured payTo account and the fee-payer `0.0.9067781`
+moved **zero** purchase value, paying only the network fee. Current Printwright purchases settle
+to the treasury first and pay designers separately.
 
 | asset | settle tx | value moved | fee-payer paid | cert |
 |---|---|---|---|---|
 | HBAR | [`0.0.9067781@1784389444.403626092`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1784389444-403626092) | `0.0.9613501` −1358695652 tℏ → `0.0.9604186` +1358695652 tℏ | 301932 tℏ fee only | `pw-000036` (seq 37) |
 | USDC | [`0.0.9067781@1784389148.249562065`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1784389148-249562065) | `0.0.9613501` −0.90 → `0.0.9604186` +0.90 (`0.0.429274`) | 1660627 tℏ fee only | `pw-000033` (seq 34) |
 
-Certificates anchored on topic [`0.0.9585069`](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069).
+The resulting certificates were anchored on topic
+[`0.0.9585069`](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069).
 The settle transaction's *payer* is this facilitator's fee-payer rather than the hosted one's
 `0.0.7162784` — which is itself the proof the payment was routed here.
 

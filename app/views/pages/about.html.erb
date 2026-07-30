@@ -6,27 +6,26 @@
     the tokens have no monetary value.</p>
 
   <h2>The problem</h2>
-  <p>Designers who sell 3D-printable models have no enforceable record of what was actually
-    licensed to whom — a sale is a download link and an invoice, easy to dispute and easy to
-    ignore. Software agents have no way to buy a licensed file at all: there is no account to
-    create, no card to charge, nothing an agent can act on without a human in the loop.</p>
+  <p>Conventional 3D-model sales often leave rights in an invoice or account-bound download.
+    Printwright explores a machine-readable alternative in which software can discover an offer,
+    authorize a bounded payment, receive the files, and retain portable evidence of the licence.</p>
 
   <h2>What Printwright is</h2>
   <p>A marketplace for <strong>licensed</strong> 3D-printable models. Designers upload a model
-    and set a per-print royalty; buyers — human or software agent — pay for a license over
+    and set licence prices; buyers — human or software agent — pay for a licence over
     <a class="mono" href="<%= Hedera::Network.mirror_base %>/api/v1/network/nodes">Hedera <%= Hedera::Network.name %></a>
-    using the x402 protocol. Every purchase mints a license certificate on Hedera Consensus
-    Service: a tamper-evident public record of "unit N of model X, licensed at time T,"
-    verifiable by anyone on the public mirror node, independent of Printwright.</p>
+    using the x402 protocol. Each real delivery returns a private proof bundle and asynchronously
+    anchors only its opaque commitment on Hedera Consensus Service. A holder can disclose the
+    bundle so another party can recompute it and compare it with the exact public Mirror Node
+    message.</p>
 
   <h2>How the certificate rail works</h2>
-  <p>Each license offer carries a price and terms. When a buyer pays, the marketplace submits a
-    message to an HCS topic — id
+  <p>Each licence offer carries a price and terms. After paid delivery, a retrying job submits an
+    opaque commitment envelope to an HCS topic — id
     <a class="mono" href="<%= Hedera::Network.hcs_topic_url %>"><%= Hedera::Network.hcs_topic_id %></a>
-    — recording the model, the unit serial, the license terms hash, and the payment
-    transaction. Consensus ordering makes the record tamper-evident; anyone can read it back
-    from the public mirror node and compare it against the marketplace's copy, field by field,
-    from the <%= link_to "verify page", verify_path(cert_id: "pw-000038") %>.</p>
+    — without publishing the certificate, model, buyer, terms, or transaction. Consensus ordering
+    fixes that commitment at a topic position. Verification requires the holder's disclosed proof
+    bundle; the verifier recomputes it locally and compares it with the exact Mirror Node message.</p>
 
   <h2>Three doors, one marketplace</h2>
   <ul>

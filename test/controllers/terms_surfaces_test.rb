@@ -33,7 +33,7 @@ class TermsSurfacesTest < ActionDispatch::IntegrationTest
 
   test "legal pages render with honest template labels" do
     { terms_path => "Marketplace Terms of Service",
-      privacy_path => "permanently", takedown_path => "counter-notice" }.each do |path, marker|
+      privacy_path => "opaque commitment", takedown_path => "counter-notice" }.each do |path, marker|
       get path
       assert_response :success
       assert_match marker, response.body

@@ -102,7 +102,7 @@ curl -L "$(jq -r .receipt.download_url purchase.json)?token=$(jq -r .receipt.tok
 
 The same JSON carries the print-feedback and model-update capabilities, and `receipt.url` opens
 the human receipt page from the same token. **Store `receipt.token` with the certificate id at
-settlement** — it is the one handle that outlives everything else in the response. Buyers keep
+settlement** — it is the durable no-account handle that outlives the initial grant. Buyers keep
 access across model versions too: `model_updates` serves the newest deliverable bundle while the
 original certified files stay reachable.
 
@@ -143,7 +143,7 @@ These are public records, not screenshots:
 | **Separate designer payout** | [USDC payout on Mirror Node ↗](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1784242883-124267302) |
 | **Separate model-version provenance** | [`pwv-1` submit on Mirror Node ↗](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1785078563-036978424) · [exact Mirror message #70](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/70) |
 
-The dated 2026-07-29 reproducibility snapshot, including a full cold-clone run of every door and
+The dated 2026-07-30 reproducibility snapshot, including a full cold-clone run of every door and
 what has and has not been externally validated, is in [`docs/VALIDATION.md`](docs/VALIDATION.md).
 
 ## Run the demo

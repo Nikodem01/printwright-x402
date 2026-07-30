@@ -4,10 +4,10 @@ Live commerce manifest: GET /.well-known/x402-catalog.json
 
 > The agent-buyable marketplace for licensed 3D-printable models. Search, inspect, and BUY
 > print licenses over plain HTTP — payments use the x402 protocol (HTTP 402) settling on
-> Hedera testnet in HBAR or USDC. No account, no API key, no card. Every purchase anchors a
-> tamper-evident license certificate to the Hedera Consensus Service as an opaque commitment;
-> the certificate travels with the buyer as a proof bundle and is verifiable by anyone they
-> show it to, against the public mirror node.
+> Hedera testnet in HBAR or USDC. No Printwright account or API key; paying requires a funded
+> Hedera account and a local buyer key or wallet approval. Each real paid delivery returns a
+> private proof bundle and queues its opaque commitment for asynchronous HCS anchoring. The
+> holder can disclose that bundle for verification against the public mirror node.
 
 API base: /api/v1 — full spec at /openapi.json — human docs at /docs
 
@@ -39,7 +39,7 @@ not expire and needs no account, so it is how you get the files back later:
 
 The same JSON also carries the print_feedback and model_updates capabilities. There are no
 refunds, so store `receipt.token` with the certificate id the moment a purchase settles: it is
-the only handle that survives the grant. A settled purchase that cannot be delivered returns
+the durable no-account handle that survives the grant. A settled purchase that cannot be delivered returns
 503 {"error":"no_deliverable_file","recoverable":true} with the cert_id and receipt — never a
 200 with an empty files[].
 
@@ -47,11 +47,12 @@ For 1-200 line items sharing one payTo, POST
 {"items":[{"model_id":1,"license":"commercial_unit","quantity":3}, ...]} to /api/v1/batches.
 `quantity` defaults to 1 and buys N separate licenses on one line; the batch totals at most 250
 licenses. Probe and retry the identical JSON body. One aggregate x402 settlement returns one
-certificate, files[] and verify_url per license; mixed direct-pay destinations are rejected.
+certificate, files[] and verify_url per license. All items quote the same treasury payTo; mixed
+designers are supported.
 Batch items carry a summary rather than the full single-license payload: fetch the proof bundle
 from `bundle_url`, and everything else from `receipt.files_url` as above.
 An optional `webhook` object (`url` public HTTPS, `secret` 32-256 bytes) in both identical batch
-bodies receives a signed certificate.anchored event only after each paid certificate lands on HCS.
+bodies receives a signed certificate.anchored event only after each paid commitment lands on HCS.
 Designer-configured endpoints receive sale.completed only after paid delivery. Webhooks report
 x402 lifecycle results; they never create purchases, licenses, certificates, or ledger entries,
 and sandbox flows emit no webhooks. Verify HMAC-SHA256 over
@@ -129,11 +130,13 @@ not hit them. Back off and retry after the given number of seconds.
   get_latest_version, verify_certificate
 - Third-party verifier — `npx --package ./verifier printwright-verify <bundle.json|bundle-url|->`
   (shortens to `npx printwright-verify` after registry release) recomputes the commitment locally
-  (RFC 8785 JCS + SHA-256) and checks it against Hedera's mirror node without requesting this
-  marketplace; the mirror host is fixed and its URL derived from the bundle's topic and sequence
+  (RFC 8785 JCS + SHA-256) and checks it against Hedera's mirror node; a bundle URL is fetched as
+  untrusted input, while file/stdin input never requests this marketplace. The mirror host is
+  fixed and its URL derived from the bundle's topic and sequence
 - Browser widget — load `/printwright-verify-widget.js`, then add `<printwright-verify
   bundle-url="..." topic-id="0.0.N" network="testnet">` (or paste the bundle inline as
-  `<script type="application/json">`); it never requests the marketplace API or database
+  `<script type="application/json">`); inline mode needs only the public Mirror Node, while
+  bundle-url mode fetches the URL as untrusted input
 
 `max_units` and `remaining_units` are a cap and current snapshot of licenses sold/reserved. They
 do not claim physical scarcity or technically prevent prints; the anchored license terms govern use.

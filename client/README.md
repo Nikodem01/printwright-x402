@@ -1,12 +1,18 @@
 # @printwright/client
 
 The Node.js client for the Printwright licensed 3D-model marketplace. It searches the public
-catalog, negotiates and signs x402 payments on Hedera, and independently compares license
-certificates with their HCS mirror-node messages.
+catalog, negotiates and signs x402 payments on Hedera, and recomputes a disclosed proof bundle
+before comparing it with its exact HCS Mirror Node message.
+
+This package is not published to npm yet. Install it from this checkout:
 
 ```bash
-npm install @printwright/client
+npm install /path/to/printwright-x402/client
 ```
+
+From the repository root itself, the equivalent command is `npm install ./client`.
+`npm install @printwright/client` is the registry command after release, not a command that works
+today.
 
 Catalog reads need no account:
 
@@ -76,7 +82,7 @@ console.log(batch.transaction_id, batch.licenses.map(({ cert_id }) => cert_id));
 ```
 
 The optional public-HTTPS callback receives one signed `certificate.anchored` event per item
-after its paid license certificate lands on HCS. The webhook does not create or certify a sale;
+after its paid license commitment lands on HCS. The webhook does not create or certify a sale;
 it only reports the result of this x402 batch.
 
 `can()` needs no account or key. It asks the public structured-policy endpoint whether one
@@ -99,8 +105,9 @@ This still performs a 402, mock verification, mock settlement, and certificate l
 returns a non-printable text receipt and a local throwaway-topic message. Every artifact is
 labeled sandbox; none is a Hedera transaction, real license, or proof of payment.
 
-The current Hiero SDK pins older transitive versions even though patched same-major releases
-exist. npm applications should carry the same overrides as this repository until Hiero rolls
-them forward: `@grpc/grpc-js` 1.14.4, `protobufjs` 8.7.1, and `ethers > ws` 8.21.1.
+The source package declares the same dependency overrides used by the repository:
+`@grpc/grpc-js` 1.14.4, `protobufjs` 8.7.1, and `ethers > ws` 8.21.1. npm does not propagate a
+dependency package's overrides to a consuming application's root, so consumers may need to copy
+those entries into their own root manifest.
 
 Requires Node 20 or newer. MIT licensed.

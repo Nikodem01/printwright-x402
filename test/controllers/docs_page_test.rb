@@ -8,6 +8,10 @@ class DocsPageTest < ActionDispatch::IntegrationTest
     get docs_path
     assert_response :success
     assert_match "Quickstart", response.body
+    assert_match "original 30-day grant expires", response.body
+    assert_no_match "original 24-hour grant expires", response.body
+    assert_match %r{/models/\{id\}/download</code> 120/min}, response.body
+    assert_match %r{/files/\{token\}</code> 240/min}, response.body
     assert_match "@printwright/client", response.body
     assert_match "printwright.search", response.body
     assert_match "printwright.get", response.body
@@ -37,9 +41,13 @@ class DocsPageTest < ActionDispatch::IntegrationTest
     assert_match "check_license", response.body
     assert_match "PWC-1 certificate standard", response.body
     assert_match "pwc-1.schema.json", response.body
-    assert_match "npx printwright-verify", response.body
-    assert_match "never requests the marketplace", response.body
+    assert_match "public/widget-example.bundle.json", response.body
+    assert_match "opaque commitment", response.body
+    assert_match "never trusts Printwright's verification verdict", response.body
+    assert_no_match "printwright-verify pw-000058", response.body
     assert_match "MCP", response.body
+    assert_match "Six tools", response.body
+    assert_match "get_latest_version", response.body
     assert_match "claude mcp add printwright", response.body
   end
 end

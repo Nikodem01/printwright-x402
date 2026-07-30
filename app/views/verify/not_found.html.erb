@@ -16,6 +16,6 @@
   <% else %>
     <p class="muted">No certificate with id <span class="mono"><%= requested %></span> exists here.
       Check the verify link on your receipt, or browse the
-      <a href="<%= Hedera::Network.hcs_topic_url %>">public certificate topic</a>.</p>
+      <a href="<%= Hedera::Network.hcs_topic_url %>">configured public HCS topic</a>.</p>
   <% end %>
 </div>

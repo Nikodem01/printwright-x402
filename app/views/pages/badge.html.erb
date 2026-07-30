@@ -1,9 +1,9 @@
 <% content_for :title, "License badge — Printwright" %>
 <div class="container" style="max-width: 720px">
   <h1>Embed your license badge</h1>
-  <p>Every license gets an embeddable badge that links to its live on-chain check.
-    Put it on your product page, your shop listing, anywhere — a buyer one click away
-    from public proof beats a claim.</p>
+  <p>Every real paid licence gets a private verify link and an embeddable badge. Once its
+    asynchronous commitment is anchored, a holder may disclose that link so another party can
+    check the bundle against Hedera. Before anchoring, the page says that verification is pending.</p>
 
   <p><%= render template: "verify/badge", formats: :svg,
            locals: { cert_id: "pw-4f2c8ab1d90e77", sandbox: false } %></p>
@@ -17,8 +17,8 @@
 &lt;/a&gt;</code></pre>
 
   <h2>What it proves</h2>
-  <p class="t-small">The badge itself proves nothing — the page it links to does: it reveals your
-    certificate and recomputes the commitment anchored on the public Hedera mirror node. A printable
+  <p class="t-small">The badge itself proves nothing. Its private link discloses the proof bundle,
+    recomputes the commitment, and compares it with the exact public Mirror Node message. A printable
     certificate is available from the same page.</p>
 
   <h2>Independent verification widget</h2>
