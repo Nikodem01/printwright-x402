@@ -1,24 +1,20 @@
 # printwright-verify
 
-Verify a Printwright PWC-1 certificate against Hedera's public mirror node without calling the
+Verify a Printwright proof bundle against Hedera's public mirror node without calling the
 Printwright application:
 
 ```sh
-# From the repository before the npm release:
-npx --package ./verifier printwright-verify pw-000058
-
-# Registry command after release:
-npx printwright-verify \
-  https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/50
+# From the repository:
+npx --package ./verifier printwright-verify public/widget-example.bundle.json
 ```
 
-A Printwright `/verify/pw-NNNNNN` URL is also accepted; the CLI extracts the ID and queries the
-known public HCS topic directly. Use `--topic 0.0.N` for another PWC-1 issuer/topic, `--network`
-to select a network, or `--mirror` to select a compatible mirror node.
+The input can be a local bundle file, an HTTPS `bundle_url` from a paid response, or `-` to read
+the JSON bundle from stdin. The bundle itself names the network, HCS topic, and sequence to query.
 
-Success means the payload is valid PWC-1 JSON at the reported immutable HCS topic position and,
-when an ID was supplied, that its `cert_id` matches. It does not prove ownership of the buyer
-account, interpret the legal terms, validate model geometry, or independently replay settlement.
+Success means the private certificate and terms match their hashes and the resulting commitment
+matches valid PWC-1 JSON at the reported immutable HCS topic position. It does not prove ownership
+of the buyer account, interpret the legal terms, validate model geometry, or independently replay
+settlement.
 
 The normative JSON Schema is published at `/pwc-1.schema.json`; transport and verification rules
 are documented under “PWC-1 certificate standard” on Printwright's `/docs` page.
