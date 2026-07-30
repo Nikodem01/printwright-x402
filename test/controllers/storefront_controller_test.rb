@@ -232,6 +232,15 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", docs_path
   end
 
+  test "landing page accepts a YAML-normalized integer chat message limit" do
+    set_printwright(chat_daily_visitor_message_limit: 25)
+
+    get root_path
+
+    assert_response :success
+    assert_select ".hero-shopkeeper-note", text: /Fair use: 25 messages/
+  end
+
   test "landing shopkeeper retains the complete stored conversation" do
     get chat_path
     conversation = ChatConversation.find(session[:chat_conversation_id])

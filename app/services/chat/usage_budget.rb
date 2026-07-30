@@ -41,8 +41,8 @@ module Chat
     private_class_method :consume
 
     def positive_integer(value, default)
-      value = default.to_s if value.nil?
-      value.match?(/\A\d+\z/) ? value.to_i : 0
+      value = default if value.nil?
+      value.to_s.match?(/\A\d+\z/) ? value.to_i : 0
     end
     private_class_method :positive_integer
   end
