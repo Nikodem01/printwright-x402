@@ -132,6 +132,48 @@ test("the mirror is derived from topic and sequence, never taken from the bundle
   assert.equal(result.mirror_url, MIRROR_URL);
 });
 
+test("transient mirror failures are retried before verification fails", async () => {
+  const success = mirrorReturning(COMMITMENT);
+  let calls = 0;
+  const fetchImplementation = async (...args) => {
+    calls += 1;
+    if (calls === 1) throw new TypeError("fetch failed");
+    if (calls === 2) return { ok: false, status: 503 };
+    return success(...args);
+  };
+
+  const result = await verifyBundle(anchoredBundle(), { fetch: fetchImplementation });
+
+  assert.equal(result.verified, true);
+  assert.equal(calls, 3);
+});
+
+test("mirror retries are bounded and definite client errors fail immediately", async () => {
+  let transientCalls = 0;
+  await assert.rejects(
+    () => verifyBundle(anchoredBundle(), {
+      fetch: async () => {
+        transientCalls += 1;
+        throw new TypeError("fetch failed");
+      },
+    }),
+    (error) => error instanceof VerificationError && error.code === "mirror_unavailable",
+  );
+  assert.equal(transientCalls, 4);
+
+  let definiteCalls = 0;
+  await assert.rejects(
+    () => verifyBundle(anchoredBundle(), {
+      fetch: async () => {
+        definiteCalls += 1;
+        return { ok: false, status: 400 };
+      },
+    }),
+    (error) => error instanceof VerificationError && error.code === "mirror_unavailable",
+  );
+  assert.equal(definiteCalls, 1);
+});
+
 test("a bundle anchored off the pinned topic fails without a mirror call", async () => {
   let called = false;
   const result = await verifyBundle(

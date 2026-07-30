@@ -12,6 +12,8 @@ import { createHash } from "node:crypto";
 const ALGORITHM = "sha256-jcs-v1";
 const ENVELOPE_TYPE = "printwright-license-commitment";
 const DOMAIN = Buffer.from("printwright:license-certificate:v1\0", "utf8");
+const MIRROR_ATTEMPTS = 4;
+const MIRROR_RETRY_DELAY_MS = 250;
 
 // The bundle says where its commitment is anchored, but never where to look:
 // the mirror host is one of these, and the message URL is derived from the
@@ -230,6 +232,17 @@ async function fetchJson(url, { fetchImplementation, timeoutMs }) {
   if (typeof fetchImplementation !== "function") {
     throw new VerificationError("a fetch implementation is required", "invalid_input");
   }
+  for (let attempt = 1; attempt <= MIRROR_ATTEMPTS; attempt += 1) {
+    try {
+      return await fetchJsonOnce(url, { fetchImplementation, timeoutMs });
+    } catch (error) {
+      if (error.retryable !== true || attempt === MIRROR_ATTEMPTS) throw error;
+      await new Promise((resolve) => setTimeout(resolve, MIRROR_RETRY_DELAY_MS * attempt));
+    }
+  }
+}
+
+async function fetchJsonOnce(url, { fetchImplementation, timeoutMs }) {
   // Own the timeout timer so it is always cleared — a dangling AbortSignal
   // timer would keep the process alive after the request resolves.
   const controller = new AbortController();
@@ -242,11 +255,14 @@ async function fetchJson(url, { fetchImplementation, timeoutMs }) {
       signal: controller.signal,
     });
   } catch (error) {
-    throw new VerificationError(`mirror request failed: ${error.message}`, "mirror_unavailable");
+    throw mirrorUnavailable(`mirror request failed: ${error.message}`, true);
   } finally {
     clearTimeout(timer);
   }
-  if (!response.ok) throw new VerificationError(`mirror returned HTTP ${response.status}`, "mirror_unavailable");
+  if (!response.ok) {
+    const retryable = response.status === 429 || response.status >= 500;
+    throw mirrorUnavailable(`mirror returned HTTP ${response.status}`, retryable);
+  }
   const text = await response.text();
   if (text.length > 1_048_576) throw new VerificationError("mirror response is too large", "invalid_mirror_response");
   try {
@@ -254,6 +270,12 @@ async function fetchJson(url, { fetchImplementation, timeoutMs }) {
   } catch {
     throw new VerificationError("mirror returned invalid JSON", "invalid_mirror_response");
   }
+}
+
+function mirrorUnavailable(message, retryable) {
+  const error = new VerificationError(message, "mirror_unavailable");
+  Object.defineProperty(error, "retryable", { value: retryable });
+  return error;
 }
 
 function safeUrl(value) {
