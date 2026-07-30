@@ -9,6 +9,7 @@ import "dotenv/config";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { assets, PrintwrightClient } from "@printwright/client";
+import { waitForCertificate } from "./certificate-poll.mjs";
 import { proofLines } from "./proof-links.mjs";
 
 const NET = process.env.HEDERA_NETWORK === "mainnet" ? "mainnet" : "testnet";
@@ -89,7 +90,11 @@ for (const file of body.files) {
 // The bundle is the portable proof: certificate + blinding nonce + terms + the
 // anchor coordinates. Saved whole so it can be verified later, offline of us:
 //   npx --package ./verifier printwright-verify purchases/<slug>/certificate.json
-const cert = await waitForCertificate(body.license.cert_id);
+const cert = await waitForCertificate({
+  verify: (certId) => printwright.verify(certId),
+  certId: body.license.cert_id,
+  onWait: () => step("waiting for the HCS certificate to anchor (mirror-node lag is a few seconds)"),
+});
 // Save the bundle alone — our own verdict fields are not part of the proof and
 // have no business sitting next to it in the file a verifier will read.
 const { match, onchain, consensus_timestamp, status, ...bundle } = cert;
@@ -132,16 +137,6 @@ function pickOffer(model) {
 
 function money(offer) {
   return `${(offer.price_cents / 100).toFixed(2)} USDC (${offer.currency}-lead)`;
-}
-
-async function waitForCertificate(certId, attempts = 10) {
-  for (let i = 0; i < attempts; i++) {
-    const cert = await printwright.verify(certId);
-    if (["anchored", "sandbox"].includes(cert.status)) return cert;
-    if (i === 0) step("waiting for the HCS certificate to anchor (mirror-node lag is a few seconds)");
-    await new Promise((r) => setTimeout(r, 2000));
-  }
-  return printwright.verify(certId); // still minting — return as-is
 }
 
 function step(msg) {
