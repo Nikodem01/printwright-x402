@@ -262,6 +262,21 @@ class CheckoutTest < ApplicationSystemTestCase
     assert_no_link "Cart (3)"
   end
 
+  test "a one-item cart uses a singular license heading" do
+    stub_request(:post, "#{FACILITATOR}/verify")
+      .to_return(body: fixture("verify_ok.json"), headers: { "content-type" => "application/json" })
+    stub_request(:post, "#{FACILITATOR}/settle")
+      .to_return(body: fixture("settle_ok.json"), headers: { "content-type" => "application/json" })
+
+    visit model_page_path(@model.slug)
+    click_button "Add selection to cart"
+    click_link "Cart (1)"
+    click_button "Approve cart · 0.25 USDC"
+
+    assert_text "1 license purchased"
+    assert_no_text "1 licenses purchased"
+  end
+
   test "retrying a rejected payment surfaces duplicate_payment as a terminal, non-retryable state" do
     stub_request(:post, "#{FACILITATOR}/verify")
       .to_return(body: fixture("verify_invalid.json"), headers: { "content-type" => "application/json" })

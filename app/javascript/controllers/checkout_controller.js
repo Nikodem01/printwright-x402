@@ -332,9 +332,10 @@ export default class extends Controller {
     }).join("")
 
     const allCommercial = licenses.every((license) => license.kind === "commercial_unit")
+    const licenseCount = licenses.length
     const heading = allCommercial
-      ? `${licenses.length} commercial units licensed`
-      : `${licenses.length} licenses purchased`
+      ? `${licenseCount} commercial ${licenseCount === 1 ? "unit" : "units"} licensed`
+      : `${licenseCount} ${licenseCount === 1 ? "license" : "licenses"} purchased`
     this.receiptTarget.innerHTML = `
       <div class="badge badge-ok">✓ licensed</div>
       <h3 style="margin-top: var(--s-2)">${heading}</h3>
