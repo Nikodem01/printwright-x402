@@ -26,7 +26,6 @@
     "network": "testnet",
     "topic_id": "0.0.9585069",
     "sequence_number": 59,
-    "mirror_url": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/59",
-    "hashscan_url": "https://hashscan.io/testnet/topic/0.0.9585069"
+    "mirror_url": "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/59"
   }
 }
