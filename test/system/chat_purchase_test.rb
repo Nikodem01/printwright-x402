@@ -106,6 +106,10 @@ class ChatPurchaseTest < ApplicationSystemTestCase
 
     assert_selector ".badge-ok", text: "licensed"
     assert_link "Download files"
+    scroll_margin = page.evaluate_script(
+      "parseFloat(getComputedStyle(document.querySelector('[data-checkout-target=receipt]')).scrollMarginTop)"
+    )
+    assert_operator scroll_margin, :>, 80
     assert_equal "delivered", Purchase.sole.status
     assert_not_requested :post, GEMINI
   end
