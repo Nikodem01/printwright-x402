@@ -77,6 +77,39 @@ class ChatPurchaseTest < ApplicationSystemTestCase
     page.execute_script("localStorage.removeItem('printwright-theme')") if page.current_url.present?
   end
 
+  test "the local shopkeeper searches and proposes a purchase without a Gemini key" do
+    set_printwright(gemini_api_key: nil)
+    stub_request(:get, %r{\Ahttp://localhost:3000/api/v1/models\?}).to_return(
+      body: { models: [ {
+        id: @model.id, title: @model.title, slug: @model.slug,
+        render_url: "http://localhost:3000/chat-clip.png",
+        license_offers: [ { kind: "personal", price_cents: 25, currency: "HBAR" } ]
+      } ] }.to_json,
+      headers: { "content-type" => "application/json" }
+    )
+
+    visit chat_path
+    find("input[name=message]").fill_in with: "Find me a cable clip"
+    click_button "Send"
+
+    assert_selector ".chat-model-result", text: "Chat Approval Clip"
+    assert_text "I found one catalog match"
+
+    find("input[name=message]").fill_in with: "Buy the Chat Approval Clip personal license"
+    click_button "Send"
+
+    assert_selector ".chat-purchase-card", text: "Chat Approval Clip"
+    assert_button "Approve and buy · 0.25 USDC"
+    assert_equal 0, Purchase.count
+
+    click_button "Approve and buy · 0.25 USDC"
+
+    assert_selector ".badge-ok", text: "licensed"
+    assert_link "Download files"
+    assert_equal "delivered", Purchase.sole.status
+    assert_not_requested :post, GEMINI
+  end
+
   test "a settlement timeout retries the identical signed payment without a second wallet prompt" do
     stub_request(:post, "#{FACILITATOR}/settle").to_timeout.then.to_return(
       body: fixture("settle_ok.json"), headers: { "content-type" => "application/json" }

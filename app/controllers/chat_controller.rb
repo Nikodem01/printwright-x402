@@ -37,10 +37,13 @@ class ChatController < ApplicationController
           else
             turns << { "role" => "user", "parts" => [ { "text" => text } ] }
             client = Chat::Gemini.new
-            if !client.available?
-              turns << { "role" => "model", "parts" => [ { "text" => Chat::ToolLoop::NOT_CONFIGURED_MESSAGE } ] }
-            elsif Chat::UsageBudget.consume_visitor_message?(visitor_key)
-              turns = Chat::ToolLoop.new(turns: turns, client: client).run.turns
+            if Chat::UsageBudget.consume_visitor_message?(visitor_key)
+              turns =
+                if client.available?
+                  Chat::ToolLoop.new(turns: turns, client: client).run.turns
+                else
+                  Chat::LocalShopkeeper.new(turns: turns).run(text: text).turns
+                end
             else
               turns << { "role" => "model", "parts" => [ {
                 "text" => Chat::UsageBudget.visitor_limit_message

@@ -22,7 +22,7 @@
 </p>
 
 > **Bounty pitch.** Printwright is an agent-buyable marketplace for licensed 3D-printable
-> models: APIs, MCP assistants, storefront buyers, and carts all use the same
+> models: APIs, MCP assistants, shopkeeper chat, storefront buyers, and carts all use the same
 > licensing core. x402 turns each new licence purchase into an HBAR or USDC payment on Hedera,
 > after which Printwright delivers the model and private licence proof while asynchronously
 > anchoring an opaque commitment on HCS. Designers receive accountable payouts, and anyone
@@ -116,6 +116,7 @@ fetched from `bundle_url` rather than repeated inline.
 | **HTTP / JavaScript** | [`client/`](client/) · [`scripts/buy.mjs`](scripts/buy.mjs) | Search, quote, approve, buy, and verify without a Printwright account. |
 | **MCP assistant** | [`mcp/`](mcp/) | The same flow as tools with explicit confirmation and a spend ceiling. |
 | **Storefront / cart** | Rails UI and batch API | Wallet-approved single purchases or one settlement that fans out to multiple licences. |
+| **Shopkeeper chat** | Rails UI and public catalog API | Local keyword search and explicit purchase proposals work without a model-provider key; Gemini adds open-ended recommendations when configured. A separate button still approves and signs. |
 
 ## Hedera, exactly
 
@@ -172,6 +173,11 @@ node scripts/buy.mjs --query "cable clip" --sandbox
 
 The output shows the raw x402 challenge, the mock payment retry, delivered sandbox receipt,
 licence identifier, and locally verifiable sandbox commitment.
+
+The shopkeeper also works without a model-provider key: ask `Find me a cable clip`, then
+`Buy the Snap Cable Clip personal license`. That local path is deliberately limited to catalog
+search and explicit purchase proposals. Setting `GOOGLE_GENERATIVE_AI_API_KEY` adds open-ended
+Gemini recommendations; it is not required for the reproducible chat purchase path.
 
 ### Real testnet purchase
 

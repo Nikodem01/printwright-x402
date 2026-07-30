@@ -224,7 +224,7 @@ class StorefrontControllerTest < ActionDispatch::IntegrationTest
   test "landing page narrates the three doors and how a purchase works" do
     get root_path
     assert_response :success
-    assert_select "h2", text: "Shop with AI"
+    assert_select "h2", text: "Shop by chat"
     assert_select "h2", text: "Humans"
     assert_select "h2", text: /Agents/i
     assert_select ".hero-shopkeeper form[action=?]", chat_path

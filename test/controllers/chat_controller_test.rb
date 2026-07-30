@@ -29,7 +29,7 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
     assert_select "#chat_empty_state"
     assert_select "[data-controller='chat-prompt']"
     assert_select "button[data-action='chat-prompt#choose']", 2
-    assert_select "button[data-chat-prompt-message-param*='buy']", minimum: 1
+    assert_select "button[data-chat-prompt-message-param='Find me a cable organizer']", text: "Find a model"
   end
 
   test "asking a question shows the tool trace before the answer, and the prices match the API" do

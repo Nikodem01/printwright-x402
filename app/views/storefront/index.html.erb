@@ -45,8 +45,8 @@
                 Find a cable organizer
               </button>
               <button type="button" class="prompt-chip" data-action="chat-prompt#choose"
-                      data-chat-prompt-message-param="Find a cable organizer under 3 USDC and help me buy a personal license.">
-                Help me buy with AI
+                      data-chat-prompt-message-param="<%= Rails.configuration.x.printwright.gemini_api_key.present? ? "Find a cable organizer under 3 USDC and help me buy a personal license." : "Find me a cable organizer" %>">
+                <%= Rails.configuration.x.printwright.gemini_api_key.present? ? "Help me buy with AI" : "Find a model" %>
               </button>
             </div>
           </div>
@@ -63,7 +63,7 @@
 <% unless @catalog_definition %>
 <div class="doors-grid" role="group" aria-label="Three ways to buy">
   <div class="door">
-    <h2>Shop with AI</h2>
+    <h2><%= Rails.configuration.x.printwright.gemini_api_key.present? ? "Shop with AI" : "Shop by chat" %></h2>
     <p class="t-small">Describe what you need. The shopkeeper searches through Printwright's
       real public API, shows every tool call, and prepares a bounded offer for your approval.</p>
   </div>
