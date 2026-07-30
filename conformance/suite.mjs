@@ -53,7 +53,7 @@ export async function runConformance({ baseUrl = "http://localhost:3000", fetchI
   assert(delivery.sandbox === true, "delivery is not labeled sandbox");
   assert(/no (hedera )?funds move|simulation only/i.test(delivery.warning || ""), "delivery warning is ambiguous");
   assert(/^sandbox-pw-/.test(delivery.license?.cert_id || ""), "certificate id lacks sandbox namespace");
-  assert(delivery.hashscan_url === null, "sandbox delivery claims a HashScan transaction");
+  assert(!Object.hasOwn(delivery, "hashscan_url"), "sandbox delivery carries a HashScan field");
   assert(!delivery.model_updates && !delivery.print_feedback, "sandbox delivery leaked a paid-holder capability");
   assert(delivery.files?.length > 0 && delivery.files.every((file) =>
     file.kind === "sandbox_receipt" && file.sandbox !== false), "sandbox delivery exposed printable files");

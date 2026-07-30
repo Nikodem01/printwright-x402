@@ -53,7 +53,7 @@ before(async () => {
         license: { cert_id: "sandbox-pw-000007", serial: 1, kind: "personal" },
         certificate: { cert_id: "sandbox-pw-000007", sandbox: true },
         verify_url: `${baseUrl}/verify/sandbox-pw-000007`, transaction_id: "sandbox:tx",
-        hashscan_url: null, sandbox_url: `${baseUrl}/api/v1/sandbox/transactions/sandbox:tx`,
+        sandbox_url: `${baseUrl}/api/v1/sandbox/transactions/sandbox:tx`,
       }));
     }
     if (url.pathname === "/api/v1/sandbox/files/sandbox-pw-000007") {
