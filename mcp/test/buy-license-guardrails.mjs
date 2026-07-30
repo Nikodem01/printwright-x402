@@ -36,7 +36,7 @@ before(async () => {
           files: [ { kind: "sandbox_receipt", sandbox: true } ],
           license: { cert_id: "sandbox-pw-000001", serial: 1, kind: "personal" },
           verify_url: `${BASE}/verify/sandbox-pw-000001`,
-          transaction_id: "sandbox-tx-example", hashscan_url: null,
+          transaction_id: "sandbox-tx-example", transaction_url: null,
           sandbox_url: `${BASE}/api/v1/sandbox/transactions/sandbox-tx-example`,
         }));
       }
@@ -166,7 +166,7 @@ test("sandbox mode completes without buyer credentials or Hedera traffic", async
   assert.equal(result.isError, undefined);
   const receipt = JSON.parse(result.content[0].text);
   assert.equal(receipt.sandbox, true);
-  assert.equal(receipt.hashscan_url, null);
+  assert.equal(receipt.transaction_url, null);
   assert.match(receipt.cert_id, /^sandbox-pw-/);
   assert.match(receipt.warning, /NO HEDERA FUNDS MOVE/);
   assert.equal(sandboxPaidRequests, 1);

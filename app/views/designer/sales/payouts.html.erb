@@ -72,7 +72,7 @@
             <% if group[:last_attempted_at] %>
               <dt>Last attempt</dt><dd><%= group[:last_attempted_at].utc.strftime("%Y-%m-%d %H:%M UTC") %></dd>
             <% end %>
-            <% if group[:tx_id] %><dt>Known transaction</dt><dd><%= hashscan_tx_link(group[:tx_id]) %></dd><% end %>
+            <% if group[:tx_id] %><dt>Known transaction</dt><dd><%= hedera_tx_link(group[:tx_id]) %></dd><% end %>
           </dl>
 
           <% if group[:retryable] %>
@@ -109,7 +109,7 @@
               <td><%= pluralize(group[:sale_count], "sale") %></td>
               <td class="price"><%= format_base_units(group[:amount], group[:asset]) %></td>
               <td>Recorded on-chain</td>
-              <td><%= group[:tx_id] ? hashscan_tx_link(group[:tx_id]) : "Ledger record only" %></td>
+              <td><%= group[:tx_id] ? hedera_tx_link(group[:tx_id]) : "Ledger record only" %></td>
             </tr>
           <% end %>
         </tbody>

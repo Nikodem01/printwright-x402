@@ -16,7 +16,7 @@ account with Printwright, no card — just a funded Hedera testnet account.
   with terms.
 - **`buy_license`** — **spends real Hedera testnet funds unless sandbox mode is explicitly on.** Negotiates the x402 payment for a
   model's license, signs a Hedera transfer with `BUYER_PRIVATE_KEY`, and returns the file
-  download URLs, license serial, certificate id, and HashScan transaction link. Requires
+  download URLs, license serial, certificate id, and exact Mirror Node transaction link. Requires
   `confirm: true` in the tool call — the server refuses outright without it, and separately
   refuses any offer priced above `MAX_SPEND_CENTS`.
 - **`verify_certificate`** — fetches Printwright's copy of a license certificate *and* the

@@ -74,7 +74,7 @@
       <% if @license.hcs_topic_id.present? %>
         <dt>Topic</dt>
         <dd class="mono chain">
-          <a href="<%= Hedera::Network.hashscan_base %>/topic/<%= @license.hcs_topic_id %>"><%= @license.hcs_topic_id %></a>
+          <a href="<%= Hedera::Network.mirror_base %>/api/v1/topics/<%= @license.hcs_topic_id %>"><%= @license.hcs_topic_id %></a>
         </dd>
       <% end %>
       <% if @license.hcs_sequence_number.present? %>
@@ -167,10 +167,10 @@
   <footer class="evidence-footer">
     <% unless @license.purchase.sandbox? %>
       <% if @cert&.dig("payment_tx").present? %>
-      <a class="mono" href="<%= Hedera::Network.hashscan_base %>/transaction/<%= @cert["payment_tx"] %>">payment tx ↗</a>
+      <a class="mono" href="<%= Hedera::Network.transaction_url(@cert["payment_tx"]) %>">payment tx ↗</a>
       <% end %>
       <% if @license.hcs_topic_id.present? %>
-      <a class="mono" href="<%= Hedera::Network.hashscan_base %>/topic/<%= @license.hcs_topic_id %>">HCS topic ↗</a>
+      <a class="mono" href="<%= Hedera::Network.mirror_base %>/api/v1/topics/<%= @license.hcs_topic_id %>">HCS topic ↗</a>
       <% end %>
     <% end %>
     <% if @check.mirror_url.present? %>

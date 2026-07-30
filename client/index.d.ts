@@ -88,7 +88,7 @@ export interface BatchPaymentQuote {
 export interface BatchPurchaseReceipt {
   batch_id: number;
   transaction_id: string;
-  hashscan_url: string | null;
+  transaction_url: string | null;
   sandbox: boolean;
   licenses: Array<{
     model_id: number; kind: string; cert_id: string; serial: number;
@@ -150,7 +150,7 @@ export interface PurchaseReceipt {
   share_card_url?: string;
   receipt?: ReceiptCapability;
   transaction_id: string;
-  hashscan_url: string | null;
+  transaction_url: string | null;
   print_feedback?: PrintFeedbackCapability;
   model_updates?: ModelUpdatesCapability;
   sandbox?: boolean;

@@ -2,7 +2,7 @@ require "net/http"
 
 module Hedera
   # The single seam for network-dependent facts. HEDERA_NETWORK=mainnet flips
-  # every asset id, mirror URL, and explorer link in the app; nothing else
+  # every asset id and Mirror Node URL in the app; nothing else
   # hard-codes a network. Asset ids verified against docs.hedera.com
   # (mainnet native USDC 0.0.456858; testnet 0.0.429274 — both 6 decimals).
   class Network
@@ -22,7 +22,7 @@ module Hedera
       end
 
       def hcs_topic_url
-        "#{hashscan_base}/topic/#{hcs_topic_id}"
+        "#{mirror_base}/api/v1/topics/#{hcs_topic_id}"
       end
 
       def caip2
@@ -39,8 +39,14 @@ module Hedera
         config.mirror_node_url.presence || "https://#{name}.mirrornode.hedera.com"
       end
 
-      def hashscan_base
-        "https://hashscan.io/#{name}"
+      def transaction_url(transaction_id)
+        mirror_id = mirror_transaction_id(transaction_id)
+        "#{mirror_base}/api/v1/transactions/#{mirror_id}" if mirror_id
+      end
+
+      def mirror_transaction_id(transaction_id)
+        match = transaction_id.to_s.match(/\A(\d+\.\d+\.\d+)@(\d+)\.(\d{1,9})\z/)
+        "#{match[1]}-#{match[2]}-#{match[3]}" if match
       end
 
       def get(path)

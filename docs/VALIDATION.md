@@ -10,8 +10,8 @@ Last compiled: 2026-07-29.
 
 | | |
 |---|---|
-| Messages on the license topic [`0.0.9585069`](https://hashscan.io/testnet/topic/0.0.9585069) | **79** (license commitments + model-version provenance) |
-| x402 settles into the treasury [`0.0.9584959`](https://hashscan.io/testnet/account/0.0.9584959) | **39** |
+| Messages on the license topic [`0.0.9585069`](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069) | **79** (license commitments + model-version provenance) |
+| x402 settles into the treasury [`0.0.9584959`](https://testnet.mirrornode.hedera.com/api/v1/accounts/0.0.9584959) | **39** |
 | Distinct paying accounts | **2** — `0.0.9067781`, `0.0.9613501` |
 | Assets settled | **29 in USDC** (30.75 USDC total) · **10 in HBAR** (130.53 ℏ total) |
 | Span | 2026-07-15 → 2026-07-29, across **11 separate days** |
@@ -32,16 +32,16 @@ curl -s "https://testnet.mirrornode.hedera.com/api/v1/transactions?account.id=0.
 &limit=100&order=desc&transactiontype=CRYPTOTRANSFER&result=success"
 ```
 
-A sample of the most recent settles, each resolvable on HashScan:
+A sample of the most recent settles, each resolvable on Mirror Node:
 
 | when (UTC) | payer | amount | transaction |
 |---|---|---|---|
-| 2026-07-25 10:44 | `0.0.9067781` | 0.25 USDC | [`0.0.7162784@1784976230.265183795`](https://hashscan.io/testnet/transaction/0.0.7162784@1784976230.265183795) |
-| 2026-07-25 10:21 | `0.0.9067781` | 0.25 USDC | [`0.0.7162784@1784974906.023503671`](https://hashscan.io/testnet/transaction/0.0.7162784@1784974906.023503671) |
-| 2026-07-24 13:38 | `0.0.9613501` | 0.25 USDC | [`0.0.7162784@1784900288.288350505`](https://hashscan.io/testnet/transaction/0.0.7162784@1784900288.288350505) |
-| 2026-07-22 14:11 | `0.0.9067781` | 0.25 USDC | [`0.0.7162784@1784729477.481105634`](https://hashscan.io/testnet/transaction/0.0.7162784@1784729477.481105634) |
-| 2026-07-20 17:34 | `0.0.9613501` | 0.25 USDC | [`0.0.7162784@1784568837.841774991`](https://hashscan.io/testnet/transaction/0.0.7162784@1784568837.841774991) |
-| 2026-07-19 11:04 | — | 11.2295 HBAR | [`0.0.7162784@1784459059.566518657`](https://hashscan.io/testnet/transaction/0.0.7162784@1784459059.566518657) |
+| 2026-07-25 10:44 | `0.0.9067781` | 0.25 USDC | [`0.0.7162784@1784976230.265183795`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1784976230-265183795) |
+| 2026-07-25 10:21 | `0.0.9067781` | 0.25 USDC | [`0.0.7162784@1784974906.023503671`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1784974906-023503671) |
+| 2026-07-24 13:38 | `0.0.9613501` | 0.25 USDC | [`0.0.7162784@1784900288.288350505`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1784900288-288350505) |
+| 2026-07-22 14:11 | `0.0.9067781` | 0.25 USDC | [`0.0.7162784@1784729477.481105634`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1784729477-481105634) |
+| 2026-07-20 17:34 | `0.0.9613501` | 0.25 USDC | [`0.0.7162784@1784568837.841774991`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1784568837-841774991) |
+| 2026-07-19 11:04 | — | 11.2295 HBAR | [`0.0.7162784@1784459059.566518657`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1784459059-566518657) |
 
 Note the transaction payer is always `0.0.7162784`, the facilitator: buyers sign the transfer and
 the facilitator sponsors the network fee. That is the x402 fee model working, visible on-chain.
@@ -56,11 +56,11 @@ driven against that clone, not against a working copy.
 
 | Door | Settlement | Result |
 |---|---|---|
-| Agent — `scripts/buy.mjs` | [`…@1785294144.842761447`](https://hashscan.io/testnet/transaction/0.0.7162784@1785294144.842761447) · 13.106 ℏ | `pw-53e9de6918794f4af0afe72a`, [HCS #72](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/72), 344-triangle binary STL, verifier `VERIFIED` |
-| Agent — batch, `quantity: 2` | [`…@1785294596.093128610`](https://hashscan.io/testnet/transaction/0.0.7162784@1785294596.093128610) · 26.212 ℏ | one settle, two licenses (serials 3 and 4), [HCS #74](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/74) and [#75](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/75) |
-| MCP — `buy_license` | [`…@1785294728.882241414`](https://hashscan.io/testnet/transaction/0.0.7162784@1785294728.882241414) | `pw-3f2b59a9ac1618d8a5a9aff2`; the call is refused outright without `confirm: true` |
-| Human — storefront cart | [`…@1785295513.025117689`](https://hashscan.io/testnet/transaction/0.0.7162784@1785295513.025117689) · 0.20 USDC | `pw-d48075b86c8c832833c59073`, [HCS #77](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/77); receipt page re-downloaded the STL with no account |
-| Chat — shopkeeper approval | [`…@1785296087.326924256`](https://hashscan.io/testnet/transaction/0.0.7162784@1785296087.326924256) · 0.20 USDC | `pw-383ddfaf7c7af4fe4419d90c`; the assistant could only *propose* — the approval was re-priced and cap-checked server-side |
+| Agent — `scripts/buy.mjs` | [`…@1785294144.842761447`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785294144-842761447) · 13.106 ℏ | `pw-53e9de6918794f4af0afe72a`, [HCS #72](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/72), 344-triangle binary STL, verifier `VERIFIED` |
+| Agent — batch, `quantity: 2` | [`…@1785294596.093128610`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785294596-093128610) · 26.212 ℏ | one settle, two licenses (serials 3 and 4), [HCS #74](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/74) and [#75](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/75) |
+| MCP — `buy_license` | [`…@1785294728.882241414`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785294728-882241414) | `pw-3f2b59a9ac1618d8a5a9aff2`; the call is refused outright without `confirm: true` |
+| Human — storefront cart | [`…@1785295513.025117689`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785295513-025117689) · 0.20 USDC | `pw-d48075b86c8c832833c59073`, [HCS #77](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/77); receipt page re-downloaded the STL with no account |
+| Chat — shopkeeper approval | [`…@1785296087.326924256`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785296087-326924256) · 0.20 USDC | `pw-383ddfaf7c7af4fe4419d90c`; the assistant could only *propose* — the approval was re-priced and cap-checked server-side |
 
 The durable receipt was exercised separately: the non-expiring `receipt.token` re-fetched the
 file list and re-downloaded the identical 17 284-byte STL long after the original download grant

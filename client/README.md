@@ -39,7 +39,7 @@ const decision = await buyer.can({
   certId: receipt.license.cert_id, use: "commercial_print", qty: 3,
 });
 const proof = await buyer.verify(receipt.license.cert_id);
-console.log(receipt.hashscan_url, decision.allowed, decision.reason_code, proof.match);
+console.log(receipt.transaction_url, decision.allowed, decision.reason_code, proof.match);
 
 // After this paid file actually prints successfully:
 await buyer.reportPrint({

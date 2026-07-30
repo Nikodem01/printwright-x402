@@ -6,7 +6,7 @@ module Ledger
   #
   # Failure honesty: entries are written immediately after each asset's
   # transfer settles. A crash between the sidecar call and the write would
-  # leave that one asset unrecorded — reconcile against HashScan (the memo
+  # leave that one asset unrecorded — reconcile against the Mirror Node (the memo
   # names the run) before re-running. See docs/OPERATIONS.md (V8).
   class PayoutRunner
     Payout = Struct.new(:asset, :tx_id, :transfers, keyword_init: true)

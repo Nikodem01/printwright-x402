@@ -123,8 +123,7 @@
             "mirror_url": {
               "type": "string",
               "description": "The single mirror-node message holding the commitment envelope."
-            },
-            "hashscan_url": { "type": "string", "format": "uri" }
+            }
           }
         }
       ]

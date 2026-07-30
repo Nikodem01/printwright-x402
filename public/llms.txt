@@ -26,7 +26,7 @@ provenance. Creative Commons, public-domain, missing, and unknown licenses are b
 3. Sign a Hedera TransferTransaction (transactionId.accountId = feePayer, buyer signature
    only) and retry with the base64 PaymentPayload in the PAYMENT-SIGNATURE header
 4. 200 → `files[]` (one download URL per printable part), license serial, certificate id,
-   HashScan transaction link, a portable proof_bundle (+ bundle_url to re-fetch it once
+   exact Mirror Node transaction link, a portable proof_bundle (+ bundle_url to re-fetch it once
    anchored), a certificate_pdf_url holding the same certificate as a PDF document, and the
    `receipt` capability (real paid flow only)
 
@@ -92,7 +92,7 @@ not hit them. Back off and retry after the given number of seconds.
 - /api/v1/batches: up to 200 line items and 250 licenses, one aggregate x402 payment, one
   certificate per license; per-line `quantity` buys N licenses
 - /api/v1/certificates/{cert_id}: the proof bundle for one certificate — revealed certificate,
-  blinding nonce, commitment, licensed terms text, and HCS mirror/HashScan coordinates. The
+  blinding nonce, commitment, licensed terms text, and exact HCS Mirror Node coordinates. The
   cert_id is an unguessable token: holding it is the disclosure.
 - /api/v1/licenses/{cert_id}/can?use=commercial_print&qty=3: machine-decidable yes/no from
   structured permissions, with stable reason code and anchored terms refs. Supported uses:

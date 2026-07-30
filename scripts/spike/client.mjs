@@ -72,4 +72,10 @@ console.log("\n=== SETTLED ===");
 console.log("payer:      ", settle.payer);
 console.log("network:    ", settle.network);
 console.log("transaction:", txId);
-console.log(`hashscan:    https://hashscan.io/testnet/transaction/${txId}`);
+console.log(`mirror:     ${mirrorTransactionUrl(txId)}`);
+
+function mirrorTransactionUrl(transactionId) {
+  const match = transactionId.match(/^(\d+\.\d+\.\d+)@(\d+)\.(\d{1,9})$/);
+  if (!match) return `https://testnet.mirrornode.hedera.com/api/v1/transactions?transactionid=${encodeURIComponent(transactionId)}`;
+  return `https://testnet.mirrornode.hedera.com/api/v1/transactions/${match[1]}-${match[2]}-${match[3]}`;
+}

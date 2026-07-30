@@ -90,7 +90,7 @@ server.registerTool(
         "THIS SPENDS REAL HEDERA TESTNET FUNDS. ") +
       `Capped at MAX_SPEND_CENTS=${MAX_SPEND_CENTS}. Requires confirm: true. ` +
       (SANDBOX ? "Returns a fake receipt and locally verifiable sandbox certificate." :
-        "Returns the file download URLs, license serial, certificate id and HashScan link."),
+        "Returns the file download URLs, license serial, certificate id and exact Mirror Node transaction link."),
     inputSchema: {
       model_id: z.number().int(),
       license: z.enum(["personal", "commercial_unit"]).default("personal"),
@@ -125,7 +125,7 @@ server.registerTool(
       files: result.files, license: result.license,
       sandbox: result.sandbox, warning: result.warning,
       cert_id: result.license.cert_id, verify_url: result.verify_url,
-      transaction_id: result.transaction_id, hashscan_url: result.hashscan_url,
+      transaction_id: result.transaction_id, transaction_url: result.transaction_url,
       sandbox_url: result.sandbox_url,
       model_updates: result.model_updates,
     });

@@ -14,7 +14,7 @@
     <dt>Model</dt><dd><%= @model.title %></dd>
     <dt>License</dt><dd><%= @offer.kind.humanize %> · unit #<%= @license.serial %></dd>
     <dt>Transaction</dt><dd><%= link_to @license.purchase.payment_tx_id,
-      "#{Hedera::Network.hashscan_base}/transaction/#{@license.purchase.payment_tx_id}",
+      Hedera::Network.transaction_url(@license.purchase.payment_tx_id),
       class: "mono", target: "_blank", rel: "noopener noreferrer" %></dd>
   </dl>
 

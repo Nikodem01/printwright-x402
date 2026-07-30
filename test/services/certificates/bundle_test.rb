@@ -63,6 +63,6 @@ class Certificates::BundleTest < ActiveSupport::TestCase
     assert_equal [ "testnet", "0.0.9585069", 57 ],
                  hedera.values_at("network", "topic_id", "sequence_number")
     assert_includes hedera["mirror_url"], "/topics/0.0.9585069/messages/57"
-    assert_includes hedera["hashscan_url"], "topic/0.0.9585069"
+    refute hedera.key?("hashscan_url")
   end
 end

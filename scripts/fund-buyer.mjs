@@ -50,7 +50,7 @@ try {
   const sent = await tx.execute(client);
   const receipt = await sent.getReceipt(client);
   console.log(`\n${receipt.status.toString()} — ${sent.transactionId.toString()}`);
-  console.log(`https://hashscan.io/${NET}/transaction/${sent.transactionId.toString()}`);
+  console.log(mirrorTransactionUrl(sent.transactionId.toString()));
 } catch (e) {
   // TOKEN_NOT_ASSOCIATED_TO_ACCOUNT is the one everybody hits: a fresh buyer
   // must associate USDC before it can receive any.
@@ -67,6 +67,12 @@ async function report(label) {
   const { balance } = await res.json();
   const held = (balance.tokens || []).find((t) => t.token_id === USDC)?.balance ?? 0;
   console.log(`  ${label}: ${(balance.balance / 1e8).toFixed(2)} ℏ · ${(held / 1e6).toFixed(2)} USDC`);
+}
+
+function mirrorTransactionUrl(transactionId) {
+  const match = transactionId.match(/^(\d+\.\d+\.\d+)@(\d+)\.(\d{1,9})$/);
+  if (!match) return `${MIRROR}/api/v1/transactions?transactionid=${encodeURIComponent(transactionId)}`;
+  return `${MIRROR}/api/v1/transactions/${match[1]}-${match[2]}-${match[3]}`;
 }
 
 function die(msg) {

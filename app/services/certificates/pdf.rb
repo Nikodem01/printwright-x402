@@ -129,7 +129,6 @@ module Certificates
         doc.text "live check: #{@verify_url}"
         if @license.anchored? && !@sandbox
           doc.text "mirror node: #{@bundle.dig('hedera', 'mirror_url')}"
-          doc.text "hashscan: #{@bundle.dig('hedera', 'hashscan_url')}"
         end
       end
     end

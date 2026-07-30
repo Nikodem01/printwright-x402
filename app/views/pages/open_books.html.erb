@@ -21,7 +21,7 @@
     <p class="t-small">
       <%= link_to "Raw latest-message query ↗", hcs[:mirror_url], class: "mono" %> ·
       <%= link_to "Exact latest message ↗", hcs[:latest_message_url], class: "mono" %> ·
-      <%= link_to "Topic on HashScan ↗", hcs[:hashscan_url], class: "mono" %>
+      <%= link_to "Topic metadata ↗", hcs[:topic_url], class: "mono" %>
     </p>
   <% else %>
     <p class="verify-banner banner-pending">
@@ -67,8 +67,7 @@
     <% @snapshot[:recent_settlement_proofs].each do |proof| %>
       <li><span class="mono"><%= proof[:transaction_id] %></span> —
         <%= proof[:gross_base_units] %> base units of <%= proof[:asset] %> ·
-        <%= link_to "raw mirror ↗", proof[:mirror_url] %> ·
-        <%= link_to "HashScan ↗", proof[:hashscan_url] %></li>
+        <%= link_to "transaction record ↗", proof[:transaction_url] %></li>
     <% end %>
   </ul>
   <p class="t-caption muted">Generated <%= @snapshot[:generated_at] %> on

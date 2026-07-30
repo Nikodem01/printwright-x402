@@ -897,9 +897,9 @@
     <p class="rail-intro">Choose one formal view. Time runs from top to bottom in every sequence.</p>
     <nav class="view-nav" id="view-nav"></nav>
     <div class="rail-proof">
-      <a href="https://hashscan.io/testnet/topic/0.0.9585069" target="_blank" rel="noreferrer">
+      <a href="https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069" target="_blank" rel="noreferrer">
         <small>Public boundary</small>
-        <strong>Open the HCS topic on HashScan ↗</strong>
+        <strong>Open the HCS topic on Mirror Node ↗</strong>
       </a>
     </div>
   </aside>
@@ -969,7 +969,7 @@
       title: "System context and trust boundaries",
       summary: "External buyers and creators enter one Rails commerce core. The x402 facilitator submits buyer-authorized payment, while the signing sidecar alone performs platform-key HCS writes and treasury payouts. Mirror Node is public read infrastructure.",
       invariant: "No component is presented as an operation: actors, application components, local state, Hedera network services, and public read infrastructure remain visually typed.",
-      proof: [ "Explore testnet topic 0.0.9585069 on HashScan", "https://hashscan.io/testnet/topic/0.0.9585069" ],
+      proof: [ "Explore testnet topic 0.0.9585069 on Mirror Node", "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069" ],
       facts: [
         [ "View", "C4-style context: ownership and trust, not runtime order." ],
         [ "Platform boundary", "Rails owns commerce state; facilitator and sidecar are separate key-bearing services." ],
@@ -1044,7 +1044,7 @@
           summary: "Hedera moves value through CryptoTransfer and orders/timestamps HCS messages. These are distinct operations with distinct signers.",
           code: "TransferTransaction · TopicMessageSubmitTransaction",
           boundary: "Public consensus network. It receives signed transactions, not private buyer certificates.",
-          proof: [ "Open topic 0.0.9585069 on HashScan", "https://hashscan.io/testnet/topic/0.0.9585069" ]
+          proof: [ "Open topic 0.0.9585069 on Mirror Node", "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069" ]
         },
         {
           id: "context-mirror", x: 930, y: 430, w: 212, h: 96, title: "Mirror Node",
@@ -1084,7 +1084,7 @@
           summary: "The facilitator submits one buyer-authorized HBAR or USDC CryptoTransfer from buyer to treasury.",
           code: "@x402/hedera ExactHederaScheme",
           boundary: "Buyer authorization and facilitator fee-payer authority are both outside the signing sidecar.",
-          proof: [ "View a 2.50 USDC settlement", "https://hashscan.io/testnet/transaction/0.0.7162784@1785074352.536547527" ]
+          proof: [ "View a 2.50 USDC settlement", "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785074352-536547527" ]
         },
         {
           id: "context-rails-state", from: "context-rails", to: "context-state",
@@ -1106,7 +1106,7 @@
           summary: "The sidecar signs HCS topic operations with the operator key and treasury payouts with the treasury key.",
           code: "sidecar/hedera.mjs#submitMessage · #payout",
           boundary: "It never signs the buyer's x402 payment.",
-          proof: [ "View an opaque HCS submission", "https://hashscan.io/testnet/transaction/0.0.9067781@1785074359.768280048" ]
+          proof: [ "View an opaque HCS submission", "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1785074359-768280048" ]
         },
         {
           id: "context-hedera-mirror", from: "context-hedera", to: "context-mirror",
@@ -1134,7 +1134,7 @@
       title: "Canonical purchase and paid delivery",
       summary: "API, MCP, storefront, and cart differ at entry and fan-out only. They converge on one x402 verification, settlement, local accounting, licence allocation, and paid delivery sequence.",
       invariant: "A successful settlement records the local 90/10 split before delivery. Delivery creates the licence and private access artifacts without waiting for the certificate or payout jobs.",
-      proof: [ "View the demonstrated 2.50 USDC settlement", "https://hashscan.io/testnet/transaction/0.0.7162784@1785074352.536547527" ],
+      proof: [ "View the demonstrated 2.50 USDC settlement", "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785074352-536547527" ],
       facts: [
         [ "Entry variants", "API, MCP, storefront, and cart share this sequence." ],
         [ "Point of no return", "The settled transition means money moved and atomically records local split rows." ],
@@ -1156,14 +1156,14 @@
         step("purchase-07", 7, "message", { from: "purchase-rails", to: "purchase-facilitator", kind: "app", label: "POST /verify", meta: "X402 V2", summary: "Rails asks the facilitator to validate the exact payload against the selected requirements.", code: "FacilitatorClient#verify", boundary: "Application-to-facilitator call." }),
         step("purchase-08", 8, "message", { from: "purchase-facilitator", to: "purchase-rails", kind: "return", label: "isValid + payer", meta: "NO VALUE MOVED", summary: "The facilitator returns signature and transfer validation before settlement.", code: "ExactHederaScheme#verify", boundary: "Verification response; still no Hedera write." }),
         step("purchase-09", 9, "message", { from: "purchase-rails", to: "purchase-facilitator", kind: "app", label: "POST /settle", meta: "EXACT SAME PAYLOAD", summary: "Rails asks the facilitator to settle the verified payment.", code: "FacilitatorClient#settle", boundary: "Application-to-facilitator call." }),
-        step("purchase-10", 10, "message", { from: "purchase-facilitator", to: "purchase-hedera", kind: "write", label: "Submit buyer CryptoTransfer", meta: "BUYER → TREASURY", summary: "The facilitator adds fee-payer authority and submits the buyer-authorized HBAR or USDC transfer.", code: "createHederaSignAndSubmitTransaction · ExactHederaScheme", boundary: "Hedera write; the signing sidecar is not involved.", proof: [ "Open settlement on HashScan", "https://hashscan.io/testnet/transaction/0.0.7162784@1785074352.536547527" ] }),
+        step("purchase-10", 10, "message", { from: "purchase-facilitator", to: "purchase-hedera", kind: "write", label: "Submit buyer CryptoTransfer", meta: "BUYER → TREASURY", summary: "The facilitator adds fee-payer authority and submits the buyer-authorized HBAR or USDC transfer.", code: "createHederaSignAndSubmitTransaction · ExactHederaScheme", boundary: "Hedera write; the signing sidecar is not involved.", proof: [ "Open settlement on Mirror Node", "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785074352-536547527" ] }),
         step("purchase-11", 11, "message", { from: "purchase-hedera", to: "purchase-facilitator", kind: "return", label: "Consensus + transaction ID", meta: "SUCCESS", summary: "Hedera confirms the transfer and identifies the transaction.", code: "@x402/hedera settlement result", boundary: "Consensus response from the public network." }),
         step("purchase-12", 12, "message", { from: "purchase-facilitator", to: "purchase-rails", kind: "return", label: "Settlement proof", meta: "TRANSACTION ID", summary: "The facilitator returns a successful settlement result to Rails.", code: "FacilitatorClient#settle", boundary: "Successful value movement is now application input." }),
         step("purchase-13", 13, "local", { at: "purchase-rails", kind: "local", label: "settled + 90 / 10 rows", meta: "ONE LOCAL DB TRANSACTION", summary: "The forward-only purchase transition records settled state and immutable designer-share/platform-fee rows atomically.", code: "Purchase#transition_to! · LedgerEntry.record_settle!", boundary: "Private application bookkeeping, not a Hedera ledger write." }),
         step("purchase-14", 14, "local", { at: "purchase-rails", kind: "local", label: "Allocate licence; mark delivered", meta: "ONE PER ITEM", summary: "Single purchase allocates one licence. A batch fans one aggregate payment out into one licence per item, then marks each purchase delivered.", code: "License.allocate! · DownloadsController#deliver · BatchesController#deliver", boundary: "Private application state." }),
         step("purchase-15", 15, "local", { at: "purchase-rails", kind: "async", label: "Enqueue anchor + payout jobs", meta: "AFTER DELIVERED · NOT AWAITED", summary: "Certificate anchoring and designer payout are queued after delivered state and continue independently of the response.", code: "CertMintJob.perform_later · DesignerPayoutJob.perform_later", boundary: "Asynchronous application boundary." }),
         step("purchase-16", 16, "local", { at: "purchase-rails", kind: "local", label: "Build certificate + capabilities", meta: "PRIVATE DELIVERY ARTIFACTS", summary: "Rails builds the private certificate and proof bundle, issues file grants and durable receipt/update capabilities, and includes the payment transaction ID.", code: "Certificates::Builder · Certificates::Bundle · DownloadGrant.issue! · receipt_capability", boundary: "Private buyer-controlled delivery; certificate contents stay off-chain." }),
-        step("purchase-17", 17, "message", { from: "purchase-rails", to: "purchase-buyer", kind: "return", label: "200 files + licence + private proof", meta: "PAID DELIVERY COMPLETE", summary: "The buyer receives licensed files and a complete proof bundle immediately. Its HCS status may honestly remain minting.", code: "DownloadsController#delivery_payload · BatchesController#license_payload", boundary: "Paid delivery does not wait for the signing sidecar or HCS.", proof: [ "Open resulting HCS commitment after delivery", "https://hashscan.io/testnet/transaction/0.0.9067781@1785074359.768280048" ] })
+        step("purchase-17", 17, "message", { from: "purchase-rails", to: "purchase-buyer", kind: "return", label: "200 files + licence + private proof", meta: "PAID DELIVERY COMPLETE", summary: "The buyer receives licensed files and a complete proof bundle immediately. Its HCS status may honestly remain minting.", code: "DownloadsController#delivery_payload · BatchesController#license_payload", boundary: "Paid delivery does not wait for the signing sidecar or HCS.", proof: [ "Open resulting HCS commitment after delivery", "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1785074359-768280048" ] })
       ]
     },
     {
@@ -1174,7 +1174,7 @@
       title: "Asynchronous licence commitment",
       summary: "Paid delivery completes first. A retrying job later sends only an opaque salted commitment envelope through the signing sidecar to HCS, then backfills topic and sequence coordinates.",
       invariant: "A temporary sidecar, HCS, or Mirror Node failure leaves status minting and never invalidates or blocks the already-paid download.",
-      proof: [ "View opaque licence commitment #60", "https://hashscan.io/testnet/transaction/0.0.9067781@1785074359.768280048" ],
+      proof: [ "View opaque licence commitment #60", "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1785074359-768280048" ],
       facts: [
         [ "Synchronous boundary", "The holder already has the licence, files, certificate, nonce, and proof bundle." ],
         [ "Published bytes", "HCS receives only a type/version/algorithm/commitment envelope—not the certificate." ],
@@ -1193,7 +1193,7 @@
         step("anchor-03", 3, "local", { at: "anchor-rails", kind: "local", label: "Preserve certificate + 32-byte nonce", meta: "PRIVATE PREIMAGE", summary: "The frozen certificate and random blinding nonce remain off-chain and are delivered only in the proof bundle.", code: "Certificates::Builder · License#cert_salt", boundary: "Private application/holder data." }),
         step("anchor-04", 4, "local", { at: "anchor-rails", kind: "local", label: "SHA-256(domain || nonce || JCS(cert))", meta: "SHA256-JCS-V1", summary: "Rails canonicalizes the certificate with RFC 8785 JCS and computes the domain-separated commitment.", code: "Certificates::Commitment.digest", boundary: "Deterministic local computation." }),
         step("anchor-05", 5, "message", { from: "anchor-rails", to: "anchor-sidecar", kind: "async", label: "POST /submit-cert", meta: "OPAQUE ENVELOPE ONLY", summary: "Rails sends the small commitment envelope to the authenticated sidecar endpoint.", code: "SidecarClient#submit_cert", boundary: "Crosses into the platform-key boundary." }),
-        step("anchor-06", 6, "message", { from: "anchor-sidecar", to: "anchor-hedera", kind: "write", label: "TopicMessageSubmitTransaction", meta: "SUBMIT-KEY SIGNED", summary: "The sidecar freezes, signs, and submits the opaque envelope to the configured HCS topic.", code: "sidecar/hedera.mjs#submitMessage", boundary: "Hedera write performed by the signing sidecar.", proof: [ "Open HCS submit on HashScan", "https://hashscan.io/testnet/transaction/0.0.9067781@1785074359.768280048" ] }),
+        step("anchor-06", 6, "message", { from: "anchor-sidecar", to: "anchor-hedera", kind: "write", label: "TopicMessageSubmitTransaction", meta: "SUBMIT-KEY SIGNED", summary: "The sidecar freezes, signs, and submits the opaque envelope to the configured HCS topic.", code: "sidecar/hedera.mjs#submitMessage", boundary: "Hedera write performed by the signing sidecar.", proof: [ "Open HCS submit on Mirror Node", "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1785074359-768280048" ] }),
         step("anchor-07", 7, "message", { from: "anchor-hedera", to: "anchor-sidecar", kind: "return", label: "Topic + sequence + transaction ID", meta: "CONSENSUS RECEIPT", summary: "The HCS receipt identifies the ordered message position and submission transaction.", code: "TransactionReceipt.topicSequenceNumber", boundary: "Consensus response." }),
         step("anchor-08", 8, "message", { from: "anchor-sidecar", to: "anchor-rails", kind: "return", label: "Submission receipt", meta: "HTTP 200", summary: "The sidecar returns topic, sequence, and transaction identifiers to the job.", code: "SidecarClient#submit_cert", boundary: "Returns from the key boundary." }),
         step("anchor-09", 9, "local", { at: "anchor-rails", kind: "local", label: "Backfill topic + sequence", meta: "ANCHORED STATE", summary: "Rails stores the exact HCS coordinates and emits the anchored notification.", code: "CertMintJob · WebhookFanoutJob", boundary: "Private application state now references public consensus." }),
@@ -1211,7 +1211,7 @@
       title: "Settled sale to designer payout",
       summary: "Buyer settlement creates a local obligation. After delivery, a background runner groups eligible owed shares and asks the signing sidecar for a separate treasury-to-designer CryptoTransfer.",
       invariant: "The buyer payment and designer payout are different Hedera transactions with different authorization boundaries. Unverified destinations remain owed; ambiguous payout results require reconciliation rather than blind retry.",
-      proof: [ "View the demonstrated USDC designer payout", "https://hashscan.io/testnet/transaction/0.0.9067781@1784242883.124267302" ],
+      proof: [ "View the demonstrated USDC designer payout", "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1784242883-124267302" ],
       facts: [
         [ "Source", "The settled purchase creates designer-share and platform-fee rows locally." ],
         [ "Eligibility", "Only verified payout destinations are grouped; other balances remain owed." ],
@@ -1229,7 +1229,7 @@
         step("payout-03", 3, "local", { at: "payout-runner", kind: "local", label: "Select owed rows", meta: "SKIP UNVERIFIED DESTINATIONS", summary: "Only owed designer-share entries with a verified payout account are eligible. Others remain owed.", code: "LedgerEntry.owed · payout_account_verified?", boundary: "Private eligibility decision." }),
         step("payout-04", 4, "local", { at: "payout-runner", kind: "local", label: "Group by asset + designer", meta: "ONE TRANSFER PER ASSET", summary: "The runner sums each designer's covered share and creates one grouped transfer request per asset.", code: "Ledger::PayoutRunner.run", boundary: "Local aggregation." }),
         step("payout-05", 5, "message", { from: "payout-runner", to: "payout-sidecar", kind: "app", label: "POST /payout", meta: "TRANSFERS + RECONCILABLE MEMO", summary: "The runner sends grouped destinations, amounts, asset, and a checkout/run memo to the sidecar.", code: "SidecarClient#payout", boundary: "Crosses into the treasury-key boundary." }),
-        step("payout-06", 6, "message", { from: "payout-sidecar", to: "payout-hedera", kind: "write", label: "Treasury → designers CryptoTransfer", meta: "SEPARATE VALUE WRITE", summary: "One TransferTransaction debits the treasury and credits the grouped verified designer accounts.", code: "sidecar/hedera.mjs#payout", boundary: "Hedera write signed by the treasury key; unrelated to buyer signing.", proof: [ "Open USDC payout on HashScan", "https://hashscan.io/testnet/transaction/0.0.9067781@1784242883.124267302" ] }),
+        step("payout-06", 6, "message", { from: "payout-sidecar", to: "payout-hedera", kind: "write", label: "Treasury → designers CryptoTransfer", meta: "SEPARATE VALUE WRITE", summary: "One TransferTransaction debits the treasury and credits the grouped verified designer accounts.", code: "sidecar/hedera.mjs#payout", boundary: "Hedera write signed by the treasury key; unrelated to buyer signing.", proof: [ "Open USDC payout on Mirror Node", "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1784242883-124267302" ] }),
         step("payout-07", 7, "message", { from: "payout-hedera", to: "payout-sidecar", kind: "return", label: "SUCCESS + transaction ID", meta: "CONSENSUS RECEIPT", summary: "The sidecar waits for a successful receipt and returns the transaction identifier.", code: "TransferTransaction.execute · getReceipt", boundary: "Consensus response." }),
         step("payout-08", 8, "message", { from: "payout-sidecar", to: "payout-runner", kind: "return", label: "transactionId", meta: "HTTP 200", summary: "The sidecar returns the successful payout transaction ID.", code: "SidecarClient#payout", boundary: "Returns from the treasury-key boundary." }),
         step("payout-09", 9, "message", { from: "payout-runner", to: "payout-ledger", kind: "app", label: "Record payout per purchase", meta: "SHARED TRANSACTION ID", summary: "The runner writes one designer_payout ledger row per covered purchase, all carrying the same grouped transaction ID.", code: "LedgerEntry.create!(entry_kind: designer_payout)", boundary: "Private accountable bookkeeping." }),
@@ -1245,7 +1245,7 @@
       title: "Publish and version a model",
       summary: "Original publication is local application work. A later bundle is withheld until analysis passes (or is explicitly uninspectable), then becomes available to covered owners while a separate pwv-1 HCS provenance write proceeds asynchronously.",
       invariant: "Original publication performs no Hedera operation. Version availability depends on deliverability, not HCS success; the version event is separate from every licence commitment.",
-      proof: [ "View pwv-1 model-version event #70", "https://hashscan.io/testnet/transaction/0.0.9067781@1785078563.036978424" ],
+      proof: [ "View pwv-1 model-version event #70", "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1785078563-036978424" ],
       facts: [
         [ "Original", "Upload, review, pricing, ownership warranty, and catalog publication remain local." ],
         [ "Gate", "Pending or failed geometry stays withheld; buyers retain the prior deliverable bundle." ],
@@ -1267,7 +1267,7 @@
         step("version-06", 6, "local", { at: "version-rails", kind: "local", label: "Gate on passed / skipped", meta: "FAILED AND PENDING STAY WITHHELD", summary: "Only deliverable status makes the version eligible. Otherwise owners keep the previous deliverable bundle.", code: "ModelVersion.deliverable · Api::V1::ModelVersionsController#latest_version", boundary: "Application delivery policy." }),
         step("version-07", 7, "message", { from: "version-rails", to: "version-owner", kind: "return", label: "Latest deliverable bundle", meta: "RECEIPT-AUTHORIZED ACCESS", summary: "A covered owner can inspect and download the latest deliverable version even while its HCS coordinates are still absent.", code: "Api::V1::ModelVersionsController#show/#file", boundary: "Private ownership/access continuation; no new purchase." }),
         step("version-08", 8, "message", { from: "version-rails", to: "version-sidecar", kind: "async", label: "POST /submit-version", meta: "PWV-1 EVENT", summary: "Once deliverable, the analysis job queues a retrying anchor job with the frozen version event.", code: "AnalyzeModelVersionMeshJob · ModelVersionAnchorJob", boundary: "Crosses asynchronously into the platform-key boundary." }),
-        step("version-09", 9, "message", { from: "version-sidecar", to: "version-hedera", kind: "write", label: "TopicMessageSubmitTransaction", meta: "SEPARATE VERSION PROVENANCE", summary: "The sidecar submits one constant-size pwv-1 event carrying the version and ordered bundle hash.", code: "ModelVersion#anchor_payload · sidecar/hedera.mjs#submitMessage", boundary: "Hedera write distinct from licence commitments.", proof: [ "Open pwv-1 submit on HashScan", "https://hashscan.io/testnet/transaction/0.0.9067781@1785078563.036978424" ] }),
+        step("version-09", 9, "message", { from: "version-sidecar", to: "version-hedera", kind: "write", label: "TopicMessageSubmitTransaction", meta: "SEPARATE VERSION PROVENANCE", summary: "The sidecar submits one constant-size pwv-1 event carrying the version and ordered bundle hash.", code: "ModelVersion#anchor_payload · sidecar/hedera.mjs#submitMessage", boundary: "Hedera write distinct from licence commitments.", proof: [ "Open pwv-1 submit on Mirror Node", "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1785078563-036978424" ] }),
         step("version-10", 10, "message", { from: "version-hedera", to: "version-sidecar", kind: "return", label: "Topic + sequence + transaction ID", meta: "CONSENSUS RECEIPT", summary: "Hedera returns the ordered event position and submission transaction.", code: "TopicMessageSubmitTransaction receipt", boundary: "Consensus response." }),
         step("version-11", 11, "message", { from: "version-sidecar", to: "version-rails", kind: "return", label: "Anchor receipt", meta: "HTTP 200", summary: "The sidecar returns the version event coordinates.", code: "SidecarClient#submit_version", boundary: "Returns from the platform-key boundary." }),
         step("version-12", 12, "local", { at: "version-rails", kind: "local", label: "Backfill HCS coordinates", meta: "IDEMPOTENT", summary: "Rails stores topic, sequence, and transaction ID; an already anchored version is a no-op.", code: "ModelVersionAnchorJob#perform", boundary: "Private state references the public version event." })

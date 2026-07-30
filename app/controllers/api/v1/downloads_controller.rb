@@ -292,7 +292,7 @@ class Api::V1::DownloadsController < Api::V1::BaseController
         receipt_token: license.signed_id(purpose: "model-updates")
       },
       transaction_id: purchase.payment_tx_id,
-      hashscan_url: "#{Hedera::Network.hashscan_base}/transaction/#{purchase.payment_tx_id}"
+      transaction_url: Hedera::Network.transaction_url(purchase.payment_tx_id)
     }
   end
 
@@ -315,7 +315,7 @@ class Api::V1::DownloadsController < Api::V1::BaseController
       # must exercise the same shape the paid flow returns.
       certificate_pdf_url: verify_certificate_pdf_url(license.verify_slug),
       transaction_id: purchase.payment_tx_id,
-      hashscan_url: nil,
+      transaction_url: nil,
       sandbox_url: api_v1_sandbox_transaction_url(purchase.payment_tx_id)
     }
   end

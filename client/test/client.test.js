@@ -77,7 +77,7 @@ before(async () => {
       if (request.headers["payment-signature"]) {
         paidBatchRequests += 1;
         return response.end(JSON.stringify({
-          batch_id: 3, transaction_id: "0.0.7@1.2", hashscan_url: "https://hashscan.example/tx",
+          batch_id: 3, transaction_id: "0.0.7@1.2", transaction_url: "https://mirror.example/tx",
           sandbox: false,
           // One license per unit, as the server does: a line with quantity 3 is
           // three certificates, not one.
@@ -115,7 +115,7 @@ before(async () => {
           return response.end(JSON.stringify({
             sandbox: true, warning: "SIMULATION ONLY", files: [],
             license: { cert_id: "sandbox-pw-000009", serial: 1, kind: "personal" },
-            hashscan_url: null,
+            transaction_url: null,
           }));
         }
         response.statusCode = 402;
@@ -138,7 +138,7 @@ before(async () => {
           print_feedback: {
             url: `${baseUrl}/api/v1/licenses/pw-000007/print_reports`, receipt_token: "receipt-7",
           },
-          hashscan_url: "https://hashscan.io/testnet/transaction/example",
+          transaction_url: "https://testnet.mirrornode.hedera.com/api/v1/transactions/example",
         }));
       }
       response.statusCode = 402;
@@ -295,7 +295,7 @@ test("completes a labeled sandbox purchase without an account or private key", a
 
   assert.equal(receipt.sandbox, true);
   assert.match(receipt.license.cert_id, /^sandbox-pw-/);
-  assert.equal(receipt.hashscan_url, null);
+  assert.equal(receipt.transaction_url, null);
 
   const proof = await client.verify(receipt.license.cert_id);
   assert.equal(proof.status, "sandbox");

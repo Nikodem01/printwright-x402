@@ -60,10 +60,10 @@ per asset. In each, the mirror confirms the value moved buyer → designer and t
 
 | asset | settle tx | value moved | fee-payer paid | cert |
 |---|---|---|---|---|
-| HBAR | [`0.0.9067781@1784389444.403626092`](https://hashscan.io/testnet/transaction/0.0.9067781@1784389444.403626092) | `0.0.9613501` −1358695652 tℏ → `0.0.9604186` +1358695652 tℏ | 301932 tℏ fee only | `pw-000036` (seq 37) |
-| USDC | [`0.0.9067781@1784389148.249562065`](https://hashscan.io/testnet/transaction/0.0.9067781@1784389148.249562065) | `0.0.9613501` −0.90 → `0.0.9604186` +0.90 (`0.0.429274`) | 1660627 tℏ fee only | `pw-000033` (seq 34) |
+| HBAR | [`0.0.9067781@1784389444.403626092`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1784389444-403626092) | `0.0.9613501` −1358695652 tℏ → `0.0.9604186` +1358695652 tℏ | 301932 tℏ fee only | `pw-000036` (seq 37) |
+| USDC | [`0.0.9067781@1784389148.249562065`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1784389148-249562065) | `0.0.9613501` −0.90 → `0.0.9604186` +0.90 (`0.0.429274`) | 1660627 tℏ fee only | `pw-000033` (seq 34) |
 
-Certificates anchored on topic [`0.0.9585069`](https://hashscan.io/testnet/topic/0.0.9585069).
+Certificates anchored on topic [`0.0.9585069`](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069).
 The settle transaction's *payer* is this facilitator's fee-payer rather than the hosted one's
 `0.0.7162784` — which is itself the proof the payment was routed here.
 

@@ -312,7 +312,7 @@
         "security": [],
         "parameters": [{ "name": "transaction_id", "in": "path", "required": true, "schema": { "type": "string" } }],
         "responses": {
-          "200": { "description": "Local settlement record labeled sandbox; not a HashScan or Hedera transaction", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "200": { "description": "Local settlement record labeled sandbox; not a Hedera transaction", "content": { "application/json": { "schema": { "type": "object" } } } },
           "404": { "$ref": "#/components/responses/NotFound" },
           "429": { "$ref": "#/components/responses/RateLimited" }
         }
@@ -502,7 +502,7 @@
             "count_difference": { "type": ["integer", "null"] },
             "mirror_url": { "type": ["string", "null"] },
             "latest_message_url": { "type": ["string", "null"] },
-            "hashscan_url": { "type": "string" }
+            "topic_url": { "type": "string" }
           } },
           "ledger": { "type": "object", "properties": {
             "settlement_count": { "type": "integer" },
@@ -516,8 +516,7 @@
           } },
           "recent_settlement_proofs": { "type": "array", "items": { "type": "object", "properties": {
             "transaction_id": { "type": "string" }, "asset": { "type": "string" },
-            "gross_base_units": { "type": "integer" }, "mirror_url": { "type": "string" },
-            "hashscan_url": { "type": "string" }
+            "gross_base_units": { "type": "integer" }, "transaction_url": { "type": "string" }
           } } }
         }
       },
@@ -576,7 +575,7 @@
           "batch_id": { "type": "integer" },
           "sandbox": { "type": "boolean" },
           "transaction_id": { "type": "string" },
-          "hashscan_url": { "type": ["string", "null"] },
+          "transaction_url": { "type": ["string", "null"] },
           "licenses": {
             "type": "array",
             "description": "One summary per license, not the full single-license payload repeated. `files` stays inline because the file is the purchase; fetch the proof bundle from bundle_url, and the print-feedback and model-update capabilities from receipt.files_url.",
@@ -617,7 +616,7 @@
           "print_feedback": { "$ref": "#/components/schemas/PrintFeedbackCapability" },
           "model_updates": { "$ref": "#/components/schemas/ModelUpdatesCapability" },
           "transaction_id": { "type": "string" },
-          "hashscan_url": { "type": ["string", "null"] },
+          "transaction_url": { "type": ["string", "null"] },
           "sandbox": { "type": "boolean", "description": "true only for the mock-facilitator rehearsal" },
           "warning": { "type": "string" },
           "sandbox_url": { "type": "string" }
@@ -655,7 +654,7 @@
             "hash": { "type": "string" }, "text": { "type": "string" } } },
           "hedera": { "type": "object", "description": "where the commitment is anchored, or {\"status\":\"minting\"} until it is", "properties": {
             "network": { "type": "string" }, "topic_id": { "type": "string" }, "sequence_number": { "type": "integer" },
-            "mirror_url": { "type": "string" }, "hashscan_url": { "type": "string" },
+            "mirror_url": { "type": "string" },
             "status": { "type": "string" }, "sandbox": { "type": "boolean" } } }
         }
       },

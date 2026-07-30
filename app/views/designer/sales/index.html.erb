@@ -78,9 +78,9 @@
               <details class="sale-proof">
                 <summary>View proof</summary>
                 <dl>
-                  <dt>Buyer payment</dt><dd><%= hashscan_tx_link(purchase.payment_tx_id) %></dd>
+                  <dt>Buyer payment</dt><dd><%= hedera_tx_link(purchase.payment_tx_id) %></dd>
                   <% if row[:payout] %>
-                    <dt>Designer payout</dt><dd><%= hashscan_tx_link(row[:payout].tx_id) %></dd>
+                    <dt>Designer payout</dt><dd><%= hedera_tx_link(row[:payout].tx_id) %></dd>
                   <% end %>
                   <% if purchase.license %>
                     <dt>Certificate</dt>

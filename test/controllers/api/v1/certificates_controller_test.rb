@@ -25,14 +25,14 @@ class Api::V1::CertificatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal Certificates::Commitment.digest(@license.cert_json, @license.cert_salt), body["commitment"]
   end
 
-  test "anchored cert bundle exposes mirror and hashscan links" do
+  test "anchored cert bundle exposes its exact mirror message link" do
     @license.update!(cert_json: { "v" => 1 }, hcs_topic_id: "0.0.9585069", hcs_sequence_number: 4)
     get api_v1_certificate_url(@license.cert_id)
     body = response.parsed_body
     assert_equal "anchored", body["status"]
     assert_equal "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/4",
                  body.dig("hedera", "mirror_url")
-    assert_includes body.dig("hedera", "hashscan_url"), "topic/0.0.9585069"
+    refute body.fetch("hedera").key?("hashscan_url")
   end
 
   test "bundle carries the exact licensed terms bytes" do

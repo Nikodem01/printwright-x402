@@ -45,7 +45,7 @@
             <td><%= format_base_units(share&.amount_base_units.to_i, attempt.asset) %></td>
             <td><%= attempt.status.humanize %><br><span class="t-caption mono"><%= attempt.last_error_code %></span></td>
             <td><%= attempt.last_attempted_at&.utc&.strftime("%Y-%m-%d %H:%M UTC") || "Not recorded" %></td>
-            <td><%= attempt.tx_id ? hashscan_tx_link(attempt.tx_id) : "Check memo" %></td>
+            <td><%= attempt.tx_id ? hedera_tx_link(attempt.tx_id) : "Check memo" %></td>
           </tr>
         <% end %>
       </tbody>
@@ -89,7 +89,7 @@
           <td><%= time_ago_in_words(purchase.created_at) %></td>
           <td><%= purchase.model3d.title %></td>
           <td><span class="badge <%= purchase.delivered? ? "badge-ok" : "badge-pending" %>"><%= purchase.status %></span></td>
-          <td class="t-small"><span class="mono"><%= purchase.buyer_hint.presence || "unknown" %></span><br><%= hashscan_tx_link(purchase.payment_tx_id) %></td>
+          <td class="t-small"><span class="mono"><%= purchase.buyer_hint.presence || "unknown" %></span><br><%= hedera_tx_link(purchase.payment_tx_id) %></td>
           <td>
             <% if purchase.pending? || purchase.verified? %>
               <%= button_to "Reconcile ##{purchase.id}", reconcile_admin_purchase_path(purchase),

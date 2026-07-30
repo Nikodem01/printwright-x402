@@ -10,7 +10,7 @@ hosted [Blocky402](https://blocky402.com) facilitator, using the official `@x402
 One real paid request: `GET /premium` → `402` → partially-signed `TransferTransaction`
 (0.1 HBAR) → `PAYMENT-SIGNATURE` retry → facilitator verify + settle → `200`.
 
-- Settled tx: [`0.0.7162784@1784125705.137810120`](https://hashscan.io/testnet/transaction/0.0.7162784@1784125705.137810120)
+- Settled tx: [`0.0.7162784@1784125705.137810120`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1784125705-137810120)
 - Mirror node result `SUCCESS`: payer `0.0.9067781` −0.1 ℏ, treasury `0.0.9584959` +0.1 ℏ,
   facilitator fee payer `0.0.7162784` net-zero on value (paid the network fee only).
 
@@ -47,5 +47,5 @@ cp ../../.env.example .env   # fill HEDERA_ACCOUNT_ID, HEDERA_PRIVATE_KEY (funde
 node create-treasury.mjs     # once; put the printed id in .env as TREASURY_ACCOUNT_ID
 node facilitator-proxy.mjs & # :4403 → Blocky402
 node server.mjs &            # :4402
-node client.mjs              # pays 0.1 HBAR, prints the HashScan link
+node client.mjs              # pays 0.1 HBAR, prints the exact Mirror Node link
 ```

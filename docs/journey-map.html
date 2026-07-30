@@ -880,9 +880,9 @@
       <button class="overview-button is-active" type="button" data-journey="overview">System overview</button>
     </nav>
     <div class="rail-proof">
-      <a href="https://hashscan.io/testnet/topic/0.0.9585069" target="_blank" rel="noreferrer">
+      <a href="https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069" target="_blank" rel="noreferrer">
         <small>Live testnet</small>
-        <strong>Explore the topic on HashScan ↗</strong>
+        <strong>Explore the topic on Mirror Node ↗</strong>
       </a>
     </div>
   </aside>
@@ -933,7 +933,7 @@
 
     <footer class="map-footer">
       <span>In the current flow, licence writes hold only an opaque commitment; model versions use separate <code>pwv-1</code> events. Private certificates stay off-chain.</span>
-      <span><a href="https://hashscan.io/testnet/topic/0.0.9585069" target="_blank" rel="noreferrer">View topic 0.0.9585069 on HashScan ↗</a></span>
+      <span><a href="https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069" target="_blank" rel="noreferrer">View topic 0.0.9585069 on Mirror Node ↗</a></span>
     </footer>
   </main>
 </div>
@@ -1020,7 +1020,7 @@
       entry: "API clients, assistants, storefront buyers, and carts all choose the same public offers. A cart changes the fan-out, not the core.",
       app: "Settlement writes the local 90/10 books; delivery then creates each licence, file grant, certificate, receipt, and proof bundle.",
       hedera: "Buyer payment moves value. After delivery, a retrying job anchors one opaque HCS commitment per licence; minting never blocks paid access.",
-      proof: ["View resulting commitment #60 on HashScan", "https://hashscan.io/testnet/transaction/0.0.9067781@1785074359.768280048"],
+      proof: ["View resulting commitment #60 on Mirror Node", "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1785074359-768280048"],
       nodes: ["agent", "human", "catalog", "x402", "signature", "facilitator", "settle", "sales", "delivery", "proof", "sidecar", "hcs"],
       edges: ["agent-catalog", "human-catalog", "catalog-x402", "x402-signature", "signature-facilitator", "facilitator-settle", "settle-sales", "sales-delivery", "delivery-proof", "delivery-sidecar", "sidecar-hcs"]
     },
@@ -1033,7 +1033,7 @@
       entry: "The designer uploads geometry and imagery, sets prices, and accepts the ownership warranty; later updates add bundle and changelog hashes.",
       app: "The original becomes a catalog listing after local review. A deliverable later version becomes available to covered owners and queues provenance anchoring in parallel.",
       hedera: "Original publication performs no Hedera write. Only a validated later version queues a distinct pwv-1 HCS event through the sidecar.",
-      proof: ["View model-version event on HashScan", "https://hashscan.io/testnet/transaction/0.0.9067781@1785078563.036978424"],
+      proof: ["View model-version event on Mirror Node", "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1785078563-036978424"],
       nodes: ["designer", "workbench", "version", "catalog", "delivery", "sidecar", "hcs"],
       edges: ["designer-workbench", "workbench-catalog", "workbench-version", "version-delivery", "version-sidecar", "sidecar-hcs"]
     },
@@ -1046,7 +1046,7 @@
       entry: "A completed buyer payment—not an action from the designer—starts this path.",
       app: "Settlement creates immutable split rows. Delivery triggers the payout job; the runner groups eligible obligations, and records the successful transfer ID back in the local books.",
       hedera: "Buyer → treasury and treasury → designer are separate CryptoTransfers. The sidecar signs only the later payout.",
-      proof: ["View USDC payout on HashScan", "https://hashscan.io/testnet/transaction/0.0.9067781@1784242883.124267302"],
+      proof: ["View USDC payout on Mirror Node", "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1784242883-124267302"],
       nodes: ["catalog", "x402", "signature", "facilitator", "settle", "sales", "delivery", "payout", "sidecar", "payouttx"],
       edges: ["catalog-x402", "x402-signature", "signature-facilitator", "facilitator-settle", "settle-sales", "sales-delivery", "delivery-payout", "payout-sidecar", "sidecar-payouttx"]
     },
@@ -1059,7 +1059,7 @@
       entry: "Receive the buyer-controlled proof bundle; nothing private is sent to Mirror Node.",
       app: "Validate and hash locally, derive the trusted testnet URL from topic and sequence, decode the returned envelope, and compare exactly.",
       hedera: "Mirror Node serves a public GET only. Before anchoring the honest result is pending; mismatch or unavailability is not rewritten as success.",
-      proof: ["View commitment #59 on HashScan", "https://hashscan.io/testnet/transaction/0.0.9067781@1784976237.330739643"],
+      proof: ["View commitment #59 on Mirror Node", "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1784976237-330739643"],
       nodes: ["verifier", "proof", "localhash", "mirror"],
       edges: ["verifier-proof", "proof-localhash", "mirror-localhash"]
     }
@@ -1073,7 +1073,7 @@
     entry: "API, MCP, storefront, and cart are entry modes—not separate product lifecycles.",
     app: "The app owns catalog, settlement state, licence delivery, private receipts, local books, and the retrying jobs that continue after delivery.",
     hedera: "Separate CryptoTransfer paths move buyer payments and designer payouts; distinct HCS messages timestamp licence and version provenance; Mirror Node only reads.",
-    proof: ["View the shared testnet topic on HashScan", "https://hashscan.io/testnet/topic/0.0.9585069"],
+    proof: ["View the shared testnet topic on Mirror Node", "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069"],
     nodes: NODES.map(node => node.id),
     edges: EDGES.map(edge => edge.id)
   };

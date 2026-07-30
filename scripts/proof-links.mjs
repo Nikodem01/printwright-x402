@@ -9,7 +9,7 @@ export function proofLines(cert, { baseUrl, certId }) {
 
   if (hedera?.mirror_url) {
     return [
-      `   HCS topic:   ${hedera.sandbox ? `${hedera.topic_id} (LOCAL SANDBOX ONLY)` : hedera.hashscan_url}`,
+      `   HCS topic:   ${hedera.sandbox ? `${hedera.topic_id} (LOCAL SANDBOX ONLY)` : hedera.mirror_url.replace(/\/messages\/\d+$/, "")}`,
       `   Mirror node: ${hedera.mirror_url}`,
       `   Commitment:  ${cert.commitment ?? "(pending)"}`,
     ];

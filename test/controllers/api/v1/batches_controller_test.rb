@@ -386,7 +386,7 @@ class Api::V1::BatchesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_equal true, response.parsed_body["sandbox"]
-    assert_nil response.parsed_body["hashscan_url"]
+    assert_nil response.parsed_body["transaction_url"]
     assert_equal 3, response.parsed_body.fetch("licenses").length
     assert(response.parsed_body.fetch("licenses").all? { |item| item.dig("files", 0, "kind") == "sandbox_receipt" })
     assert(response.parsed_body.fetch("licenses").none? { |item| item.key?("print_feedback") })

@@ -12,7 +12,7 @@ module TakedownPackets
       model = license.purchase.model3d
       designer = model.designer
       mirror_url = "#{Hedera::Network.mirror_base}/api/v1/topics/#{license.hcs_topic_id}/messages/#{license.hcs_sequence_number}"
-      transaction_url = "#{Hedera::Network.hashscan_base}/transaction/#{license.purchase.payment_tx_id}"
+      transaction_url = Hedera::Network.transaction_url(license.purchase.payment_tx_id)
       cert_digest = "sha256:#{Digest::SHA256.hexdigest(JSON.generate(license.cert_json))}"
       Pdf.call([
         "PRINTWRIGHT COPYRIGHT / PLATFORM NOTICE TEMPLATE - NOT LEGAL ADVICE",

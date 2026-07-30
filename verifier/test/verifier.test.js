@@ -53,7 +53,6 @@ function anchoredBundle(overrides = {}) {
     terms: { version: "v1", kind: "personal", hash: CERT.terms_hash, text: TERMS_TEXT },
     hedera: {
       network: "testnet", topic_id: "0.0.9585069", sequence_number: 57, mirror_url: MIRROR_URL,
-      hashscan_url: "https://hashscan.io/testnet/topic/0.0.9585069",
     },
     ...overrides,
   };

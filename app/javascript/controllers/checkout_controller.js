@@ -290,7 +290,7 @@ export default class extends Controller {
       ${receiptLink}
       <dl class="t-small" style="margin-bottom:0">
         <dt class="muted">transaction</dt>
-        <dd style="margin:0 0 var(--s-2)"><a class="mono" href="${body.hashscan_url}" target="_blank" rel="noopener">${this.escape(txId)}</a></dd>
+        <dd style="margin:0 0 var(--s-2)"><a class="mono" href="${body.transaction_url}" target="_blank" rel="noopener">${this.escape(txId)}</a></dd>
         <dt class="muted">certificate</dt>
         <dd style="margin:0"><a class="mono" href="${body.verify_url}">${this.escape(body.license.cert_id)}</a></dd>
       </dl>
@@ -343,7 +343,7 @@ export default class extends Controller {
       <ol class="batch-license-list">${rows}</ol>
       <dl class="t-small" style="margin-bottom:0">
         <dt class="muted">transaction</dt>
-        <dd style="margin:0"><a class="mono" href="${this.escape(body.hashscan_url)}" target="_blank" rel="noopener">${this.escape(body.transaction_id)}</a></dd>
+        <dd style="margin:0"><a class="mono" href="${this.escape(body.transaction_url)}" target="_blank" rel="noopener">${this.escape(body.transaction_id)}</a></dd>
       </dl>`
     this.receiptTarget.hidden = false
     this.statusTarget.innerHTML = ""

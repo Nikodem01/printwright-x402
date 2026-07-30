@@ -377,7 +377,7 @@ class Api::V1::BatchesController < Api::V1::BaseController
       batch_id: batch.id,
       sandbox: batch.sandbox?,
       transaction_id: batch.payment_tx_id,
-      hashscan_url: batch.sandbox? ? nil : "#{Hedera::Network.hashscan_base}/transaction/#{batch.payment_tx_id}",
+      transaction_url: batch.sandbox? ? nil : Hedera::Network.transaction_url(batch.payment_tx_id),
       licenses: batch.purchases.includes(:license, license_offer: { model3d: { model_files: :file_attachment } })
         .map { |purchase| license_summary(purchase) }
     }

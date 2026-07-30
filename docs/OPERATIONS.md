@@ -162,7 +162,7 @@ an explicit confirmation and the same database advisory lock as the command.
 
 ```bash
 DRY_RUN=1 bin/rails ledger:payout   # preview per-designer totals per asset
-bin/rails ledger:payout             # one batched tx per asset, HashScan links printed
+bin/rails ledger:payout             # one batched tx per asset, Mirror Node links printed
 ```
 
 - Only designers with an active payout destination are paid. New destinations must
@@ -182,7 +182,7 @@ bin/rails ledger:payout             # one batched tx per asset, HashScan links p
   their checkout reference, safe error code, amount, time, and known transaction id.
   The memo names the run — `printwright payout <checkout-ref>` (immediate) or
   `printwright designer payout <date>` (backstop). Check the treasury account on
-  HashScan for that exact transaction or memo. **Never retry while the result is
+  Mirror Node for that exact transaction or memo. **Never retry while the result is
   ambiguous**: first establish whether the transfer reached consensus, then record the
   existing transaction in the ledger or return the attempt to a safe not-submitted
   state through a reviewed operator repair. Preserve the attempt and evidence in the
@@ -296,7 +296,7 @@ Verified end-to-end on testnet: see that directory's README.
 One switch: `HEDERA_NETWORK=mainnet` (app, sidecar, and buyer-script env).
 Everything network-dependent derives from it — CAIP-2 network id, native USDC
 (`0.0.456858` mainnet / `0.0.429274` testnet, both 6 decimals, per
-docs.hedera.com), mirror node, and HashScan links. `MIRROR_NODE_URL` still
+docs.hedera.com), mirror node, and Mirror Node links. `MIRROR_NODE_URL` still
 overrides the mirror if needed.
 
 Also required for a real mainnet launch:

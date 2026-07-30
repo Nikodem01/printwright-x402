@@ -123,7 +123,7 @@ fetched from `bundle_url` rather than repeated inline.
 | Operation | Hedera path | Why it exists |
 | --- | --- | --- |
 | **Buyer payment** | x402 `exact` → HBAR or HTS USDC `CryptoTransfer` | Moves purchase value from the buyer to the treasury with the facilitator as fee payer. |
-| **Licence commitment** | HCS `TopicMessageSubmitTransaction` to [`0.0.9585069`](https://hashscan.io/testnet/topic/0.0.9585069) | Timestamps one privacy-preserving commitment after delivery; private certificate contents stay off-chain. |
+| **Licence commitment** | HCS `TopicMessageSubmitTransaction` to [`0.0.9585069`](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069) | Timestamps one privacy-preserving commitment after delivery; private certificate contents stay off-chain. |
 | **Model provenance** | A separate `pwv-1` HCS message | Commits a validated later model version independently of any purchase. Original publication performs no Hedera write. |
 | **Designer payout** | A separate HBAR or USDC `CryptoTransfer` | Moves grouped, eligible earnings from the treasury to a verified designer account. |
 | **Public verification** | Mirror Node REST read | Fetches the exact topic sequence for local recomputation and comparison. Mirror Node never writes. |
@@ -137,11 +137,11 @@ These are public records, not screenshots:
 
 | Demonstrated behavior | Evidence |
 | --- | --- |
-| **2.50 USDC x402 purchase** | [Settlement on HashScan ↗](https://hashscan.io/testnet/transaction/0.0.7162784@1785074352.536547527) |
-| **Resulting opaque licence commitment** | [HCS submit on HashScan ↗](https://hashscan.io/testnet/transaction/0.0.9067781@1785074359.768280048) · [exact Mirror message #60](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/60) |
-| **One 2.60 USDC batch settlement, two licences** | [Settlement on HashScan ↗](https://hashscan.io/testnet/transaction/0.0.7162784@1785074684.046610464) · [HCS #61](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/61) · [HCS #62](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/62) |
-| **Separate designer payout** | [USDC payout on HashScan ↗](https://hashscan.io/testnet/transaction/0.0.9067781@1784242883.124267302) |
-| **Separate model-version provenance** | [`pwv-1` submit on HashScan ↗](https://hashscan.io/testnet/transaction/0.0.9067781@1785078563.036978424) · [exact Mirror message #70](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/70) |
+| **2.50 USDC x402 purchase** | [Settlement on Mirror Node ↗](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785074352-536547527) |
+| **Resulting opaque licence commitment** | [HCS submit on Mirror Node ↗](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1785074359-768280048) · [exact Mirror message #60](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/60) |
+| **One 2.60 USDC batch settlement, two licences** | [Settlement on Mirror Node ↗](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785074684-046610464) · [HCS #61](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/61) · [HCS #62](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/62) |
+| **Separate designer payout** | [USDC payout on Mirror Node ↗](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1784242883-124267302) |
+| **Separate model-version provenance** | [`pwv-1` submit on Mirror Node ↗](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1785078563-036978424) · [exact Mirror message #70](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/70) |
 
 The dated 2026-07-29 reproducibility snapshot, including a full cold-clone run of every door and
 what has and has not been externally validated, is in [`docs/VALIDATION.md`](docs/VALIDATION.md).

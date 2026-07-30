@@ -37,7 +37,8 @@ curl -i "http://localhost:3000/api/v1/models/5/download?license=personal" \
 #   payment-response: eyJ0cmFuc2FjdGlvbiI6Ii4uLiJ9    (base64 settlement receipt)
 #   { "files": [...], "license": {"cert_id": "pw-000036", "serial": 3, "kind": "personal"},
 #     "receipt": {"url":".../receipts/pw-000036","token":"private signed capability"},
-#     "certificate": {...}, "transaction_id": "...", "hashscan_url": "https://hashscan.io/..." }</pre>
+#     "certificate": {...}, "transaction_id": "...",
+#     "transaction_url": "https://testnet.mirrornode.hedera.com/api/v1/transactions/..." }</pre>
 
   <h2>Durable receipts and optional library</h2>
   <p class="t-small">Every real paid delivery includes a private <code class="mono">receipt</code>
@@ -386,7 +387,6 @@ claude mcp add printwright \
         <tr><th scope="row">USDC decimals</th><td>6</td><td>6</td></tr>
         <tr><th scope="row">HBAR asset id</th><td colspan="2"><code class="mono">0.0.0</code> — always, on either network</td></tr>
         <tr><th scope="row">Mirror node</th><td colspan="2"><code class="mono">https://&lt;network&gt;.mirrornode.hedera.com</code>, overridable with <code class="mono">MIRROR_NODE_URL</code></td></tr>
-        <tr><th scope="row">HashScan</th><td colspan="2"><code class="mono">https://hashscan.io/&lt;network&gt;</code></td></tr>
       </tbody>
     </table>
   </div>

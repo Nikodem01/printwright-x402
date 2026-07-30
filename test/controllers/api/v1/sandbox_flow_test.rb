@@ -40,7 +40,7 @@ class Api::V1::SandboxFlowTest < ActionDispatch::IntegrationTest
     delivery = response.parsed_body
     assert_equal "true", response.headers["X-Printwright-Sandbox"]
     assert_equal [ true, Sandbox::Requirements::WARNING, nil ],
-      [ delivery["sandbox"], delivery["warning"], delivery["hashscan_url"] ]
+      [ delivery["sandbox"], delivery["warning"], delivery["transaction_url"] ]
     assert_match(/\Asandbox-tx-[0-9a-f]{20}\z/, delivery["transaction_id"])
     assert_match(/\Asandbox-pw-[0-9a-f]{24}\z/, delivery.dig("license", "cert_id"))
     assert_equal [ "sandbox_receipt" ], delivery["files"].pluck("kind")
@@ -69,7 +69,8 @@ class Api::V1::SandboxFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
     certificate = response.parsed_body
     assert_equal "sandbox", certificate["status"]
-    assert_equal [ true, nil ], [ certificate.dig("hedera", "sandbox"), certificate.dig("hedera", "hashscan_url") ]
+    assert_equal true, certificate.dig("hedera", "sandbox")
+    refute certificate.fetch("hedera").key?("hashscan_url")
 
     get certificate.dig("hedera", "mirror_url")
     assert_response :success
@@ -87,7 +88,7 @@ class Api::V1::SandboxFlowTest < ActionDispatch::IntegrationTest
     get URI(delivery["verify_url"]).request_uri
     assert_response :success
     assert_select ".banner-sandbox", text: /Sandbox/i
-    assert_select '.evidence-footer a[href*="hashscan.io"]', count: 0
+    assert_select '.evidence-footer a[href*="mirrornode.hedera.com"]', count: 0
 
     get verify_badge_path(license.verify_slug)
     assert_response :success

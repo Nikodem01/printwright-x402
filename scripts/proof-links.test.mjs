@@ -16,7 +16,6 @@ const ANCHORED = {
     topic_id: "0.0.9585069",
     sequence_number: 60,
     mirror_url: "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/60",
-    hashscan_url: "https://hashscan.io/testnet/topic/0.0.9585069",
   },
 };
 
@@ -37,10 +36,10 @@ test("the pending state names a command that works unchanged once anchored", () 
   );
 });
 
-test("an anchored certificate still reports the real HashScan and mirror links", () => {
+test("an anchored certificate reports the exact topic and message links", () => {
   const lines = proofLines(ANCHORED, { baseUrl: BASE, certId: CERT_ID }).join("\n");
 
-  assert.match(lines, /HCS topic:\s+https:\/\/hashscan\.io\/testnet\/topic\/0\.0\.9585069/);
+  assert.match(lines, /HCS topic:\s+https:\/\/testnet\.mirrornode\.hedera\.com\/api\/v1\/topics\/0\.0\.9585069/);
   assert.match(lines, /Mirror node:\s+https:\/\/testnet\.mirrornode\.hedera\.com\/api\/v1\/topics\/0\.0\.9585069\/messages\/60/);
   assert.match(lines, /Commitment:\s+ae241c97/);
   assert.doesNotMatch(lines, /undefined|pending/);

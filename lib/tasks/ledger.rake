@@ -19,7 +19,7 @@ namespace :ledger do
     else
       results.each do |payout|
         puts "#{payout.asset}: #{payout.transfers.map { |t| "#{t[:accountId]} +#{t[:amount]}" }.join(', ')}"
-        puts payout.tx_id ? "  tx: https://hashscan.io/testnet/transaction/#{payout.tx_id}" : "  (dry run — nothing sent)"
+        puts payout.tx_id ? "  tx: #{Hedera::Network.transaction_url(payout.tx_id)}" : "  (dry run — nothing sent)"
       end
     end
   end

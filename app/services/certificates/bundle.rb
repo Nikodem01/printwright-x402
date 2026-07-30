@@ -58,8 +58,7 @@ module Certificates
         "network" => Hedera::Network.name,
         "topic_id" => license.hcs_topic_id,
         "sequence_number" => license.hcs_sequence_number,
-        "mirror_url" => "#{mirror}/api/v1/topics/#{license.hcs_topic_id}/messages/#{license.hcs_sequence_number}",
-        "hashscan_url" => "#{Hedera::Network.hashscan_base}/topic/#{license.hcs_topic_id}"
+        "mirror_url" => "#{mirror}/api/v1/topics/#{license.hcs_topic_id}/messages/#{license.hcs_sequence_number}"
       }
     end
   end

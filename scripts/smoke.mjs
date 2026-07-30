@@ -79,7 +79,7 @@ ok(`proof bundle verified by verifier/cli.js — ${verification}`);
 clearTimeout(watchdog);
 console.log(`\nSMOKE GREEN in ${((Date.now() - started) / 1000).toFixed(1)}s`);
 console.log(`  settle tx:  ${settleUrl ?? "(see buy.mjs output above)"}`);
-console.log(`  topic:      ${bundle.hedera.hashscan_url}`);
+console.log(`  topic:      ${bundle.hedera.mirror_url.replace(/\/messages\/\d+$/, "")}`);
 console.log(`  mirror:     ${bundle.hedera.mirror_url}`);
 console.log(`  commitment: ${bundle.commitment}`);
 process.exit(0);
