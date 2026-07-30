@@ -387,6 +387,55 @@ test("reports mirror indexing lag without turning an anchored certificate into a
   assert.match(proof.note, /still indexing/);
 });
 
+test("retries transient Mirror failures while checking a USDC association", async () => {
+  let calls = 0;
+  const client = new PrintwrightClient({
+    accountId: "0.0.1234",
+    privateKey: PrivateKey.generateECDSA().toStringRaw(),
+    fetch: async () => {
+      calls += 1;
+      if (calls === 1) throw new TypeError("fetch failed");
+      if (calls === 2) return new Response("temporary", { status: 503 });
+      return Response.json({ tokens: [ { token_id: "0.0.429274", balance: 1 } ] });
+    },
+  });
+
+  await client.ensureUsdcAssociated();
+  assert.equal(calls, 3);
+});
+
+test("bounds transient Mirror retries and does not retry a definite response", async () => {
+  let transientCalls = 0;
+  const transient = new PrintwrightClient({
+    accountId: "0.0.1234",
+    privateKey: PrivateKey.generateECDSA().toStringRaw(),
+    fetch: async () => {
+      transientCalls += 1;
+      return Response.json({ error: "unavailable" }, { status: 503 });
+    },
+  });
+  await assert.rejects(
+    () => transient.ensureUsdcAssociated(),
+    (error) => error instanceof PrintwrightError && error.status === 503
+  );
+  assert.equal(transientCalls, 4);
+
+  let definiteCalls = 0;
+  const definite = new PrintwrightClient({
+    accountId: "0.0.1234",
+    privateKey: PrivateKey.generateECDSA().toStringRaw(),
+    fetch: async () => {
+      definiteCalls += 1;
+      return Response.json({ error: "bad request" }, { status: 400 });
+    },
+  });
+  await assert.rejects(
+    () => definite.ensureUsdcAssociated(),
+    (error) => error instanceof PrintwrightError && error.status === 400
+  );
+  assert.equal(definiteCalls, 1);
+});
+
 test("rejects malformed ids, networks, and missing buyer credentials", async () => {
   assert.throws(() => new PrintwrightClient({ baseUrl, network: "previewnet" }), /testnet or mainnet/);
   await assert.rejects(() => new PrintwrightClient({ baseUrl }).get("7/../8"), /positive integer/);

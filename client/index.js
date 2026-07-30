@@ -8,6 +8,7 @@ const USDC_IDS = { testnet: "0.0.429274", mainnet: "0.0.456858" };
 const ASSET_IDS = { hbar: "0.0.0" };
 const COMMITMENT_DOMAIN = "printwright:license-certificate:v1\0";
 const COMMITMENT_TYPE = "printwright-license-commitment";
+const MIRROR_RETRY_DELAYS_MS = [ 250, 750, 1_500 ];
 
 export class PrintwrightError extends Error {
   constructor(message, { status, body } = {}) {
@@ -242,18 +243,38 @@ export class PrintwrightClient {
     return new URL(path, this.baseUrl);
   }
 
-  async getJson(url) {
-    let response;
-    try {
-      response = await this.fetch(url, { headers: { accept: "application/json" } });
-    } catch (error) {
-      throw new PrintwrightError(`GET ${url} failed: ${error.message}`);
-    }
-    const body = await jsonBody(response);
-    if (!response.ok) {
+  async getJson(url, { retryTransient = false } = {}) {
+    for (let attempt = 0; ; attempt += 1) {
+      let response;
+      try {
+        response = await this.fetch(url, { headers: { accept: "application/json" } });
+      } catch (error) {
+        if (retryTransient && attempt < MIRROR_RETRY_DELAYS_MS.length) {
+          await delay(MIRROR_RETRY_DELAYS_MS[attempt]);
+          continue;
+        }
+        throw new PrintwrightError(`GET ${url} failed: ${error.message}`);
+      }
+
+      let body;
+      try {
+        body = await jsonBody(response);
+      } catch (error) {
+        if (retryTransient && transientStatus(response.status) &&
+            attempt < MIRROR_RETRY_DELAYS_MS.length) {
+          await delay(MIRROR_RETRY_DELAYS_MS[attempt]);
+          continue;
+        }
+        throw error;
+      }
+      if (response.ok) return body;
+      if (retryTransient && transientStatus(response.status) &&
+          attempt < MIRROR_RETRY_DELAYS_MS.length) {
+        await delay(MIRROR_RETRY_DELAYS_MS[attempt]);
+        continue;
+      }
       throw new PrintwrightError(`GET ${url} -> ${response.status}`, { status: response.status, body });
     }
-    return body;
   }
 
   requireSigner() {
@@ -344,7 +365,7 @@ export class PrintwrightClient {
       `https://${this.network}.mirrornode.hedera.com/api/v1/accounts/${encodeURIComponent(this.accountId)}/tokens`
     );
     mirrorUrl.searchParams.set("token.id", tokenId);
-    const { tokens } = await this.getJson(mirrorUrl);
+    const { tokens } = await this.getJson(mirrorUrl, { retryTransient: true });
     if (tokens?.length) return;
 
     const key = typeof this.privateKey === "string"
@@ -359,6 +380,14 @@ export class PrintwrightClient {
       client.close();
     }
   }
+}
+
+function transientStatus(status) {
+  return status === 429 || status >= 500;
+}
+
+function delay(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 function selectAsset(paymentRequired, asset, network) {
