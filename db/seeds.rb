@@ -22,6 +22,12 @@ def upgradable_seed_model(slug, file_hash)
   Model3d.new(slug: slug)
 end
 
+def seed_attachment_current?(attachment, bytes)
+  attachment.attached? &&
+    attachment.blob.checksum == Digest::MD5.base64digest(bytes) &&
+    attachment.blob.service.exist?(attachment.blob.key)
+end
+
 # Designers with their own funded testnet account (SEED_*_ACCOUNT_ID env)
 # receive sales directly once the publish-time mirror check passes; the rest
 # demonstrate treasury custody + owed balance. Never default to the treasury
@@ -328,13 +334,13 @@ DESIGNERS = { studio: studio, atelier: atelier, workshop: workshop }.freeze
   model.save!
 
   stl_file = model.model_files.find_or_create_by!(kind: "stl", position: 0)
-  unless stl_file.file.attached? && stl_file.file.blob.checksum == Digest::MD5.base64digest(stl_bytes)
+  unless seed_attachment_current?(stl_file.file, stl_bytes)
     stl_file.file.attach(io: StringIO.new(stl_bytes), filename: stl_name, content_type: "model/stl")
   end
 
   render = model.model_files.find_or_create_by!(kind: "render", position: 1)
   render_bytes = ASSETS.join(render_name).binread
-  unless render.file.attached? && render.file.blob.checksum == Digest::MD5.base64digest(render_bytes)
+  unless seed_attachment_current?(render.file, render_bytes)
     render.file.attach(io: StringIO.new(render_bytes), filename: render_name, content_type: "image/png")
   end
 

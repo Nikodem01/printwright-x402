@@ -9,6 +9,27 @@ class CatalogAssetsTest < ActiveSupport::TestCase
     assert_includes output, "Seed assets valid: 37"
   end
 
+  test "seed restores attachment bytes missing from local storage" do
+    bytes = Rails.root.join("db/seed_assets/cable-clip.stl").binread
+    model = Model3d.create!(
+      designer: designers(:one), title: "Cable clip", slug: "cable-clip",
+      file_hash: "sha256:#{Digest::SHA256.hexdigest(bytes)}", status: "published"
+    )
+    file = model.model_files.create!(kind: "stl", position: 0)
+    file.file.attach(io: StringIO.new(bytes), filename: "cable-clip.stl", content_type: "model/stl")
+    missing_blob = file.file.blob
+    FileUtils.rm(missing_blob.service.send(:path_for, missing_blob.key))
+
+    assert_predicate file.file, :attached?
+    assert_not missing_blob.service.exist?(missing_blob.key)
+
+    capture_io { load Rails.root.join("db/seeds.rb") }
+
+    restored = model.reload.model_files.find_by!(kind: "stl", position: 0).file
+    assert restored.blob.service.exist?(restored.blob.key)
+    assert_equal bytes, restored.download
+  end
+
   test "seed upgrade preserves a purchased legacy file and publishes a replacement" do
     old_bytes = "solid legacy\nendsolid legacy\n"
     legacy = Model3d.create!(
