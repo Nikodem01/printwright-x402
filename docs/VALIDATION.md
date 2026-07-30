@@ -1,118 +1,121 @@
 # Validation record
 
-What has actually been exercised against Hedera testnet, and by whom. Every number here is
-checkable against the public mirror node without asking Printwright for anything — the commands
-are included so you can re-derive them rather than take them on trust.
+What has actually been exercised against Hedera testnet, and by whom. The on-chain figures below
+are a dated snapshot; the linked Mirror Node records remain independently fetchable.
 
-Last compiled: 2026-07-29.
+Last compiled: 2026-07-30.
 
 ## The on-chain record
 
+Snapshot after transaction `0.0.7162784@1785411775.692726241`:
+
 | | |
 |---|---|
-| Messages on the license topic [`0.0.9585069`](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069) | **79** (license commitments + model-version provenance) |
-| x402 settles into the treasury [`0.0.9584959`](https://testnet.mirrornode.hedera.com/api/v1/accounts/0.0.9584959) | **39** |
-| Distinct paying accounts | **2** — `0.0.9067781`, `0.0.9613501` |
-| Assets settled | **29 in USDC** (30.75 USDC total) · **10 in HBAR** (130.53 ℏ total) |
-| Span | 2026-07-15 → 2026-07-29, across **11 separate days** |
-| Designer payouts executed from treasury | **6** |
+| Historical shared topic [`0.0.9585069`](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069) | **82 messages**: 55 legacy full-certificate messages, 1 deprecated `pwc-1` envelope, 24 current opaque commitments, and 2 `pwv-1` model-version events |
+| Incoming x402 test settles to treasury [`0.0.9584959`](https://testnet.mirrornode.hedera.com/api/v1/accounts/0.0.9584959) | **53** |
+| Internal paying accounts | **2** — `0.0.9067781`, `0.0.9613501` |
+| Assets settled | **39 in USDC** (38.70 USDC total) · **14 in HBAR** (163.19564756 ℏ total) |
+| Span | 2026-07-15 → 2026-07-30, across **12 separate UTC days** |
+| Designer payouts executed from treasury | **6** (plus one separately labeled refund) |
 
-Two paying accounts, both ours: this is a record of the system working, not of demand. No
-outside party has bought anything.
+Both paying accounts are ours. This is a record of repeated system tests, not demand or
+third-party adoption. The topic breakdown also matters: messages 1–56 include the superseded
+pre-commitment design. Claims that current licence writes are opaque refer only to the current
+writer and are directly visible from sequence 58 onward.
 
-Re-derive it:
+Re-derive the two public streams:
 
 ```bash
-# every message on the license topic
-curl -s "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages?limit=1&order=desc" \
-  | python3 -c "import sys,json;print(json.load(sys.stdin)['messages'][0]['sequence_number'],'messages')"
+curl -s "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages?limit=100&order=asc"
 
-# every successful transfer touching the treasury
 curl -s "https://testnet.mirrornode.hedera.com/api/v1/transactions?account.id=0.0.9584959\
-&limit=100&order=desc&transactiontype=CRYPTOTRANSFER&result=success"
+&limit=100&order=asc&transactiontype=CRYPTOTRANSFER&result=success"
 ```
 
-A sample of the most recent settles, each resolvable on Mirror Node:
+The transaction query contains incoming test purchases, outgoing designer payouts, and the
+labeled refund. The settlement figures above count only transactions where the treasury's HBAR
+or testnet USDC (`0.0.429274`) balance increases.
 
-| when (UTC) | payer | amount | transaction |
-|---|---|---|---|
-| 2026-07-25 10:44 | `0.0.9067781` | 0.25 USDC | [`0.0.7162784@1784976230.265183795`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1784976230-265183795) |
-| 2026-07-25 10:21 | `0.0.9067781` | 0.25 USDC | [`0.0.7162784@1784974906.023503671`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1784974906-023503671) |
-| 2026-07-24 13:38 | `0.0.9613501` | 0.25 USDC | [`0.0.7162784@1784900288.288350505`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1784900288-288350505) |
-| 2026-07-22 14:11 | `0.0.9067781` | 0.25 USDC | [`0.0.7162784@1784729477.481105634`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1784729477-481105634) |
-| 2026-07-20 17:34 | `0.0.9613501` | 0.25 USDC | [`0.0.7162784@1784568837.841774991`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1784568837-841774991) |
-| 2026-07-19 11:04 | — | 11.2295 HBAR | [`0.0.7162784@1784459059.566518657`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1784459059-566518657) |
+A sample of directly checked records:
 
-Note the transaction payer is always `0.0.7162784`, the facilitator: buyers sign the transfer and
-the facilitator sponsors the network fee. That is the x402 fee model working, visible on-chain.
+| demonstrated behavior | evidence |
+|---|---|
+| 2.50 USDC x402 settle | [`0.0.7162784@1785074352.536547527`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785074352-536547527) |
+| resulting current-format commitment | [HCS #60](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/60) |
+| one 2.60 USDC batch settle, two commitments | [settlement](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785074684-046610464) · [HCS #61](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/61) · [HCS #62](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/62) |
+| separate USDC designer payout | [`0.0.9067781@1784242883.124267302`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1784242883-124267302) |
+| separate model-version provenance | [HCS #70](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/70) |
 
-## Cold-clone reproduction, 2026-07-29
+The x402 settlement transaction payer is `0.0.7162784`, the hosted facilitator. Buyers authorize
+the value transfer; the facilitator adds its fee-payer signature and submits it.
 
-Every purchase below was made from a **fresh `git clone` of this repository's `main`** into an
-empty directory, following only the README: `cp .env.example .env`, `bin/setup --skip-server`,
-`bin/rails db:seed`, `npm install`, `bin/dev`. Setup took 38 s; the sandbox rehearsal ran 0.7 s
-later; the first real settle completed **10.8 s** after the command was typed. Every door was
-driven against that clone, not against a working copy.
+## Cold-clone reproduction, 2026-07-30
+
+The audit used an isolated clone and an empty PostgreSQL database. Following the README took
+3 seconds to clone, 40 seconds for `bin/setup --skip-server` (including the initial seed),
+37 seconds for the explicit idempotent `bin/rails db:seed`, 14 seconds for the root npm install,
+and 18 seconds for the sidecar npm install. The sandbox rehearsal completed in about 1 second.
+Clone start to the first real purchase was **195 seconds**; that purchase command itself took
+**15 seconds**.
+
+A new HCS topic was created exactly as the README directs:
+[`0.0.9841379`](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9841379). Every door below
+was then driven against that isolated clone:
 
 | Door | Settlement | Result |
 |---|---|---|
-| Agent — `scripts/buy.mjs` | [`…@1785294144.842761447`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785294144-842761447) · 13.106 ℏ | `pw-53e9de6918794f4af0afe72a`, [HCS #72](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/72), 344-triangle binary STL, verifier `VERIFIED` |
-| Agent — batch, `quantity: 2` | [`…@1785294596.093128610`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785294596-093128610) · 26.212 ℏ | one settle, two licenses (serials 3 and 4), [HCS #74](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/74) and [#75](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/75) |
-| MCP — `buy_license` | [`…@1785294728.882241414`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785294728-882241414) | `pw-3f2b59a9ac1618d8a5a9aff2`; the call is refused outright without `confirm: true` |
-| Human — storefront cart | [`…@1785295513.025117689`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785295513-025117689) · 0.20 USDC | `pw-d48075b86c8c832833c59073`, [HCS #77](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/77); receipt page re-downloaded the STL with no account |
-| Chat — shopkeeper approval | [`…@1785296087.326924256`](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785296087-326924256) · 0.20 USDC | `pw-383ddfaf7c7af4fe4419d90c`; the assistant could only *propose* — the approval was re-priced and cap-checked server-side |
+| Agent — `scripts/buy.mjs` | [0.90 USDC](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785409009-328510354) | `pw-377e5ccb22f37ccb87ad631f`, [HCS #2](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9841379/messages/2), 17,284-byte/344-triangle STL, standalone verifier `VERIFIED` |
+| Agent — batch, `quantity: 2` | [one 0.50 USDC settle](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785409151-337309777) | two licences and two commitments: [HCS #3](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9841379/messages/3), [HCS #4](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9841379/messages/4) |
+| MCP — `buy_license` | [0.90 USDC](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785409226-615173835) | `pw-6de09d52d24f2bdd7b52120c`, [HCS #5](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9841379/messages/5); the server refuses without `confirm: true` |
+| Human — storefront cart | [0.90 USDC](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785410098-745866509) | `pw-3bd03707185f54e1c9b50637`, [HCS #7](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9841379/messages/7); browser receipt and re-download worked |
+| Chat — local shopkeeper + approval | [0.90 USDC](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785410796-543945129) | `pw-1f4d5b412c5bf6cdbb5b0de9`, [HCS #9](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9841379/messages/9); search, proposal, separate approval, receipt, and download worked without a model-provider key |
+| Post-audit paid-response check | [0.25 USDC](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785411775-692726241) | `pw-e6cef5c9cc22310df1b84169`, [HCS #10](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9841379/messages/10); exact transaction URL resolved and the standalone verifier returned `VERIFIED` |
 
-The durable receipt was exercised separately: the non-expiring `receipt.token` re-fetched the
-file list and re-downloaded the identical 17 284-byte STL long after the original download grant
-was issued, with no account and no login.
+The durable receipt capability re-fetched the file list and re-downloaded the exact same
+17,284-byte STL (`sha256:9faad93d155e27f3c7fa8b7b875999865b7e48d03dc986e51d066b5b9a6b0ce3`)
+without an account or login. That real re-download happened in the same audit session, before the
+original 30-day grant expired; automated tests separately time-travel past grant expiry.
 
 ## What each door has done
 
-| Door | Exercised by | Evidence |
-|---|---|---|
-| Bare HTTP agent (`scripts/buy.mjs`) | repeated real buys, most recently 2026-07-29 | saved deliverables under `purchases/<slug>/` (STL + `purchase.json` + proof bundle) |
-| MCP assistant (`mcp/server.mjs`) | tool-driven purchase | `cd mcp && npm test` spawns the real server over stdio; a real `buy_license` settle is in the table above |
-| Browser checkout | wallet-signed checkout | `bin/rails test:system` drives the x402 states and the receipt end to end; a real browser settle is in the table above |
-| Batch API | one aggregate settle, many licenses | covered in the Rails suite and in the table above |
-| Sandbox (`X-Sandbox: true`) | credential-free rehearsal | `conformance/suite.mjs` runs the whole contract against a live server in CI |
+| Door | Executed evidence |
+|---|---|
+| Bare HTTP agent (`scripts/buy.mjs`) | real settle, file download, OpenSCAD render, mesh checks, proof-bundle verification, and receipt re-download |
+| MCP assistant (`mcp/server.mjs`) | stdio initialize/tool-list, real `buy_license`, `check_license`, and certificate verification |
+| Browser checkout | real browser search, cart, approval, settlement, receipt, file download, and receipt re-download |
+| Shopkeeper chat | real browser search, bounded proposal, separate approval, settlement, receipt, and file download |
+| Batch API | one aggregate real settlement producing two licences and two HCS commitments |
+| Sandbox (`X-Sandbox: true`) | live conformance suite with no buyer credentials or Hedera write |
 
-## The standing gate
+## The standing smoke gate
 
-Every demo-path change closes on a **real settle**, not a mock. `scripts/smoke.mjs` boots the app,
-the sidecar, and the facilitator, buys a licence with real testnet value, waits for the commitment
-to anchor, and then hands the delivered proof bundle to the standalone verifier CLI over stdin —
-requiring a `VERIFIED` verdict before the gate goes green. A run that settles but cannot be
-independently verified is a failed run.
+`scripts/smoke.mjs` checks the app, sidecar, and facilitator, makes a real testnet purchase, waits
+for the commitment, and requires the standalone verifier CLI to report `VERIFIED`. This gate is
+not a claim that every edit has run a paid settle; it is the command used for release/demo
+validation when funded credentials are available.
 
-The most recent gate run (2026-07-25) settled `0.0.7162784@1784976230.265183795`, anchored the
-commitment at topic `0.0.9585069` **sequence 59**, and the verifier reported bundle integrity,
-certificate schema, terms integrity, and Hedera anchoring all VERIFIED. That same proof bundle is
-embedded in [`public/widget-example.html`](../public/widget-example.html), where the browser widget
-re-verifies it against the live mirror from a static page.
+The portable sample in [`public/widget-example.html`](../public/widget-example.html) is the proof
+bundle for HCS sequence 59. Both the standalone verifier and browser widget recompute it against
+the live Mirror Node. An earlier smoke run caught a real terms-integrity failure after licence
+text had been edited in place; that was fixed rather than relabeled as success.
 
-That run is also what caught the last real defect: `terms integrity FAILED`, because the licence
-text had been edited in place after publication. Self-testing that only ever passes is not
-evidence; this one found something.
+## Reproducibility limits
 
-## Reproducibility
-
-A fresh-clone rehearsal reached a real settlement using only the README — no source reading, no
-tribal knowledge. The facilitator dependency is not a single point of failure: the self-host
-fallback in [`selfhost-facilitator/`](../selfhost-facilitator/) runs the same contract behind one
-environment variable, and the sandbox mode completes the whole flow with no funds at all.
+The cold run used the documented prerequisites already installed on the host and a pre-funded
+internal testnet account. No private key entered the Rails process. The public repository does not
+provide funds, and a stranger must create/fund their own testnet buyer exactly as the README says.
+The hosted facilitator has a separately runnable self-host fallback; that reduces provider
+dependence but does not remove dependence on Hedera or public network access.
 
 ## What this is not
 
-Being straight about the limit of the above: **these are our own test buys.** Two independently
-keyed Hedera accounts have paid real testnet value through the public rails on eight separate days,
-which demonstrates the flow works repeatedly and is verifiable by a stranger — but it is not the
-same as an outside person choosing to buy something.
+These are our own test buys. Two internally controlled Hedera accounts have paid real testnet
+value on 12 UTC days. That demonstrates repeatability under our control, not outside demand or
+independent user validation.
 
-Not yet done, and not claimed:
+Not done and not claimed:
 
-- **No independent third party has purchased on a public deployment.** The marketplace has not been
-  put in front of outside buyers or designers.
-- **No collected user feedback.** No interviews, no usability notes, no traction data.
+- **No independent third party has purchased on a public deployment.**
+- **No collected user feedback.** No interviews, usability notes, or traction data.
 
-That remains the weakest part of the submission, and it needs outsiders and a public URL rather
-than another test run from us.
+External validation remains the weakest part of the submission.
