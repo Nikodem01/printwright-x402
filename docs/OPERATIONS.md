@@ -274,8 +274,19 @@ dropdb printwright_restore_rehearsal
 
 Never use `--clean` or point a rehearsal at the production database. On 2026-07-19 the local
 custom-format rehearsal restored schema version `20260719235500`, 36 model rows and the expected
-zero local license rows, then removed only the named scratch database and temporary dump. The
-provider upload/download rehearsal remains pending until V20's owner-created bucket exists.
+zero local license rows, then removed only the named scratch database and temporary dump.
+
+On **2026-07-31** the same rehearsal ran against the real production database on the deployment
+host, restoring into a scratch database inside the `db` container. Every count matched the source —
+37 models, 47 offers, 1 licence, 1 purchase — and the `cert_id` of the genuine paid purchase
+(`pw-66dcbd6945e60adb41b0a722`) survived the round trip, which is the assertion that actually
+matters: a dump that restores rows but loses the licence a buyer paid for is not a backup. Only the
+scratch database and the staged dump were removed afterwards.
+
+That rehearsal also caught the reason backups had never worked in this image: `pg_dump` was
+version 15 against a version 16 server and refused outright. Nothing surfaces that failure until
+the nightly job runs, so **rehearse a restore on any new deployment before trusting the schedule** —
+a backup job that has never produced a restorable file is not a backup job.
 
 ### A backup on the same disk is not a backup
 
