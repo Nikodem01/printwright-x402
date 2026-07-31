@@ -7,7 +7,6 @@
 
 ASSETS = Rails.root.join("db/seed_assets")
 PROVENANCE = YAML.safe_load_file(ASSETS.join("provenance.yml")).fetch("models")
-PROVENANCE_NOTE = "Self-authored parametric model dedicated CC0-1.0; reproducible source and print notes are included with the catalog."
 
 # A published file hash is part of every certificate. If a prior seed asset has
 # already sold, keep that model, its offers, and its attachments immutable;
@@ -251,8 +250,8 @@ DEEP_CATALOG_MODELS = [
     offers: [ { kind: "personal", price_cents: 100, currency: "HBAR" },
               { kind: "commercial_unit", price_cents: 20, currency: "USDC" } ] },
   { designer: :studio, slug: "open-wheel-toy-racer",
-    title: "Open-Wheel Toy Racer",
-    description: "A compact open-wheel toy car with chunky wheels, raised ground clearance, and simple logo-free bodywork.",
+    title: "Legally Distinct Open Wheel Toy Racer",
+    description: "A compact open-wheel toy car with chunky wheels, raised ground clearance, and simple logo-free bodywork. No affiliation with any racing team—at least, not yet.",
     tags: %w[race car racer open-wheel motorsport formula toy], category: "toys-and-games",
     collections: %w[small-space],
     printability: { supports: true, materials: %w[PLA PETG], est_print_minutes: 62, bed_min_mm: 106 },
@@ -323,7 +322,7 @@ DESIGNERS = { studio: studio, atelier: atelier, workshop: workshop }.freeze
   model.assign_attributes(
     designer: DESIGNERS.fetch(spec[:designer]),
     title: spec[:title],
-    description: "#{spec[:description]} #{PROVENANCE_NOTE}",
+    description: spec[:description],
     tags: spec[:tags],
     category: spec[:category],
     collections: spec[:collections],

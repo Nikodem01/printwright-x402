@@ -57,7 +57,9 @@ class CatalogAssetsTest < ActiveSupport::TestCase
     seeded_models = Model3d.where(slug: seed_slugs).includes(model_files: { file_attachment: :blob })
     assert_equal 37, seeded_models.length
     racer = seeded_models.find { |model| model.slug == "open-wheel-toy-racer" }
-    assert_equal "Open-Wheel Toy Racer", racer.title
+    assert_equal "Legally Distinct Open Wheel Toy Racer", racer.title
+    assert_includes racer.description, "No affiliation with any racing team—at least, not yet."
+    assert_not_includes racer.description, "Self-authored parametric model dedicated CC0-1.0"
     assert_includes racer.tags, "car"
     seeded_models.each do |seeded_model|
       assert_includes Model3d::CATEGORIES.keys, seeded_model.category
