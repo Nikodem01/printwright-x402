@@ -1,3 +1,5 @@
+require "zip"
+
 # The durable side of delivery. The signed receipt token never expires and needs
 # no account, so this — not the download grant in the purchase response — is how
 # a buyer or their agent gets the files back a month or a year later.
@@ -33,6 +35,26 @@ class ReceiptsController < ApplicationController
     redirect_to api_v1_file_path(DownloadGrant.for(@license).token, f: index), allow_other_host: false
   end
 
+  # Browsers commonly block the second of two automatic downloads. Package the
+  # printable files and certificate together so the purchase button reliably
+  # delivers the complete paid bundle in one response.
+  def package
+    model = @license.purchase.model3d
+    archive = Zip::OutputStream.write_buffer do |zip|
+      model.deliverable_files.each_with_index do |(_index, model_file), position|
+        safe_name = model_file.file.filename.to_s.gsub(%r{[\\/]}, "_")
+        zip.put_next_entry(format("%02d-%s", position + 1, safe_name))
+        zip.write(model_file.file.download)
+      end
+      zip.put_next_entry("printwright-certificate-#{@license.cert_id}.pdf")
+      zip.write(Certificates::Pdf.render(@license, verify_url: verify_url(@license.verify_slug)))
+    end
+
+    send_data archive.string,
+      filename: "#{model.slug}-#{@license.cert_id}.zip",
+      type: "application/zip", disposition: "attachment"
+  end
+
   private
 
   def receipt_payload
@@ -50,6 +72,7 @@ class ReceiptsController < ApplicationController
       verify_url: verify_url(@license.verify_slug),
       bundle_url: api_v1_certificate_url(@license.cert_id),
       certificate_pdf_url: verify_certificate_pdf_url(@license.verify_slug),
+      package_url: purchase_receipt_package_url(@license.cert_id, token: params[:token]),
       model_updates: {
         url: api_v1_license_latest_version_url(@license.cert_id),
         download_url: api_v1_license_latest_version_file_url(@license.cert_id),

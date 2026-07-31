@@ -282,15 +282,21 @@ export default class extends Controller {
     const receiptLink = body.receipt
       ? `<a class="btn" href="${this.escape(body.receipt.url)}?token=${encodeURIComponent(body.receipt.token)}">Open durable receipt</a>`
       : ""
+    const packageUrl = body.receipt?.package_url
+      ? `${this.escape(body.receipt.package_url)}?token=${encodeURIComponent(body.receipt.token)}`
+      : this.escape(body.files[0]?.url || "#")
+    const licenseHeading = body.license.kind === "personal"
+      ? `Personal license #${body.license.serial} — unlimited personal prints`
+      : `Commercial unit ${serialLabel}`
     this.receiptTarget.innerHTML = `
       <div class="badge badge-ok">✓ licensed</div>
-      <h3 style="margin-top: var(--s-2)">Licensed — unit ${serialLabel}</h3>
+      <h3 style="margin-top: var(--s-2)">${licenseHeading}</h3>
       ${capNote}
-      <a class="btn btn-primary" href="${body.files[0]?.url}" download>Download files</a>
+      <a class="btn btn-primary" href="${packageUrl}" download>Download model + certificate (.zip)</a>
       ${receiptLink}
       <dl class="t-small" style="margin-bottom:0">
         <dt class="muted">transaction</dt>
-        <dd style="margin:0 0 var(--s-2)"><a class="mono" href="${body.transaction_url}" target="_blank" rel="noopener">${this.escape(txId)}</a></dd>
+        <dd style="margin:0 0 var(--s-2)"><a class="mono" href="${this.escape(body.transaction_url)}" target="_blank" rel="noopener" title="View payment on HashScan">${this.escape(txId)}</a></dd>
         <dt class="muted">certificate</dt>
         <dd style="margin:0"><a class="mono" href="${body.verify_url}">${this.escape(body.license.cert_id)}</a></dd>
       </dl>
@@ -319,13 +325,19 @@ export default class extends Controller {
     const capNote = maxUnits
       ? `<p class="t-caption muted">${first.remaining_units} of ${maxUnits} license slots now remain. This cap does not technically restrict physical printing.</p>`
       : ""
-    const rows = licenses.map((license, index) => {
+    const rows = licenses.map((license) => {
       const receiptLink = license.receipt
         ? `<a href="${this.escape(license.receipt.url)}?token=${encodeURIComponent(license.receipt.token)}">Open receipt</a>`
         : ""
+      const packageUrl = license.receipt?.package_url
+        ? `${this.escape(license.receipt.package_url)}?token=${encodeURIComponent(license.receipt.token)}`
+        : this.escape(license.files[0]?.url || "#")
+      const licenseLabel = license.kind === "personal"
+        ? `Personal license #${license.serial}`
+        : `Commercial unit #${license.serial}`
       return `<li class="batch-license">
-        <strong>Unit ${index + 1}</strong>
-        <a class="batch-download" href="${this.escape(license.files[0]?.url || "#")}" download>Download files</a>
+        <strong>${licenseLabel}</strong>
+        <a class="batch-download" href="${packageUrl}" download>Download model + certificate</a>
         <a class="mono" href="${this.escape(license.verify_url)}">${this.escape(license.cert_id)}</a>
         ${receiptLink}
       </li>`
@@ -343,7 +355,7 @@ export default class extends Controller {
       <ol class="batch-license-list">${rows}</ol>
       <dl class="t-small" style="margin-bottom:0">
         <dt class="muted">transaction</dt>
-        <dd style="margin:0"><a class="mono" href="${this.escape(body.transaction_url)}" target="_blank" rel="noopener">${this.escape(body.transaction_id)}</a></dd>
+        <dd style="margin:0"><a class="mono" href="${this.escape(body.transaction_url)}" target="_blank" rel="noopener" title="View payment on HashScan">${this.escape(body.transaction_id)}</a></dd>
       </dl>`
     this.receiptTarget.hidden = false
     this.statusTarget.innerHTML = ""

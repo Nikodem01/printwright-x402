@@ -154,6 +154,7 @@ Rails.application.routes.draw do
       defaults: { format: :pdf }
   get "receipts/:cert_id", to: "receipts#show", as: :purchase_receipt
   get "receipts/:cert_id/download", to: "receipts#download", as: :purchase_receipt_download
+  get "receipts/:cert_id/package", to: "receipts#package", as: :purchase_receipt_package
   post "receipts/:cert_id/library", to: "library_memberships#create", as: :receipt_library_membership
   get "library", to: "license_library#show", as: :license_library
   get "library/sign-in", to: "license_library#new", as: :new_license_library

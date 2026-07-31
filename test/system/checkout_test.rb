@@ -51,13 +51,13 @@ class CheckoutTest < ApplicationSystemTestCase
     click_button "Buy license · 0.25 USDC"
 
     assert_selector ".badge-ok", text: "licensed"
-    assert_text "Licensed — unit #1 of 25"
+    assert_text "Personal license #1 — unlimited personal prints"
     assert_text "24 of 25 license slots now remain"
     assert_selector "img[alt^='Share card for pw-']"
     assert_selector "a", text: settled_tx
     # Unguessable by design: a sequential id would let anyone walk the reveals.
     assert_selector "a", text: /\Apw-[0-9a-f]{16,}\z/
-    assert_link "Download files"
+    assert_link "Download model + certificate (.zip)"
     assert_no_button "Buy license · 0.25 USDC"
 
     purchase = Purchase.last

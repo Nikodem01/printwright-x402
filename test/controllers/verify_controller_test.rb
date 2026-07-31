@@ -43,7 +43,7 @@ class VerifyControllerTest < ActionDispatch::IntegrationTest
     assert_select ".banner-ok .st-settled", text: /Verified on Hedera/
     assert_select ".cert-facts dt", text: "Commitment"
     assert_select ".cert-facts dd.chain", text: /1784141018\.086938437/
-    assert_select ".cert-facts dd.mono", text: /1 of/
+    assert_select ".cert-facts dd.mono", text: /Personal #1 · unlimited personal, non-commercial prints/
     assert_select ".evidence-footer a", minimum: 3
     assert_select 'meta[property="og:image"][content$="/share-card"]'
   end
@@ -53,6 +53,15 @@ class VerifyControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select ".banner-pending", text: /Minting/
     assert_select 'meta[http-equiv="refresh"]', count: 1
+  end
+
+  test "personal certificate says the grant covers unlimited personal prints" do
+    get verify_certificate_path(@license.verify_slug)
+
+    assert_response :success
+    assert_match "personal license <strong>##{@license.serial}</strong>", response.body
+    assert_match "unlimited physical prints for personal, non-commercial use", response.body
+    assert_no_match(/unit <strong>##{@license.serial}<\/strong> of/, response.body)
   end
 
   test "anchored but mirror 404 still shows minting (propagation)" do

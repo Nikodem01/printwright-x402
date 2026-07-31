@@ -67,10 +67,17 @@
       </p>
     <% else %>
       <p>
-        This certifies that unit <strong>#<%= @license.serial %></strong> of
-        <strong><%= @model.title %></strong> is licensed under a
-        <strong><%= @license.purchase.license_offer.kind.humanize.downcase %></strong> license
-        granted by <strong><%= @model.designer.display_name %></strong>.
+        <% if @license.purchase.license_offer.kind == "personal" %>
+          This certifies personal license <strong>#<%= @license.serial %></strong> for
+          <strong><%= @model.title %></strong>, granted by
+          <strong><%= @model.designer.display_name %></strong>. It permits
+          <strong>unlimited physical prints for personal, non-commercial use</strong>.
+        <% else %>
+          This certifies commercial unit <strong>#<%= @license.serial %></strong> of
+          <strong><%= @model.title %></strong>, granted by
+          <strong><%= @model.designer.display_name %></strong>. It permits
+          <strong>one physical print for commercial sale</strong>.
+        <% end %>
       </p>
     <% end %>
 

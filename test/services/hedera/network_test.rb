@@ -12,7 +12,7 @@ class Hedera::NetworkTest < ActiveSupport::TestCase
     assert_equal "https://testnet.mirrornode.hedera.com", Hedera::Network.mirror_base
     assert_equal "https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069",
       Hedera::Network.hcs_topic_url
-    assert_equal "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7-1-2",
+    assert_equal "https://hashscan.io/testnet/transaction/0.0.7@1.2",
       Hedera::Network.transaction_url("0.0.7@1.2")
     assert_nil Hedera::Network.transaction_url("not-a-transaction")
   end

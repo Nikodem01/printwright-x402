@@ -146,13 +146,17 @@ module Certificates
     end
 
     def statement_text
-      unit = "unit ##{@license.serial} of #{drawable(@model.title)}"
+      title = drawable(@model.title)
       designer = drawable(@model.designer.display_name)
       if @sandbox
-        "This locally simulates #{unit} by #{designer}. It grants no rights and certifies no payment or license."
+        "This locally simulates license ##{@license.serial} for #{title} by #{designer}. " \
+          "It grants no rights and certifies no payment or license."
+      elsif @offer.kind == "personal"
+        "This certifies personal license ##{@license.serial} for #{title}, granted by #{designer}. " \
+          "It permits unlimited physical prints for personal, non-commercial use."
       else
-        "This certifies that #{unit} is licensed under a " \
-          "#{@offer.kind.humanize.downcase} license granted by #{designer}."
+        "This certifies commercial unit ##{@license.serial} of #{title}, granted by #{designer}. " \
+          "It permits one physical print for commercial sale."
       end
     end
 

@@ -68,8 +68,8 @@ class ChatPurchaseTest < ApplicationSystemTestCase
     click_button "Approve and buy · 0.25 USDC"
 
     assert_selector ".badge-ok", text: "licensed"
-    assert_text "Licensed — unit #1"
-    assert_link "Download files"
+    assert_text "Personal license #1 — unlimited personal prints"
+    assert_link "Download model + certificate (.zip)"
     assert_equal 1, TestWalletController.sign_calls
     assert_equal "delivered", Purchase.sole.status
     assert_equal "completed", ChatConversation.order(:created_at).last.purchase_proposal["state"]
@@ -105,7 +105,7 @@ class ChatPurchaseTest < ApplicationSystemTestCase
     click_button "Approve and buy · 0.25 USDC"
 
     assert_selector ".badge-ok", text: "licensed"
-    assert_link "Download files"
+    assert_link "Download model + certificate (.zip)"
     scroll_margin = page.evaluate_script(
       "parseFloat(getComputedStyle(document.querySelector('[data-checkout-target=receipt]')).scrollMarginTop)"
     )

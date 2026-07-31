@@ -11,8 +11,8 @@
 
   <text x="96" y="386" font-family="system-ui,sans-serif" font-size="24" fill="#65645f">LICENSE</text>
   <text x="96" y="432" font-family="system-ui,sans-serif" font-size="34" font-weight="700" fill="#20201d"><%= @offer.kind.humanize %></text>
-  <text x="610" y="386" font-family="system-ui,sans-serif" font-size="24" fill="#65645f">LICENSE UNIT</text>
-  <text x="610" y="432" font-family="ui-monospace,monospace" font-size="34" font-weight="700" fill="#20201d">#<%= @license.serial %><%= " of #{@offer.max_units}" if @offer.max_units %></text>
+  <text x="610" y="386" font-family="system-ui,sans-serif" font-size="24" fill="#65645f"><%= @offer.kind == "personal" ? "PERSONAL PRINTS" : "COMMERCIAL UNIT" %></text>
+  <text x="610" y="432" font-family="ui-monospace,monospace" font-size="34" font-weight="700" fill="#20201d"><%= @offer.kind == "personal" ? "UNLIMITED" : "##{@license.serial}#{" of #{@offer.max_units}" if @offer.max_units}" %></text>
 
   <% if @license.purchase.sandbox? %>
     <text x="96" y="518" font-family="system-ui,sans-serif" font-size="24" font-weight="700" fill="#9a5b00">SANDBOX SIMULATION — NOT A LICENSE OR HEDERA RECORD</text>

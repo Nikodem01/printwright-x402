@@ -188,7 +188,7 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     body = response.parsed_body
     assert_equal "0.0.7162784@1784125705.137810120", body["transaction_id"]
     assert_equal(
-      "https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1784125705-137810120",
+      "https://hashscan.io/testnet/transaction/0.0.7162784@1784125705.137810120",
       body["transaction_url"]
     )
     assert_equal 1, body.dig("license", "serial")

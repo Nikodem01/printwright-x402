@@ -1,4 +1,5 @@
 require "test_helper"
+require "zip"
 
 class ReceiptsAndLibraryTest < ActionDispatch::IntegrationTest
   include ActiveJob::TestHelper
@@ -66,6 +67,7 @@ class ReceiptsAndLibraryTest < ActionDispatch::IntegrationTest
     assert_equal "no-store", response.headers["Cache-Control"]
     assert_select 'meta[name="robots"][content="noindex,nofollow"]'
     assert_select "h1", text: "Purchase receipt"
+    assert_select "a", text: "Download model + certificate (.zip)"
     assert_select "a", text: "Re-download STL"
     assert_select "form[action=?]", receipt_library_membership_path(@license.cert_id)
 
@@ -91,6 +93,19 @@ class ReceiptsAndLibraryTest < ActionDispatch::IntegrationTest
       assert_not_equal first_grant.token, fresh.token
       get api_v1_file_path(fresh.token, f: 0)
       assert_response :redirect
+    end
+  end
+
+  test "complete package contains every model file and the certificate PDF" do
+    get purchase_receipt_package_path(@license.cert_id), params: { token: @token }
+
+    assert_response :success
+    assert_equal "application/zip", response.media_type
+    Zip::File.open_buffer(response.body) do |zip|
+      assert_equal [ "01-library.stl", "printwright-certificate-#{@license.cert_id}.pdf" ],
+        zip.entries.map(&:name)
+      assert_equal "solid library\nendsolid library\n", zip.read("01-library.stl")
+      assert zip.read("printwright-certificate-#{@license.cert_id}.pdf").start_with?("%PDF")
     end
   end
 

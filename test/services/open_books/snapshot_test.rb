@@ -44,7 +44,8 @@ class OpenBooks::SnapshotTest < ActiveSupport::TestCase
     )
     proof = snapshot[:recent_settlement_proofs].sole
     assert_equal 250_000, proof[:gross_base_units]
-    assert_includes proof[:transaction_url], "/transactions/0.0.7162784-1784449762-916833016"
+    assert_equal "https://hashscan.io/testnet/transaction/0.0.7162784@1784449762.916833016",
+      proof[:transaction_url]
   end
 
   test "mirror failure is labeled unavailable without hiding the local ledger" do

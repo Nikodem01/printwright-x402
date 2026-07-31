@@ -92,12 +92,13 @@
       <% if @check.consensus_timestamp.present? %>
         <dt>Consensus</dt><dd class="mono chain"><%= @check.consensus_timestamp %></dd>
       <% end %>
-      <dt>Unit</dt>
-      <dd class="mono">
-        <%= @cert.present? ? @cert["unit_serial"] : @license.serial %> of
-        <%= @license.purchase.license_offer.max_units || "unlimited" %> ·
-        <%= @license.purchase.license_offer.kind.humanize.downcase %>
-      </dd>
+      <% if @license.purchase.license_offer.kind == "personal" %>
+        <dt>License</dt>
+        <dd class="mono">Personal #<%= @cert.present? ? @cert["unit_serial"] : @license.serial %> · unlimited personal, non-commercial prints</dd>
+      <% else %>
+        <dt>Commercial unit</dt>
+        <dd class="mono">#<%= @cert.present? ? @cert["unit_serial"] : @license.serial %><%= " of #{@license.purchase.license_offer.max_units}" if @license.purchase.license_offer.max_units %> · one commercial print</dd>
+      <% end %>
 
       <% if @cert.present? %>
         <dt>Issued</dt>
@@ -167,7 +168,7 @@
   <footer class="evidence-footer">
     <% unless @license.purchase.sandbox? %>
       <% if @cert&.dig("payment_tx").present? %>
-      <a class="mono" href="<%= Hedera::Network.transaction_url(@cert["payment_tx"]) %>">payment tx ↗</a>
+      <a class="mono" href="<%= Hedera::Network.transaction_url(@cert["payment_tx"]) %>" target="_blank" rel="noopener noreferrer">payment tx on HashScan ↗</a>
       <% end %>
       <% if @license.hcs_topic_id.present? %>
       <a class="mono" href="<%= Hedera::Network.mirror_base %>/api/v1/topics/<%= @license.hcs_topic_id %>">HCS topic ↗</a>

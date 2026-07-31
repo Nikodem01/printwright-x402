@@ -12,16 +12,20 @@
   <dl class="fact-grid">
     <dt>Certificate</dt><dd><%= link_to @license.cert_id, verify_path(@license.verify_slug), class: "mono" %></dd>
     <dt>Model</dt><dd><%= @model.title %></dd>
-    <dt>License</dt><dd><%= @offer.kind.humanize %> · unit #<%= @license.serial %></dd>
+    <dt>License</dt><dd><% if @offer.kind == "personal" %>Personal #<%= @license.serial %> · unlimited personal, non-commercial prints<% else %>Commercial unit #<%= @license.serial %> · one commercial print<% end %></dd>
     <dt>Transaction</dt><dd><%= link_to @license.purchase.payment_tx_id,
       Hedera::Network.transaction_url(@license.purchase.payment_tx_id),
-      class: "mono", target: "_blank", rel: "noopener noreferrer" %></dd>
+      class: "mono", target: "_blank", rel: "noopener noreferrer", title: "View payment on HashScan" %></dd>
   </dl>
+
+  <p><%= link_to "Download model + certificate (.zip)",
+    purchase_receipt_package_path(@license.cert_id, token: params[:token]),
+    class: "btn btn-primary", data: { turbo: false }, download: true %></p>
 
   <% @files.each_with_index do |(index, file), position| %>
     <p><%= link_to "Re-download #{file.kind.upcase}#{" (part #{position + 1} of #{@files.length})" if @files.many?}",
       purchase_receipt_download_path(@license.cert_id, token: params[:token], f: index),
-      class: "btn #{position.zero? ? 'btn-primary' : ''}", data: { turbo: false } %></p>
+      class: "btn", data: { turbo: false } %></p>
   <% end %>
 
   <section style="margin-top: var(--s7)">

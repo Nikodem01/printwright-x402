@@ -40,8 +40,9 @@ module Hedera
       end
 
       def transaction_url(transaction_id)
-        mirror_id = mirror_transaction_id(transaction_id)
-        "#{mirror_base}/api/v1/transactions/#{mirror_id}" if mirror_id
+        return unless mirror_transaction_id(transaction_id)
+
+        "https://hashscan.io/#{name}/transaction/#{transaction_id}"
       end
 
       def mirror_transaction_id(transaction_id)

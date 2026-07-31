@@ -427,6 +427,7 @@ class Api::V1::BatchesController < Api::V1::BaseController
       url: purchase_receipt_url(license.cert_id),
       files_url: purchase_receipt_url(license.cert_id, format: :json),
       download_url: purchase_receipt_download_url(license.cert_id),
+      package_url: purchase_receipt_package_url(license.cert_id),
       token: license.signed_id(purpose: "purchase-receipt"),
       expires_at: nil
     }
