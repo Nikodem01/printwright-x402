@@ -2,6 +2,8 @@
 // Printwright MCP server: search, inspect, BUY (real testnet spend), verify.
 // A thin wrapper over the public REST API — the same door any agent uses.
 import "dotenv/config";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { PrintwrightClient } from "@printwright/client";
@@ -10,6 +12,10 @@ import { z } from "zod";
 const BASE = (process.env.PRINTWRIGHT_URL || "http://localhost:3000").replace(/\/$/, "");
 const NETWORK = process.env.HEDERA_NETWORK === "mainnet" ? "mainnet" : "testnet";
 const SANDBOX = process.env.PRINTWRIGHT_SANDBOX === "true";
+// When set, buy_license also saves the purchased deliverables (printable
+// files, certificate PDF, proof bundle, complete ZIP) under this directory so
+// the agent's human can open them straight from a file explorer.
+const DOWNLOAD_DIR = process.env.PRINTWRIGHT_DOWNLOAD_DIR || "";
 const client = new PrintwrightClient({
   baseUrl: BASE,
   accountId: process.env.BUYER_ACCOUNT_ID || process.env.HEDERA_ACCOUNT_ID,
@@ -46,6 +52,52 @@ const server = new McpServer({ name: "printwright", version: "0.3.0" });
 
 const json = (data) => ({ content: [{ type: "text", text: JSON.stringify(data, null, 2) }] });
 const fail = (message) => ({ isError: true, content: [{ type: "text", text: message }] });
+
+async function saveTo(dir, name, bytes) {
+  const file = path.join(dir, name);
+  await writeFile(file, bytes);
+  return file;
+}
+
+async function fetchBytes(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${new URL(url).pathname}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+// Best-effort local delivery: a failed download must never mask a completed
+// purchase — the URLs in the result remain the durable path either way.
+async function downloadDeliverables(result, model) {
+  if (!DOWNLOAD_DIR) return { saved: [], note: "set PRINTWRIGHT_DOWNLOAD_DIR to also save files locally" };
+  const dir = path.resolve(DOWNLOAD_DIR, result.license.cert_id);
+  const saved = [];
+  const errors = [];
+  await mkdir(dir, { recursive: true });
+
+  for (const [i, file] of (result.files || []).entries()) {
+    const ext = file.kind === "sandbox_receipt" ? "json" : file.kind;
+    const name = `${model.slug}${i > 0 ? `-part${i + 1}` : ""}.${ext}`;
+    try { saved.push(await saveTo(dir, name, await fetchBytes(file.url))); }
+    catch (e) { errors.push(`${name}: ${e.message}`); }
+  }
+  if (result.certificate_pdf_url) {
+    try {
+      saved.push(await saveTo(dir, `printwright-certificate-${result.license.cert_id}.pdf`,
+        await fetchBytes(result.certificate_pdf_url)));
+    } catch (e) { errors.push(`certificate pdf: ${e.message}`); }
+  }
+  if (result.proof_bundle) {
+    saved.push(await saveTo(dir, "proof-bundle.json",
+      Buffer.from(JSON.stringify(result.proof_bundle, null, 2))));
+  }
+  if (result.receipt?.package_url && result.receipt?.token) {
+    try {
+      saved.push(await saveTo(dir, `${model.slug}-${result.license.cert_id}.zip`,
+        await fetchBytes(`${result.receipt.package_url}?token=${encodeURIComponent(result.receipt.token)}`)));
+    } catch (e) { errors.push(`package zip: ${e.message}`); }
+  }
+  return { saved, ...(errors.length ? { download_errors: errors } : {}) };
+}
 
 server.registerTool(
   "search_models",
@@ -90,7 +142,8 @@ server.registerTool(
         "THIS SPENDS REAL HEDERA TESTNET FUNDS. ") +
       `Capped at MAX_SPEND_CENTS=${MAX_SPEND_CENTS}. Requires confirm: true. ` +
       (SANDBOX ? "Returns a fake receipt and locally verifiable sandbox certificate." :
-        "Returns the file download URLs, license serial, certificate id and exact Mirror Node transaction link."),
+        "Returns the file download URLs, certificate id and exact Mirror Node transaction link (commercial per-unit licenses also carry a unit serial; personal licenses never do). ") +
+      (DOWNLOAD_DIR ? `Also saves the printable files, certificate PDF, proof bundle and complete ZIP under ${path.resolve(DOWNLOAD_DIR)} and lists them in local_files.` : ""),
     inputSchema: {
       model_id: z.number().int(),
       license: z.enum(["personal", "commercial_unit"]).default("personal"),
@@ -121,8 +174,10 @@ server.registerTool(
     }
 
     const result = await client.buy({ modelId: model_id, license, asset });
+    const local = await downloadDeliverables(result, model);
     return json({
       files: result.files, license: result.license,
+      local_files: local.saved, download_errors: local.download_errors, note: local.note,
       sandbox: result.sandbox, warning: result.warning,
       cert_id: result.license.cert_id, verify_url: result.verify_url,
       transaction_id: result.transaction_id, transaction_url: result.transaction_url,
