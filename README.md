@@ -158,6 +158,7 @@ These are public records, not screenshots:
 | **One 2.60 USDC batch settlement, two licences** | [Settlement on Mirror Node ↗](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785074684-046610464) · [HCS #61](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/61) · [HCS #62](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/62) |
 | **Separate designer payout** | [USDC payout on Mirror Node ↗](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1784242883-124267302) |
 | **Separate model-version provenance** | [`pwv-1` submit on Mirror Node ↗](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.9067781-1785078563-036978424) · [exact Mirror message #70](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/70) |
+| **0.20 USDC purchase made entirely through the MCP tools** (2026-08-01) | [Payment on HashScan ↗](https://hashscan.io/testnet/transaction/0.0.7162784@1785513662.973861917) · [settlement on Mirror Node ↗](https://testnet.mirrornode.hedera.com/api/v1/transactions/0.0.7162784-1785513662-973861917) · [opaque commitment, message #88](https://testnet.mirrornode.hedera.com/api/v1/topics/0.0.9585069/messages/88) |
 
 The dated 2026-07-30 reproducibility snapshot, including a full cold-clone run of every door and
 what has and has not been externally validated, is in [`docs/VALIDATION.md`](docs/VALIDATION.md).
@@ -211,6 +212,61 @@ node scripts/buy.mjs --query "cable clip" --asset usdc --max-price 300
 The script prints the 402 payload, signs locally, retries the protected resource, downloads the
 model and proof bundle under `purchases/<slug>/`, and prints the payment and verification links.
 Use `--dry-run` to stop after the real 402 without signing or spending.
+
+### The agent door: MCP
+
+The MCP server in [`mcp/`](mcp/) exposes the same flow as tools an editor agent can call:
+`search_models → get_model → buy_license(confirm: true) → verify_certificate`. Configure it in
+VS Code (`.vscode/mcp.json`) or Claude Code (`.mcp.json`) — values reference your environment,
+no secrets in the file:
+
+```jsonc
+{
+  "mcpServers": {
+    "printwright": {
+      "command": "node",
+      "args": ["/absolute/path/to/printwright-x402/mcp/server.mjs"],
+      "env": {
+        "PRINTWRIGHT_URL": "http://localhost:3000",
+        "HEDERA_NETWORK": "testnet",
+        "PRINTWRIGHT_SANDBOX": "true",              // "false" for a real testnet spend
+        "MAX_SPEND_CENTS": "120",                   // buyer-side ceiling, USD cents
+        "PRINTWRIGHT_DOWNLOAD_DIR": "/path/to/downloads",  // optional: save deliverables to disk
+        "DOTENV_CONFIG_PATH": "/secure/path/.env.buyer"    // holds BUYER_ACCOUNT_ID / BUYER_PRIVATE_KEY
+      }
+    }
+  }
+}
+```
+
+`BUYER_PRIVATE_KEY` is read **only by this local MCP process**, which signs the Hedera transfer
+itself; only signed transaction bytes ever reach Printwright or the facilitator. With
+`PRINTWRIGHT_SANDBOX=true` the identical four-tool sequence runs with zero funds and a fake local
+anchor — no key needed at all. With it `false`, `buy_license` settles a real testnet payment, and
+when `PRINTWRIGHT_DOWNLOAD_DIR` is set it also saves the printable files, the certificate PDF,
+`proof-bundle.json`, and the complete ZIP into that directory and lists them in `local_files`.
+(`cd mcp && npm install` once before first use.)
+
+### What a paid purchase puts on disk
+
+The receipt's `package_url` (and the MCP `local_files`) deliver one ZIP holding every printable
+part, `proof-bundle.json`, and a self-contained certificate PDF. The PDF's appendix reproduces the
+entire proof: the exact RFC 8785 canonical certificate, the blinding nonce, the commitment
+formula and value, and the reproduction recipe for the model hash (SHA-256 of the printable bytes
+in the same ZIP) and terms hash (SHA-256 of the full license text printed in the PDF) — plus the
+HashScan and Mirror Node evidence URLs. A **personal** license grants unlimited personal,
+non-commercial prints and deliberately carries **no sale or unit number**; a **commercial
+per-unit** license covers one commercial print and keeps its unit serial, because that serial is
+part of what the license means.
+
+### Ports and health checks
+
+| Service | Port | Health check |
+| --- | --- | --- |
+| Rails (storefront + API + jobs) | 3000 | `curl -f http://localhost:3000/up` |
+| HCS signing sidecar | 4021 | `curl -f http://localhost:4021/healthz` |
+| Hosted x402 facilitator (external) | — | `curl -f https://api.testnet.blocky402.com/supported` |
+| Hedera testnet mirror node (external) | — | `curl -f https://testnet.mirrornode.hedera.com/api/v1/network/nodes?limit=1` |
 
 <details>
 <summary><strong>First-time signing-sidecar setup</strong></summary>
@@ -326,6 +382,20 @@ GitHub Actions also runs RuboCop, Brakeman, sandbox conformance, seed boot, brow
 contracts, dependency audits, log hygiene, and a repository-wide secret scan.
 
 </details>
+
+## Troubleshooting
+
+| Symptom | Cause and fix |
+| --- | --- |
+| Certificate stays **Minting** | The HCS anchor is asynchronous and retries. If it never lands, the sidecar is down — `curl -f http://localhost:4021/healthz`, restart with `(cd sidecar && npm start)`, and the pending job re-anchors on its own. |
+| `verify_certificate` returns `match: null` with an indexing note | The commitment is anchored but the public mirror node has not indexed it yet — normal for ~10–30 s after purchase. Retry; nothing is wrong. |
+| `buy_license` fails with insufficient funds / `TOKEN_NOT_ASSOCIATED_TO_ACCOUNT` | The buyer account needs HBAR for fees plus the asset being spent, and must be associated with testnet USDC `0.0.429274` before it can receive or send it. Fund at [portal.hedera.com](https://portal.hedera.com/dashboard), get test USDC at [faucet.circle.com](https://faucet.circle.com). |
+| Offer refused with a `MAX_SPEND_CENTS` message | Your own buyer-side ceiling, not the marketplace. Raise the env var if you mean to spend more. |
+| Shopkeeper replies "isn't configured on this server yet" | `GOOGLE_GENERATIVE_AI_API_KEY` is unset. The deterministic local shopkeeper still answers catalog searches and purchase proposals; the message is honest, not an error. |
+| Connect-wallet does nothing | `WALLETCONNECT_PROJECT_ID` is unset (checkout says so in the UI). With it set, Reown shows its wallet chooser first; picking **HashPack Browser** then launches the installed HashPack extension. |
+| GitHub/Google sign-in buttons absent | Intentional: each button renders only when its `*_CLIENT_ID` is configured (see `.env.example` for the callback URLs). Email + password always works; none of this affects buying. |
+| Port 3000/4021 already in use | Another instance is running — `lsof -i :3000` / `lsof -i :4021` and stop it, or pass `-p`/`SIDECAR_PORT` for an alternate port. |
+| Broken catalog images after re-seeding | Renders are attachments; `bin/rails db:seed` is idempotent and restores any missing files. |
 
 ## Current scope
 
