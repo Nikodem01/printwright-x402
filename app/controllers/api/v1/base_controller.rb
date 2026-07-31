@@ -1,6 +1,14 @@
 class Api::V1::BaseController < ApplicationController
   skip_forgery_protection
 
+  # Every API response carries the demo fact, not just the 402 — an agent that
+  # lists the catalog or re-downloads a file never sees a payment challenge,
+  # and must still be able to tell this is testnet. Set *before* the action,
+  # not after: an action that raises into a `rescue_from` below never reaches
+  # its after_action callbacks, and an agent hitting an error is exactly the
+  # one that most needs to know which network it is talking to.
+  before_action :mark_demo_environment
+
   rescue_from ActiveRecord::RecordNotFound do
     render json: { error: "not_found" }, status: :not_found
   end
@@ -15,6 +23,11 @@ class Api::V1::BaseController < ApplicationController
   end
 
   private
+
+  def mark_demo_environment
+    return unless X402::DemoNotice.active?
+    response.set_header(X402::DemoNotice::HEADER, X402::DemoNotice.header_value)
+  end
 
   def render_listing_unavailable(model)
     if model.paused?

@@ -21,9 +21,17 @@ Rails.application.configure do
   # Enable serving of images, stylesheets, and JavaScripts from an asset server.
   # config.asset_host = "http://assets.example.com"
 
-  # Paid model files live in private S3-compatible storage. Active Storage's
-  # service redirect is short-lived even though the Printwright grant is durable.
-  config.active_storage.service = :production_s3
+  # Paid model files live in private storage — S3-compatible by default, or a
+  # local volume when STORAGE_BACKEND=disk (a deployment with no object-storage
+  # provider). Active Storage's service redirect is short-lived either way, even
+  # though the Printwright grant is durable.
+  #
+  # Chosen by an explicit setting rather than inferred from whether S3 happens to
+  # be configured: silently falling back to local disk because a credential was
+  # missing is how a deployment ends up serving paid files from somewhere nobody
+  # is backing up.
+  config.active_storage.service =
+    ENV["STORAGE_BACKEND"] == "disk" ? :production_disk : :production_s3
   config.active_storage.service_urls_expire_in = ENV.fetch("STORAGE_URL_TTL_MINUTES", "10").to_i.minutes
 
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.

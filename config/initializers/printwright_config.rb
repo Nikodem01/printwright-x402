@@ -12,10 +12,16 @@ config = PrintwrightSettings.normalize!(Rails.configuration.x.printwright)
 # secret. Discovering either from a 500 — or worse, from a payment landing in
 # someone else's treasury — is not a thing to find out in production.
 if Rails.env.production? && !ENV["SECRET_KEY_BASE_DUMMY"]
-  required_env = %w[
-    APP_HOST S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY S3_BUCKET
-    SMTP_ADDRESS SMTP_USERNAME SMTP_PASSWORD HEDERA_ACCOUNT_ID
-  ]
+  required_env = %w[APP_HOST SMTP_ADDRESS SMTP_USERNAME SMTP_PASSWORD HEDERA_ACCOUNT_ID]
+  # Which storage credentials are mandatory depends on where files are going.
+  # A disk deployment must not be forced to invent S3 credentials it will never
+  # use — but it must name a root, so the volume is a deliberate mount and not
+  # whatever directory the container happened to start in.
+  required_env += if ENV["STORAGE_BACKEND"] == "disk"
+    %w[STORAGE_DISK_ROOT]
+  else
+    %w[S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY S3_BUCKET]
+  end
   missing = required_env.select { |name| ENV[name].blank? }
   raise "Missing production configuration: #{missing.join(', ')}" if missing.any?
 

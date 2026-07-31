@@ -29,7 +29,7 @@ module X402
     end
 
     def payment_required(error: "payment required")
-      {
+      body = {
         x402Version: 2,
         error: error,
         resource: {
@@ -40,6 +40,8 @@ module X402
         accepts: accepts,
         help: help
       }
+      body[:demo] = DemoNotice.payload if DemoNotice.active?
+      body
     end
 
     # An agent that cannot pay reads this and can tell its owner what to do —

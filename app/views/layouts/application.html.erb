@@ -140,6 +140,7 @@
     <% end %>
 
     <main class="container<%= " designer-main" if designer_workspace %>">
+      <%= render "shared/demo_banner" %>
       <% if notice %>
         <div class="flash flash-ok" role="status"><%= render "shared/state_mark", state: "settled" %><span><%= notice %></span></div>
       <% end %>

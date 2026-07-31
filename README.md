@@ -76,6 +76,22 @@ buyer key. Only a successful facilitator settlement creates the local books and 
 Certificate anchoring then retries independently, so a temporary sidecar or HCS failure cannot
 turn a paid download into a false failure.
 
+### This is a testnet demo, and it says so to both audiences
+
+Settlements are real Hedera **testnet** transactions and certificates are genuinely anchored and
+publicly verifiable — but the value moved has no monetary worth, and a licence issued here is not
+a commercial grant of rights. A human sees a banner on every page. An agent never renders HTML, so
+it is told the same thing in the shapes it already parses:
+
+| Surface | Signal |
+| --- | --- |
+| Every `/api/v1` response, errors included | `X-Printwright-Environment: demo; network=testnet; funds=test-only` |
+| The `402` PaymentRequirements body | a `demo` object beside `accepts`, carrying `network`, `funds` and a plain-language `message` |
+
+x402 clients ignore unknown fields, so an agent that can already pay is unaffected. Both signals
+are derived from `HEDERA_NETWORK` and vanish together on a mainnet deployment, so no surface can be
+left claiming the wrong thing.
+
 ### What a purchase delivers, and how to get it back
 
 The purchase **is** the file. A paid response always carries `files` — one download URL per

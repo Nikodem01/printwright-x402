@@ -6,6 +6,15 @@ local:
   service: Disk
   root: <%= Rails.root.join("storage") %>
 
+# Model files on a volume attached to the deployment host, for deployments with
+# no object-storage provider. Same durability caveat as the database backups:
+# one disk, so a lost host is lost files. The volume must be size-capped and
+# paired with the app's storage quotas, because this disk is shared with
+# everything else on the machine.
+production_disk:
+  service: Disk
+  root: <%= ENV.fetch("STORAGE_DISK_ROOT", "/rails/storage") %>
+
 production_s3:
   service: S3
   endpoint: <%= ENV["S3_ENDPOINT"].presence %>

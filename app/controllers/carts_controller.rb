@@ -1,4 +1,6 @@
 class CartsController < ApplicationController
+  include NoIndex
+
   before_action :load_cart
 
   def show; end

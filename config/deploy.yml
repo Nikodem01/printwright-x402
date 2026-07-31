@@ -1,12 +1,34 @@
 service: printwright_x402
+# Repository path only — no registry host and no tag. Kamal prepends the
+# registry server and appends the version itself; including either here yields
+# a double-prefixed image name that fails to push.
 image: <%= ENV.fetch("KAMAL_APP_IMAGE") %>
+
+# Kamal assumes root over SSH. A host that (correctly) refuses root login needs
+# this set to a sudo-capable account, or every command fails at connect.
+ssh:
+  user: <%= ENV.fetch("DEPLOY_SSH_USER", "root") %>
 
 servers:
   web:
-    - <%= ENV.fetch("DEPLOY_HOST") %>
+    hosts:
+      - <%= ENV.fetch("DEPLOY_HOST") %>
+    # Hard caps so a runaway Rails is killed inside its own cgroup instead of
+    # letting the kernel choose a victim elsewhere on the host. The swap
+    # allowance is deliberately generous: on a small box, swapping is survivable
+    # and being OOM-killed mid-delivery is not.
+    options:
+      memory: <%= ENV.fetch("APP_MEMORY_LIMIT", "600m") %>
+      memory-swap: <%= ENV.fetch("APP_MEMORY_SWAP_LIMIT", "1500m") %>
 
+# ssl:false means kamal-proxy speaks plain HTTP and issues no certificate —
+# correct when something upstream already owns 80/443 and terminates TLS. Move
+# the proxy off the public ports to match:
+#   kamal proxy boot_config set --http-port 8080 --https-port 8443 --bind-ips 127.0.0.1
+# forward_headers stays true either way: Rails keeps assume_ssl/force_ssl and
+# depends on the upstream sending X-Forwarded-Proto.
 proxy:
-  ssl: true
+  ssl: <%= ENV.fetch("KAMAL_PROXY_SSL", "true") %>
   host: <%= ENV.fetch("APP_HOST") %>
   forward_headers: true
   healthcheck:
@@ -14,6 +36,9 @@ proxy:
     interval: 3
     timeout: 3
 
+# Kamal always pushes and pulls, even when the builder and the target are the
+# same machine. A registry:2 bound to 127.0.0.1:5000 satisfies that without
+# exposing anything: Docker treats loopback as an allowed insecure registry.
 registry: &registry
   server: <%= ENV.fetch("KAMAL_REGISTRY_SERVER", "ghcr.io") %>
   username: <%= ENV.fetch("KAMAL_REGISTRY_USERNAME") %>
@@ -40,6 +65,16 @@ env:
     SMTP_DOMAIN: <%= ENV.fetch("SMTP_DOMAIN", ENV.fetch("APP_HOST")) %>
     DB_HOST: printwright_x402-db
     SOLID_QUEUE_IN_PUMA: true
+    # Single mode, not cluster-with-one-worker: on a memory-bound host the Puma
+    # master process is pure overhead, and a second worker costs more than it
+    # returns at demo traffic.
+    WEB_CONCURRENCY: <%= ENV.fetch("WEB_CONCURRENCY", "0") %>
+    # This sets the DB pool (database.yml reads RAILS_MAX_THREADS), and the pool
+    # is shared with Solid Queue running inside Puma. Solid Queue claims 5
+    # connections and *refuses to boot* if the pool is smaller — which takes
+    # Puma down with it, so the container crashloops rather than serving
+    # degraded. Anything below 6 here is a boot failure, not a tuning choice.
+    RAILS_MAX_THREADS: <%= ENV.fetch("RAILS_MAX_THREADS", "8") %>
     HEDERA_NETWORK: <%= ENV.fetch("HEDERA_NETWORK", "testnet") %>
     HEDERA_ACCOUNT_ID: <%= ENV.fetch("HEDERA_ACCOUNT_ID") %>
     HEDERA_HCS_TOPIC_ID: <%= ENV.fetch("HEDERA_HCS_TOPIC_ID") %>
@@ -65,6 +100,11 @@ asset_path: /rails/public/assets
 
 builder:
   arch: amd64
+  # Set KAMAL_BUILD_REMOTE (e.g. ssh://user@host) to build on the deployment
+  # host instead of the workstation. Left unset, builds stay local.
+<% unless ENV["KAMAL_BUILD_REMOTE"].to_s.strip.empty? %>
+  remote: <%= ENV["KAMAL_BUILD_REMOTE"] %>
+<% end %>
 
 aliases:
   console: app exec --interactive --reuse "bin/rails console"
@@ -87,8 +127,20 @@ accessories:
       - config/deploy/postgres-init.sql:/docker-entrypoint-initdb.d/printwright.sql:ro
     directories:
       - printwright_x402_postgres:/var/lib/postgresql/data
+    # Tuned down for a small host: the default shared_buffers and connection
+    # count assume a machine with memory to spare, and this one has none. Raise
+    # these on a larger box rather than leaving them as a permanent ceiling.
+    cmd: >-
+      postgres
+      -c shared_buffers=<%= ENV.fetch("PG_SHARED_BUFFERS", "64MB") %>
+      -c max_connections=<%= ENV.fetch("PG_MAX_CONNECTIONS", "20") %>
+      -c work_mem=4MB
+      -c maintenance_work_mem=64MB
+      -c effective_cache_size=256MB
     options:
       restart: always
+      memory: <%= ENV.fetch("DB_MEMORY_LIMIT", "300m") %>
+      memory-swap: <%= ENV.fetch("DB_MEMORY_SWAP_LIMIT", "600m") %>
 
   sidecar:
     image: <%= ENV.fetch("SIDECAR_IMAGE") %>
@@ -112,3 +164,5 @@ accessories:
         - SENTRY_DSN
     options:
       restart: always
+      memory: <%= ENV.fetch("SIDECAR_MEMORY_LIMIT", "200m") %>
+      memory-swap: <%= ENV.fetch("SIDECAR_MEMORY_SWAP_LIMIT", "400m") %>

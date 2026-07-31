@@ -11,6 +11,13 @@ class RodauthMain < Rodauth::Rails::Auth
       :confirm_password, :password_grace_period, :omniauth
 
     # ==> General
+    # Rodauth's own mailer otherwise sends as webmaster@<APP_HOST>, which the
+    # rest of the app never uses. On a relay that only authorises one sender —
+    # a Gmail account, say — a From address on a different domain fails SPF and
+    # DKIM alignment, so verification and password-reset mail lands in spam or
+    # is refused outright. Every mailer sends as the same configured identity.
+    email_from { Rails.configuration.x.printwright.mail_from }
+
     # Initialize Sequel and have it reuse Active Record's database connection.
     db Sequel.postgres(extensions: :activerecord_connection, keep_reference: false)
     # Avoid DB query that checks accounts table schema at boot time.

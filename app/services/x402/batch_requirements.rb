@@ -26,6 +26,7 @@ module X402
       if @sandbox
         body.merge!(sandbox: true, warning: Sandbox::Requirements::WARNING)
       end
+      body[:demo] = DemoNotice.payload if DemoNotice.active?
       body
     end
 

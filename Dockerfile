@@ -18,8 +18,20 @@ WORKDIR /rails
 # renders the preview image every listing needs through GLX, so it requires an
 # X display even headless. A container has none, and without this no designer
 # could publish.
+# postgresql-client comes from PGDG, pinned to the server's major version.
+# Debian bookworm ships client 15; the database runs 16, and pg_dump refuses to
+# dump a newer server than itself — which silently breaks every backup, since
+# the failure only surfaces when the nightly job runs. PG_MAJOR must track the
+# `db` accessory image in config/deploy.yml.
+ARG PG_MAJOR=16
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libvips openscad postgresql-client xvfb && \
+    apt-get install --no-install-recommends -y curl gnupg ca-certificates && \
+    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+      | gpg --dearmor -o /usr/share/keyrings/pgdg.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" \
+      > /etc/apt/sources.list.d/pgdg.list && \
+    apt-get update -qq && \
+    apt-get install --no-install-recommends -y libjemalloc2 libvips openscad postgresql-client-${PG_MAJOR} xvfb && \
     ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 

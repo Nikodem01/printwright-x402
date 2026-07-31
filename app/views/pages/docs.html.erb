@@ -17,13 +17,15 @@
   <pre class="mono t-small" style="overflow-x:auto"># 1. Probe: call the paid endpoint with no payment attached
 curl -i "http://localhost:3000/api/v1/models/5/download?license=personal"
 #   HTTP/1.1 402 Payment Required
+#   x-printwright-environment: demo; network=testnet; funds=test-only
 #   payment-required: eyJ4NDAyVmVyc2lvbiI6Mi...        (base64 of the JSON body below)
 #   {"x402Version":2,"error":"payment required","resource":{"url":"...","description":"..."},
 #    "accepts":[
 #      {"scheme":"exact","network":"hedera:testnet","payTo":"0.0.9584959","amount":"900000",
 #       "asset":"0.0.429274","extra":{"feePayer":"0.0.7162784"},"maxTimeoutSeconds":180},
 #      {"scheme":"exact","network":"hedera:testnet","payTo":"0.0.9584959","amount":"1358695652",
-#       "asset":"0.0.0","extra":{"feePayer":"0.0.7162784"},"maxTimeoutSeconds":180}]}
+#       "asset":"0.0.0","extra":{"feePayer":"0.0.7162784"},"maxTimeoutSeconds":180}],
+#    "demo":{"network":"testnet","funds":"test-only","message":"Demo deployment. ..."}}
 
 # 2. Pick one `accepts` entry (asset 0.0.0 = HBAR tinybars, 0.0.429274 = testnet USDC).
 #    Sign a Hedera TransferTransaction with transactionId.accountId = extra.feePayer
@@ -39,6 +41,26 @@ curl -i "http://localhost:3000/api/v1/models/5/download?license=personal" \
 #     "receipt": {"url":".../receipts/pw-000036","token":"private signed capability"},
 #     "certificate": {...}, "transaction_id": "...",
 #     "transaction_url": "https://testnet.mirrornode.hedera.com/api/v1/transactions/..." }</pre>
+
+  <h2 id="demo-environment">Demo environment signal</h2>
+  <p class="t-small">This deployment is a Hedera <strong>testnet</strong> demo: settlements are real
+    Hedera transactions and certificates are genuinely anchored and publicly verifiable, but the
+    value moved has no monetary worth and a license here is not a commercial grant of rights.
+    Humans see a banner. Agents never render HTML, so the same fact is machine-readable in two
+    places:</p>
+  <ul class="t-small">
+    <li>An <code class="mono">X-Printwright-Environment</code> response header on
+      <em>every</em> <code class="mono">/api/v1</code> response, including errors:
+      <code class="mono">demo; network=testnet; funds=test-only</code>.</li>
+    <li>A <code class="mono">demo</code> object in the <code class="mono">402</code>
+      PaymentRequirements body — <code class="mono">network</code>, <code class="mono">funds</code>
+      and a plain-language <code class="mono">message</code> — alongside
+      <code class="mono">accepts</code>. Unknown fields are ignored by x402 clients, so an agent
+      that can already pay is unaffected.</li>
+  </ul>
+  <p class="t-small">Both disappear together on a mainnet deployment; neither can be left behind.
+    An agent deciding whether it is authorised to spend should read the header before it reads
+    <code class="mono">accepts</code>.</p>
 
   <h2>Durable receipts and optional library</h2>
   <p class="t-small">Every real paid delivery includes a private <code class="mono">receipt</code>

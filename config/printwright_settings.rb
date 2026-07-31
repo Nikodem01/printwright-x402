@@ -22,6 +22,12 @@ module PrintwrightSettings
     x402_pay_to x402_facilitator_url walletconnect_project_id
   ].freeze
 
+  # Caps on what one account, and the deployment as a whole, may store.
+  STORAGE_LIMITS = %i[
+    storage_bytes_per_designer storage_bytes_global
+    max_models_per_designer max_files_per_model
+  ].freeze
+
   module_function
 
   def normalize!(config)
@@ -34,6 +40,14 @@ module PrintwrightSettings
         config.chat_max_spend_cents
       end
     config.s3_force_path_style = config.s3_force_path_style.to_s == "true"
+    # Same fail-closed rule as the spend caps, for the same reason: a typo in a
+    # storage cap must never be read as "no limit". Here 0 means every upload
+    # is refused with a clear message, which is recoverable — whereas an
+    # unbounded cap fills the disk the whole host shares.
+    STORAGE_LIMITS.each { |key| config[key] = integer_or_zero(config[key]) }
+    # Retention is fail-safe rather than fail-closed, the opposite of the caps
+    # above: 0 kept dumps would mean deleting the backup you just took.
+    config.backup_disk_keep = [ integer_or_zero(config.backup_disk_keep), 1 ].max
     OPTIONAL.each { |key| config[key] = config[key].presence }
     config
   end

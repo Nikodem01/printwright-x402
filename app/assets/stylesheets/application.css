@@ -825,6 +825,39 @@ body > .site-header {
   background: var(--bg-inset); font-size: var(--t-small); color: var(--text-2);
 }
 
+/* ═══ demo banner ═══════════════════════════════════════════════════════
+   First element inside <main> on every page, so it is above the fold
+   everywhere without any view opting in. It steps to --bg-card (the most
+   elevated surface) rather than tinting: per the colour law a filled
+   coloured panel would claim a state the page does not have. Prominence
+   comes from the brass badge and the bold lead clause. Brass is the
+   provisional/pending accent — green is issuance only, wax is failure, and
+   this is neither. */
+.demo-banner {
+  display: flex; align-items: center; gap: var(--s3) var(--s4); flex-wrap: wrap;
+  margin-bottom: var(--s5); padding: var(--s3) var(--s4);
+  border-radius: var(--r-md); background: var(--bg-card);
+  font-size: var(--t-small); color: var(--text-2);
+}
+.demo-banner-copy { margin: 0; flex: 1 1 24ch; max-width: var(--measure); }
+.demo-banner-copy strong { color: var(--text); font-weight: 600; }
+.demo-banner-link { flex: none; margin-left: auto; white-space: nowrap; }
+
+/* The badge is the only element allowed to carry the brass fill: it is a
+   label, not a surface, so it cannot be mistaken for page-wide state. */
+.demo-badge {
+  flex: none; padding: var(--s1) var(--s3); border-radius: var(--r-pill);
+  background: var(--state-pending); color: var(--bg-card);
+  font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 620px) {
+  .demo-banner { gap: var(--s2) var(--s3); }
+  .demo-banner-copy { flex-basis: 100%; }
+  .demo-banner-link { margin-left: 0; }
+}
+
 /* ═══ status marks ══════════════════════════════════════════════════════
    Shape carries the meaning so it survives greyscale and every form of
    colour blindness; hue only reinforces. The word is mandatory — never

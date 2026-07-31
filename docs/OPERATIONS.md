@@ -66,6 +66,137 @@ reset and a buyer-library link through the public UI, then confirm both arrive a
 HTTPS origin. Configure an external uptime monitor against `https://$APP_HOST/up`; `/up` is process
 health only, so retain the paid smoke check below.
 
+### Variant: deploying behind an existing reverse proxy
+
+The topology above assumes kamal-proxy owns 80/443. When the host already runs a web server —
+another site, a company proxy — that server keeps the public ports and Printwright sits behind it.
+Three things change, and nothing about the app does:
+
+1. **kamal-proxy moves off the standard ports and off the public interface.**
+
+   ```bash
+   bin/kamal proxy boot_config set --http-port 8080 --https-port 8443 --bind-ips 127.0.0.1
+   ```
+
+2. **TLS terminates upstream**, so set `proxy.ssl: false` in `config/deploy.yml` and leave
+   `forward_headers: true`. Rails keeps `assume_ssl` and `force_ssl`; the upstream proxy must send
+   `X-Forwarded-Proto`, or every request becomes a redirect loop. This is the classic failure — the
+   check for it is in the verification list below, not left to chance.
+
+3. **The upstream vhost proxies to `127.0.0.1:8080`** and must forward `Host`, `X-Forwarded-Host`,
+   `X-Forwarded-For`, `X-Forwarded-Proto`, and the `Upgrade`/`Connection` pair that Turbo and Action
+   Cable need. Its `client_max_body_size` (or equivalent) must exceed the app's own upload cap, or
+   large model uploads fail before Rails ever sees them.
+
+Put any new proxy configuration in **new** files rather than editing the existing site's — a
+separate vhost and a separate include for any shared maps or rate-limit zones. A deploy that never
+edits the neighbour's files is a deploy that can be reverted by deleting files.
+
+### Variant: Docker Compose on the host, without Kamal
+
+Kamal drives every build through a local `docker` CLI — including `remote:` builds, where the remote
+builder is still orchestrated by local `docker buildx`. On a workstation with no working Docker, no
+Kamal setting helps. Building *and* running on the deployment host's own daemon sidesteps it, and is
+simpler than the registry route: when the builder and the runtime are the same daemon there is
+nothing to push or pull, so the registry disappears along with its failure modes.
+
+Ship the source and build in place:
+
+```bash
+rsync -az --delete --exclude '.git/' --exclude 'node_modules/' --exclude 'tmp/' \
+      --exclude 'log/' --exclude 'storage/' --exclude '.env*' ./ user@host:/opt/printwright/app/
+ssh user@host 'cd /opt/printwright && docker compose build && docker compose up -d'
+```
+
+`node_modules` is deliberately excluded: the wallet bundle is prebuilt and committed, and the image
+build never runs npm. `.env*` is excluded because the production env files are written separately
+with `600` permissions and must never arrive by rsync.
+
+What such a compose file has to preserve, and why each matters more than the tool used to get there:
+
+* **Nothing binds a public interface.** Publish the app as `127.0.0.1:8080:80` and let the upstream
+  proxy reach it. Docker publishes *past* the host firewall — `0.0.0.0` here would expose the app
+  directly regardless of iptables rules.
+* **Postgres and the signing sidecar are never published at all**, only reachable over a private
+  bridge network shared with the app.
+* **Hard `mem_limit` on every service.** On a small shared host this is what makes a runaway
+  container die in its own cgroup instead of the kernel choosing a victim from another service.
+* **Keys reach only the sidecar's `env_file`.** The Rails service's env file must contain no
+  private key at all — verified after boot, see "Proving custody after a deploy".
+
+### Variant: building on the deployment host
+
+Kamal needs a registry to push to and pull from, even when the builder and the target are the same
+machine. A `registry:2` container bound to loopback is enough:
+
+```bash
+docker run -d --restart always --name registry \
+  -p 127.0.0.1:5000:5000 -v registry_data:/var/lib/registry registry:2
+```
+
+Then point `KAMAL_REGISTRY_SERVER` at `127.0.0.1:5000` and use a remote builder. Docker treats
+`127.0.0.1` as an allowed insecure registry, so no daemon configuration is needed and nothing is
+exposed off-box — confirm with `ss -tlnp | grep 5000` that it is bound to loopback and not `0.0.0.0`.
+
+Building on a small shared host needs guardrails, because a build peaks far above the app's steady
+memory and disk use:
+
+```bash
+# BEFORE every build — refuse to start if either is tight
+df -h /                       # want several GB free beyond the image size
+free -m                       # confirm swap exists and is not already in use
+# AFTER every deploy
+docker image prune -f
+docker exec registry bin/registry garbage-collect /etc/docker/registry/config.yml
+```
+
+Never build while a co-resident service is visibly serving load. Give every Printwright container an
+explicit memory limit so a runaway process is killed inside its own cgroup instead of letting the
+kernel pick a victim elsewhere on the box.
+
+### Storage quotas
+
+Open signup plus unbounded uploads is a full disk, and on a shared host a full disk is everyone's
+outage. Four settings bound it (`.env.example` documents each):
+
+| setting | bounds |
+|---|---|
+| `STORAGE_BYTES_PER_DESIGNER` | total attached bytes for one account |
+| `STORAGE_BYTES_GLOBAL` | total attached bytes for the whole deployment |
+| `MAX_MODELS_PER_DESIGNER` | model rows per account |
+| `MAX_FILES_PER_MODEL` | attachments per model |
+
+Size `STORAGE_BYTES_GLOBAL` **below** the volume actually provisioned, so the cap is reached before
+the filesystem is. Uploads over any cap are refused cleanly with a reason the designer can act on —
+never a 500, never a partial write. A value that is not a plain integer is read as `0`, which
+refuses every upload: a typo must never be mistaken for "unlimited". Current usage:
+
+```bash
+bin/kamal app exec 'bin/rails runner "puts Uploads::Quota.global_bytes"'
+```
+
+Pair the global cap with a host-level free-disk alert; the cap protects the app, the alert protects
+the machine.
+
+### Verifying a deploy behind a proxy
+
+Beyond the checks above, confirm the parts the proxy can break:
+
+```bash
+# HTTPS is served and the redirect chain terminates (no loop)
+curl -sSI "https://$APP_HOST/up" | head -1
+curl -sSI "http://$APP_HOST/"    | grep -i location      # -> https://…, once
+
+# HSTS survives the upstream hop
+curl -sSI "https://$APP_HOST/" | grep -i strict-transport-security
+
+# the demo signal reaches agents
+curl -sSI "https://$APP_HOST/api/v1/models" | grep -i x-printwright-environment
+
+# Postgres is NOT reachable from outside the docker network
+ss -tlnp | grep 5432 || echo "correct: not published to a host port"
+```
+
 ## Error monitoring
 
 Rails requests, Solid Queue jobs and the Node sidecar report to Sentry when `SENTRY_DSN` is set.
@@ -108,6 +239,19 @@ that expires after `STORAGE_URL_TTL_MINUTES` (10 minutes by default). Configure 
 from `.env.example`; `S3_ENDPOINT` is optional for AWS and required for most compatible providers.
 Production refuses to boot without the bucket and access credentials.
 
+**Deployments with no object-storage provider** set `STORAGE_BACKEND=disk` and `STORAGE_DISK_ROOT`
+to a mounted, size-capped volume. Active Storage then uses the `production_disk` service, signed
+URLs still expire on the same TTL, and the `S3_*` values become unnecessary — boot requires
+`STORAGE_DISK_ROOT` instead. The selection is explicit on purpose: falling back to local disk
+because a credential happened to be missing is how paid files end up somewhere nobody is backing
+up. Two consequences worth stating plainly:
+
+* **Files are only as durable as one disk.** Losing the host loses the models. Acceptable for a
+  demo; not for anything a designer would be upset to lose.
+* **The disk is now a shared failure mode** with everything else on the machine. Pair this with the
+  storage quotas above and a host free-disk alert — the quota protects the app, the alert protects
+  the box.
+
 Solid Queue runs `DatabaseBackupJob` nightly at 02:15. It calls `pg_dump --format=custom` without
 putting the database password in argv and uploads an AES-256 server-side-encrypted object under
 `BACKUP_S3_PREFIX`. Run and inspect one on demand:
@@ -132,6 +276,33 @@ Never use `--clean` or point a rehearsal at the production database. On 2026-07-
 custom-format rehearsal restored schema version `20260719235500`, 36 model rows and the expected
 zero local license rows, then removed only the named scratch database and temporary dump. The
 provider upload/download rehearsal remains pending until V20's owner-created bucket exists.
+
+### A backup on the same disk is not a backup
+
+When object storage is a local volume on the deployment host rather than a remote provider, the
+nightly job is protecting against exactly one failure — someone deleting rows. It protects against
+none of the ones that actually destroy a deployment: a full disk, a corrupted filesystem, a
+terminated instance, or a host that will not boot. Everything is on the same disk, so everything
+dies together.
+
+Treat that setup as a rehearsal aid, not as durability, and pull a dump off the box regularly. One
+command, run from a workstation, writing to local disk and never leaving anything behind on the
+server:
+
+```bash
+ssh "$DEPLOY_USER@$DEPLOY_HOST" \
+  'docker exec printwright_x402-db pg_dump -U printwright_x402 --format=custom printwright_x402_production' \
+  > "printwright-$(date +%Y%m%dT%H%M%S).dump"
+```
+
+Verify what landed before trusting it — a zero-byte file is the usual failure:
+
+```bash
+ls -lh printwright-*.dump && pg_restore --list printwright-*.dump | head
+```
+
+The restore rehearsal above is what proves the file is usable. A dump nobody has ever restored is a
+hypothesis, not a backup.
 
 ## Designer payouts
 
@@ -330,3 +501,75 @@ Boot check without spending: start the app with `HEDERA_NETWORK=mainnet` and
 | buyer (`BUYER_PRIVATE_KEY`) | operator's shell env | demo purchases |
 
 The Rails process never loads a private key. Never add one to `.env`.
+
+### Proving custody after a deploy
+
+The map above is a claim; these are the checks that make it a fact. Run all of them before calling
+a deploy done, and treat any hit as a stop.
+
+```bash
+# 1. Not in the Rails container's environment
+bin/kamal app exec 'env' | grep -E 'HEDERA_PRIVATE_KEY|TREASURY_' && echo FAIL || echo ok
+
+# 2. Not baked into an image layer or its build history
+docker history --no-trunc "$KAMAL_APP_IMAGE" | grep -iE 'PRIVATE_KEY|\.env' && echo FAIL || echo ok
+
+# 3. File permissions on anything holding a key
+stat -c '%a %n' sidecar/.env .env      # both must be 600
+
+# 4. Never committed, in either repo
+git log --all --oneline -- .env sidecar/.env    # must print nothing
+
+# 5. Not in logs or error payloads — throw once from a signing path and read the result
+bin/kamal app logs --lines 500 | grep -iE 'PRIVATE_KEY|302e0201' && echo FAIL || echo ok
+```
+
+Sentry runs with PII off; confirm one deliberately failed signing operation produces an event whose
+payload contains no key material before trusting the integration.
+
+### Key rotation
+
+A key used for a public demo should be treated as spent when the demo ends — especially one that
+doubles as a development key. Rotation checklist:
+
+1. Create a fresh key for the operator account, or a fresh account, in the Hedera portal.
+2. Update `sidecar/.env` on the host and `bin/kamal env push`; restart the sidecar accessory only —
+   Rails never held the key and does not need a restart.
+3. Submit one certificate and confirm it appears on the topic under the new key.
+4. Retire the old key on the account so the previous value stops being a credential.
+5. Re-run the custody checks above.
+
+Rotate immediately, not on schedule, if a key ever appears in a diff, a log line, an image layer, or
+a screenshot.
+
+## Complete teardown
+
+Removing Printwright from a shared host must leave every co-resident service untouched. In order:
+
+```bash
+# 1. Application and accessories
+bin/kamal app remove
+bin/kamal accessory remove db
+bin/kamal accessory remove sidecar
+bin/kamal proxy remove
+
+# 2. The build/registry apparatus, if the host was also the builder
+docker rm -f registry && docker volume rm registry_data
+docker image prune -a -f
+docker builder prune -a -f
+
+# 3. Data volumes — irreversible, so take a dump off-box first
+bin/kamal accessory exec db 'pg_dump …' > backup.sql   # see the backup section
+docker volume rm printwright_x402_postgres
+
+# 4. The upstream proxy vhost and its TLS certificate
+sudo rm -f /etc/nginx/sites-enabled/<app> /etc/nginx/sites-available/<app>
+sudo rm -f /etc/nginx/conf.d/<app>-*.conf
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot delete --cert-name "$APP_HOST"
+```
+
+What deliberately survives: the Docker engine itself, the host firewall rules, and every file
+belonging to another service. Because all proxy configuration went into *new* files, step 4 is a
+delete rather than an edit — there is no shared file to restore. Verify the neighbour is still
+serving before and after every step, and finish by rotating the Hedera keys per the checklist above.

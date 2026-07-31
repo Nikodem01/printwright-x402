@@ -16,13 +16,41 @@ module Backups
     def call
       Tempfile.create([ "printwright-primary-", ".dump" ], binmode: true) do |file|
         dump!(file.path)
-        upload!(file)
+        disk_backend? ? store_on_disk!(file) : upload!(file)
       end
     end
 
     private
 
     attr_reader :runner, :clock
+
+    def disk_backend? = config.backup_backend.to_s == "disk"
+
+    # Writes owner-only, then prunes to the retention count. Pruning is the
+    # point: an unbounded backup directory on a shared volume eventually takes
+    # down everything else on the disk, which is a worse outage than the one
+    # backups exist to prevent.
+    #
+    # This is not durability — the dump sits on the same disk as the database it
+    # came from. See the runbook for the one command that pulls it off-box.
+    def store_on_disk!(file)
+      root = Pathname.new(config.backup_disk_root.to_s)
+      raise Error, "BACKUP_DISK_ROOT is not set" if root.to_s.blank?
+
+      root.mkpath
+      destination = root.join(dump_filename)
+      file.rewind
+      destination.open("wb", 0o600) { |out| IO.copy_stream(file, out) }
+      prune!(root)
+      destination.to_s
+    rescue SystemCallError => error
+      raise Error, "backup write failed: #{error.class.name}"
+    end
+
+    def prune!(root)
+      dumps = root.glob("printwright-*.dump").sort_by { |path| path.basename.to_s }
+      dumps[0...-config.backup_disk_keep].to_a.each(&:delete)
+    end
 
     def dump!(path)
       _stdout, stderr, status = runner.capture3(
@@ -49,12 +77,18 @@ module Backups
       raise Error, "backup upload failed: #{error.class.name}"
     end
 
+    # Timestamped so the name sorts chronologically — which is what makes disk
+    # pruning a plain sort rather than a stat of every file.
+    def dump_filename
+      @dump_filename ||= "printwright-#{clock.now.utc.strftime('%Y%m%dT%H%M%SZ')}.dump"
+    end
+
     def object_key
       @object_key ||= begin
         prefix = config.backup_s3_prefix.to_s.delete_prefix("/").delete_suffix("/")
         raise Error, "BACKUP_S3_PREFIX is invalid" if prefix.blank? || prefix.include?("..")
 
-        "#{prefix}/printwright-#{clock.now.utc.strftime('%Y%m%dT%H%M%SZ')}.dump"
+        "#{prefix}/#{dump_filename}"
       end
     end
 

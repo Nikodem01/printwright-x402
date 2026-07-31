@@ -1,4 +1,6 @@
 class Admin::BaseController < ApplicationController
+  include NoIndex
+
   layout "admin"
 
   before_action -> { rodauth.require_account }

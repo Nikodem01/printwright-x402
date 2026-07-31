@@ -53,6 +53,31 @@ class HardeningTest < ActionDispatch::IntegrationTest
     assert_match(/<script type="importmap"[^>]*nonce=/, response.body)
   end
 
+  # Asserted on the modern header name AND its modern syntax on purpose. Rails'
+  # `config.permissions_policy` DSL emits the superseded `Feature-Policy` header
+  # in `camera 'none'` form, which current browsers ignore — a policy that looks
+  # configured and does nothing. If someone ever "simplifies" this back to the
+  # DSL, this test is what says no.
+  test "Permissions-Policy denies unused hardware in the syntax browsers read" do
+    get model_page_path(@model.slug)
+
+    assert_response :success
+    policy = response.headers["Permissions-Policy"]
+    assert_includes policy, "camera=()"
+    assert_includes policy, "microphone=()"
+    assert_includes policy, "geolocation=()"
+    assert_nil response.headers["Feature-Policy"],
+      "the legacy header would be dead weight next to the real one"
+  end
+
+  test "the standard framing and sniffing headers are present" do
+    get model_page_path(@model.slug)
+
+    assert_equal "nosniff", response.headers["X-Content-Type-Options"]
+    assert_equal "SAMEORIGIN", response.headers["X-Frame-Options"]
+    assert_equal "strict-origin-when-cross-origin", response.headers["Referrer-Policy"]
+  end
+
   test "printable certificate's print button script is nonced, not inline-attr" do
     purchase = Purchase.create!(
       license_offer: @model.license_offers.first, status: "settled",

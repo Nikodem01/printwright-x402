@@ -2,6 +2,8 @@
 # no account, so this — not the download grant in the purchase response — is how
 # a buyer or their agent gets the files back a month or a year later.
 class ReceiptsController < ApplicationController
+  include NoIndex
+
   rate_limit to: 60, within: 1.minute, store: RateLimitStore
 
   before_action :authorize_receipt

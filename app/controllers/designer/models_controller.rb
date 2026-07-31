@@ -35,6 +35,11 @@ class Designer::ModelsController < Designer::BaseController
 
   def create
     @model = current_designer.models3d.build(model_params)
+    if (reason = Uploads::Quota.reason_to_refuse_new_model(current_designer))
+      @model.errors.add(:base, reason)
+      return render :new, status: :unprocessable_entity
+    end
+
     @model.slug = @model.title.to_s.parameterize if @model.slug.blank?
     if @model.save
       attach_uploads
@@ -324,7 +329,8 @@ class Designer::ModelsController < Designer::BaseController
         next
       end
       if (reason = Uploads::Validator.reason_to_reject(upload, kind: kind) ||
-                   duplicate_of_bundle(bundle, upload, kind))
+                   duplicate_of_bundle(bundle, upload, kind) ||
+                   quota_reason(upload))
         rejected << reason
         next
       end
@@ -335,7 +341,8 @@ class Designer::ModelsController < Designer::BaseController
     end
     Array(params.dig(:model3d, :render_files)).reject(&:blank?).each do |upload|
       if (reason = Uploads::Validator.reason_to_reject(upload, kind: "render") ||
-                   duplicate_of_bundle(bundle, upload, "render"))
+                   duplicate_of_bundle(bundle, upload, "render") ||
+                   quota_reason(upload))
         rejected << reason
         next
       end
@@ -346,6 +353,14 @@ class Designer::ModelsController < Designer::BaseController
     flash[:alert] = "Rejected: #{rejected.join('; ')}" if rejected.any?
     queue_mesh_analysis if printable_attached
     rejected
+  end
+
+  # Re-read per upload rather than once per request: each accepted file in this
+  # same submission counts against the allowance the next one is measured
+  # against, so a batch cannot walk past the cap together.
+  def quota_reason(upload)
+    Uploads::Quota.reason_to_reject(model: @model, upload_bytes: upload.size.to_i)
+      &.then { |reason| "#{upload.original_filename}: #{reason}" }
   end
 
   # A duplicate is judged against the bundle the buyer would receive: the files

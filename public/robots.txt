@@ -1,1 +1,33 @@
 # See https://www.robotstxt.org/robotstxt.html for documentation on how to use the robots.txt file
+#
+# The storefront and the catalog are meant to be found. Everything below is
+# either an authenticated area or a capability link — a URL that IS the
+# credential, held only by the buyer who paid. Those must never end up in an
+# index, a crawl cache, or a search result.
+#
+# robots.txt is a request, not access control: these paths are also protected
+# by authentication or an unguessable signed token, and carry
+# `noindex, nofollow` in the response itself. This file is the polite first
+# layer, not the lock.
+
+User-agent: *
+
+# Purchase and delivery capability links.
+Disallow: /receipts/
+Disallow: /library
+Disallow: /cart
+
+# Authenticated areas.
+Disallow: /admin
+Disallow: /designer/
+Disallow: /login
+Disallow: /create-account
+Disallow: /reset-password
+Disallow: /change-password
+
+# Machine-payable endpoints. An agent finds these through /llms.txt and the
+# OpenAPI document; a crawler walking them just issues 402s at us.
+Disallow: /api/
+
+# Deliberately crawlable: /verify/ certificate pages are public proof, and are
+# meant to be linkable and findable by anyone holding a certificate id.

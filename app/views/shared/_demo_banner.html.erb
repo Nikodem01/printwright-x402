@@ -1,0 +1,18 @@
+<%# The one place a human is told this is not real commerce. Rendered from the
+    layout so the storefront, checkout, chat and the designer workspace cannot
+    drift apart. Brass, not green: green is issuance only, and this is a
+    provisional-state marker, not an error either. Agents get the identical
+    fact from X402::DemoNotice — see the 402 body and the
+    X-Printwright-Environment header. %>
+<% if X402::DemoNotice.active? %>
+  <aside class="demo-banner" role="note" aria-label="Deployment notice">
+    <span class="demo-badge mono">Demo</span>
+    <p class="demo-banner-copy">
+      <strong>Hedera <%= Hedera::Network.name %> · no real money.</strong>
+      Purchases settle in test HBAR/USDC with no monetary value. Licenses and
+      HCS certificates are genuinely issued and publicly verifiable — they are
+      not a commercial grant of rights.
+    </p>
+    <%= link_to "How it works", about_path, class: "demo-banner-link t-small" %>
+  </aside>
+<% end %>

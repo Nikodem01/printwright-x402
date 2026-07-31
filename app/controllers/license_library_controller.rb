@@ -1,4 +1,6 @@
 class LicenseLibraryController < ApplicationController
+  include NoIndex
+
   rate_limit to: 5, within: 1.minute, only: :create, store: RateLimitStore
 
   def new
