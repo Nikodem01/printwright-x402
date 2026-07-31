@@ -35,9 +35,6 @@ class StorefrontController < ApplicationController
   def show
     @model = Model3d.publicly_resolvable.includes(:designer, :license_offers,
                                                   model_files: { file_attachment: :blob }).find_by!(slug: params[:slug])
-    @licenses_issued = License.joins(purchase: :license_offer)
-                              .where(purchases: { sandbox: false },
-                                     license_offers: { model3d_id: @model.id }).count
     @successful_prints = PrintReport.joins(license: { purchase: :license_offer })
                                     .where(license_offers: { model3d_id: @model.id }).count
     @analytics_event = {

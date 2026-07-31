@@ -101,7 +101,8 @@ const { match, onchain, consensus_timestamp, status, ...bundle } = cert;
 writeFileSync(join(dir, "certificate.json"), JSON.stringify(bundle, null, 2));
 console.log(`   proof bundle: ${join(dir, "certificate.json")} (${cert.status})`);
 
-console.log(`\n   License:     ${body.license.cert_id} — ${body.license.kind}, unit serial ${body.license.serial}`);
+console.log(`\n   License:     ${body.license.cert_id} — ${body.license.kind}` +
+  (body.license.serial != null ? `, unit serial ${body.license.serial}` : ""));
 console.log(`   Transaction: ${body.sandbox ? body.sandbox_url : body.transaction_url}`);
 console.log(`   Verify:      ${body.verify_url}`);
 for (const line of proofLines(cert, { baseUrl: BASE, certId: body.license.cert_id })) {

@@ -48,6 +48,10 @@ class ReceiptsController < ApplicationController
       end
       zip.put_next_entry("printwright-certificate-#{@license.cert_id}.pdf")
       zip.write(Certificates::Pdf.render(@license, verify_url: verify_url(@license.verify_slug)))
+      # The machine-readable preimage the PDF appendix reproduces in print —
+      # exact bytes, so every hash is recomputable offline from this ZIP alone.
+      zip.put_next_entry("proof-bundle.json")
+      zip.write(JSON.pretty_generate(Certificates::Bundle.for(@license)))
     end
 
     send_data archive.string,
@@ -60,10 +64,13 @@ class ReceiptsController < ApplicationController
   def receipt_payload
     grant = DownloadGrant.for(@license)
     model = @license.purchase.model3d
+    offer = @license.purchase.license_offer
     {
       cert_id: @license.cert_id,
-      serial: @license.serial,
-      kind: @license.purchase.license_offer.kind,
+      # Personal grants carry no sale number — a serial here would reveal the
+      # designer's cumulative personal sales to whoever holds the receipt.
+      **(offer.kind == "commercial_unit" ? { serial: @license.serial } : {}),
+      kind: offer.kind,
       model: { id: model.id, slug: model.slug, title: model.title },
       transaction_id: @license.purchase.payment_tx_id,
       files: @files.map do |index, file|

@@ -25,7 +25,8 @@ class WebhookFanoutJob < ApplicationJob
       Designers::Notifier.record_later(designer: model.designer, kind: "sale_delivered", model3d: model,
         payload: {
           license_type: purchase.license_offer.kind, asset: purchase.asset,
-          amount_base_units: purchase.amount_base_units, serial: license.serial
+          amount_base_units: purchase.amount_base_units,
+          **(purchase.license_offer.kind == "commercial_unit" ? { serial: license.serial } : {})
         })
     when "certificate.anchored"
       Designers::Notifier.record_later(designer: model.designer, kind: "certificate_anchored", model3d: model,

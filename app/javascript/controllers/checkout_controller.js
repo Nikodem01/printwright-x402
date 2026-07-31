@@ -270,6 +270,8 @@ export default class extends Controller {
     this.element.dataset.checkoutState = "success"
     const txId = body.transaction_id
     const maxUnits = body.license.max_units
+    // Personal licenses carry no serial (the API omits it): a sale number
+    // would reveal the designer's cumulative personal sales to every buyer.
     const serialLabel = maxUnits ? `#${body.license.serial} of ${maxUnits}` : `#${body.license.serial}`
     const capNote = maxUnits
       ? `<p class="t-caption muted">${body.license.remaining_units} of ${maxUnits} license slots now remain. This cap does not technically restrict physical printing.</p>`
@@ -286,7 +288,7 @@ export default class extends Controller {
       ? `${this.escape(body.receipt.package_url)}?token=${encodeURIComponent(body.receipt.token)}`
       : this.escape(body.files[0]?.url || "#")
     const licenseHeading = body.license.kind === "personal"
-      ? `Personal license #${body.license.serial} — unlimited personal prints`
+      ? "Personal license — unlimited personal prints"
       : `Commercial unit ${serialLabel}`
     this.receiptTarget.innerHTML = `
       <div class="badge badge-ok">✓ licensed</div>
@@ -333,7 +335,7 @@ export default class extends Controller {
         ? `${this.escape(license.receipt.package_url)}?token=${encodeURIComponent(license.receipt.token)}`
         : this.escape(license.files[0]?.url || "#")
       const licenseLabel = license.kind === "personal"
-        ? `Personal license #${license.serial}`
+        ? "Personal license"
         : `Commercial unit #${license.serial}`
       return `<li class="batch-license">
         <strong>${licenseLabel}</strong>

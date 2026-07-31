@@ -306,7 +306,7 @@ class Api::V1::DownloadsController < Api::V1::BaseController
         expires_at: nil,
         sandbox: true
       } ],
-      license: { cert_id: license.cert_id, serial: license.serial, kind: purchase.license_offer.kind },
+      license: license_identity(license, purchase.license_offer),
       certificate: license.cert_json,
       proof_bundle: Certificates::Bundle.for(license),
       bundle_url: api_v1_certificate_url(license.cert_id),
@@ -323,12 +323,19 @@ class Api::V1::DownloadsController < Api::V1::BaseController
   def license_summary(license)
     offer = license.purchase.license_offer
     {
-      cert_id: license.cert_id,
-      serial: license.serial,
-      kind: offer.kind,
+      **license_identity(license, offer),
       max_units: offer.max_units,
       remaining_units: offer.units_remaining
     }
+  end
+
+  # Personal grants deliberately expose no serial: a sequential sale number
+  # would reveal the designer's cumulative personal sales to every buyer.
+  # Commercial per-unit grants keep it — "unit N" is part of that license.
+  def license_identity(license, offer)
+    identity = { cert_id: license.cert_id, kind: offer.kind }
+    identity[:serial] = license.serial if offer.kind == "commercial_unit"
+    identity
   end
 
   # THE durable delivery path, not a footnote. The `files` URLs above ride a

@@ -1,7 +1,7 @@
 <p>You made a sale<%= @model ? " — #{@model.title}" : "" %>.</p>
 
 <p>
-  <%= @notification.payload["license_type"].to_s.humanize %> license, unit <%= @notification.payload["serial"] %>,
+  <%= @notification.payload["license_type"].to_s.humanize %> license<%= ", unit #{@notification.payload['serial']}" if @notification.payload["serial"].present? %>,
   sold for <strong><%= format_base_units(@notification.payload["amount_base_units"].to_i, @notification.payload["asset"]) %></strong> gross.
   Your 90% share is recorded in the immutable ledger and pays out to your verified destination.
 </p>

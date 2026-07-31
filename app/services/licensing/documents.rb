@@ -12,7 +12,7 @@ module Licensing
     # and those bytes must remain fetchable to verify. Bump this (never edit a
     # published document) by adding app/licenses/vN/ and a migration that moves
     # existing offers forward.
-    CURRENT_VERSION = "v2".freeze
+    CURRENT_VERSION = "v3".freeze
 
     class UnknownDocument < StandardError; end
 

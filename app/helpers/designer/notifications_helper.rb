@@ -26,7 +26,8 @@ module Designer::NotificationsHelper
     payload = notification.payload
     case notification.kind
     when "sale_delivered"
-      "#{payload['license_type'].to_s.humanize} license, unit #{payload['serial']} — " \
+      unit = payload["serial"].present? ? ", unit #{payload['serial']}" : ""
+      "#{payload['license_type'].to_s.humanize} license#{unit} — " \
         "#{format_base_units(payload['amount_base_units'].to_i, payload['asset'])}"
     when "certificate_anchored"
       "HCS sequence ##{payload['hcs_sequence_number']}"

@@ -91,10 +91,6 @@
           <dd><%= printability_value(key, value) %></dd>
         </div>
       <% end %>
-      <div>
-        <dt>Licensed</dt>
-        <dd><%= @licenses_issued %></dd>
-      </div>
     </dl>
 
     <div class="trust-strip" data-controller="clipboard">
@@ -105,8 +101,6 @@
                 data-action="clipboard#copy" data-clipboard-full-value="<%= @model.file_hash %>">copy full hash</button>
       </span>
       <span class="t-caption muted">Public integrity check for the licensed file bundle—not a download key.</span>
-      <%# The licence count is already a cell in the title block below — one
-          fact, one place. %>
       <% if @successful_prints.positive? %>
         <%# An attestation, not a settlement state — so a neutral badge, not
             one of the three status marks. %>

@@ -49,7 +49,10 @@ class BadgeCertificateTest < ActionDispatch::IntegrationTest
     assert_equal "image/svg+xml", response.media_type
     assert_match 'width="1200" height="630"', response.body
     assert_match @license.cert_id, response.body
-    assert_match "#1 of 25", response.body
+    # A capped personal offer still shows UNLIMITED prints and never the sale
+    # position — "#1 of 25" would publish the designer's personal sales count.
+    assert_match "UNLIMITED", response.body
+    assert_no_match(/#\d+ of \d+/, response.body)
     assert_match "limits licenses sold", response.body
     assert_no_match(/<script/i, response.body)
     assert_empty Nokogiri::XML(response.body).errors

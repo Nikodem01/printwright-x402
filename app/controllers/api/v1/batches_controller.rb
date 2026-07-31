@@ -407,7 +407,7 @@ class Api::V1::BatchesController < Api::V1::BaseController
       model_id: purchase.model3d.id,
       kind: purchase.license_offer.kind,
       cert_id: license.cert_id,
-      serial: license.serial,
+      **(purchase.license_offer.kind == "commercial_unit" ? { serial: license.serial } : {}),
       max_units: purchase.license_offer.max_units,
       remaining_units: purchase.license_offer.units_remaining,
       files: files,

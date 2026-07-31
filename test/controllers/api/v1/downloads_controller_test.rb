@@ -191,7 +191,9 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
       "https://hashscan.io/testnet/transaction/0.0.7162784@1784125705.137810120",
       body["transaction_url"]
     )
-    assert_equal 1, body.dig("license", "serial")
+    # Personal licenses expose no serial — a sale number would reveal the
+    # designer's cumulative personal sales to every buyer.
+    assert_not body.fetch("license").key?("serial")
     assert_match(/\Apw-[0-9a-f]{24}\z/, body.dig("license", "cert_id"))
 
     # The agent receives a portable proof bundle it can verify against Hedera
@@ -405,7 +407,7 @@ class Api::V1::DownloadsControllerTest < ActionDispatch::IntegrationTest
     get download_path, headers: payment_headers(@payload)
     assert_response :success
     assert Purchase.sole.delivered?
-    assert_equal 1, response.parsed_body.dig("license", "serial")
+    assert_match(/\Apw-[0-9a-f]{24}\z/, response.parsed_body.dig("license", "cert_id"))
   end
 
   test "replay after verify timeout retries verification (money never moved)" do

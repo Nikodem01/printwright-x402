@@ -37,7 +37,7 @@ curl -i "http://localhost:3000/api/v1/models/5/download?license=personal" \
   -H "PAYMENT-SIGNATURE: &lt;base64 PaymentPayload&gt;"
 #   HTTP/1.1 200 OK
 #   payment-response: eyJ0cmFuc2FjdGlvbiI6Ii4uLiJ9    (base64 settlement receipt)
-#   { "files": [...], "license": {"cert_id": "pw-000036", "serial": 3, "kind": "personal"},
+#   { "files": [...], "license": {"cert_id": "pw-000036", "kind": "personal"},
 #     "receipt": {"url":".../receipts/pw-000036","token":"private signed capability"},
 #     "certificate": {...}, "transaction_id": "...",
 #     "transaction_url": "https://hashscan.io/testnet/transaction/..." }</pre>

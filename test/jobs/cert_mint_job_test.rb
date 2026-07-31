@@ -20,14 +20,30 @@ class CertMintJobTest < ActiveJob::TestCase
     purchase.transition_to!(:delivered)
   end
 
-  test "builds the frozen v1 cert schema, compact and under the HCS limit" do
+  test "builds the v2 cert schema, compact and under the HCS limit" do
     cert = Certificates::Builder.call(@license)
-    assert_equal %w[v cert_id model_id model_hash designer license_type unit_serial
+    # Personal certs carry no unit_serial: a sale number in the preimage would
+    # reveal the designer's cumulative personal sales to anyone shown the cert.
+    assert_equal %w[v cert_id model_id model_hash designer license_type
                     buyer_hint payment_tx issued_at terms_hash], cert.keys
     # `designer` is the stable studio id, never the payout wallet (privacy §6b.2).
-    assert_equal [ 1, @license.cert_id, designers(:one).id, "personal", 1, "0.0.9067781", "0.0.7162784@111.222" ],
-                 cert.values_at("v", "cert_id", "designer", "license_type", "unit_serial", "buyer_hint", "payment_tx")
+    assert_equal [ 2, @license.cert_id, designers(:one).id, "personal", "0.0.9067781", "0.0.7162784@111.222" ],
+                 cert.values_at("v", "cert_id", "designer", "license_type", "buyer_hint", "payment_tx")
     assert_operator JSON.generate(cert).bytesize, :<, 1024
+  end
+
+  test "commercial per-unit certs keep their unit serial" do
+    offer = @license.license_offer.model3d.license_offers.create!(
+      kind: "commercial_unit", price_cents: 900, terms_md: "T.")
+    purchase = Purchase.create!(
+      license_offer: offer, status: "settled", replay_key: SecureRandom.hex(32),
+      buyer_hint: "0.0.9067781", payment_tx_id: "0.0.7162784@111.333"
+    )
+    license = License.allocate!(purchase)
+
+    cert = Certificates::Builder.call(license)
+    assert_equal 2, cert["v"]
+    assert_equal license.serial, cert["unit_serial"]
   end
 
   test "successful mint stores cert_json and backfills topic + sequence" do

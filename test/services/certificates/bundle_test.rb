@@ -17,7 +17,9 @@ class Certificates::BundleTest < ActiveSupport::TestCase
 
   test "bundle is a self-contained reveal whose commitment recomputes from cert + nonce" do
     bundle = Certificates::Bundle.for(@license)
-    assert_equal 1, bundle["proof_version"]
+    # proof_version mirrors the certificate schema version it reveals.
+    assert_equal @license.cert_json["v"], bundle["proof_version"]
+    assert_equal 2, bundle["proof_version"]
     assert_equal "sha256-jcs-v1", bundle["algorithm"]
     assert_equal @license.cert_json, bundle["certificate"]
     assert_equal @license.cert_salt, bundle["blinding_nonce"]

@@ -9,7 +9,7 @@ module Certificates
   class Bundle
     def self.for(license)
       {
-        "proof_version" => 1,
+        "proof_version" => license.cert_json.presence&.fetch("v", 1) || 1,
         "algorithm" => Commitment::ALGORITHM,
         "certificate" => license.cert_json.presence,
         "blinding_nonce" => license.cert_salt,

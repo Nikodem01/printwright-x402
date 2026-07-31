@@ -27,7 +27,7 @@ module TakedownPackets
         "Frozen model bundle hash: #{model.file_hash}",
         "Printwright certificate: #{license.cert_id}",
         "Certificate JSON digest: #{cert_digest}",
-        "License kind / serial: #{license.purchase.license_offer.kind} / #{license.serial}",
+        "License kind: #{license.purchase.license_offer.kind}#{license.purchase.license_offer.kind == 'commercial_unit' ? " / unit #{license.serial}" : ""}",
         "Settlement transaction: #{license.purchase.payment_tx_id}",
         "Transaction evidence: #{transaction_url}",
         "HCS topic / sequence: #{license.hcs_topic_id} / #{license.hcs_sequence_number}",

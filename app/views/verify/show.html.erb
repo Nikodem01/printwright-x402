@@ -94,10 +94,10 @@
       <% end %>
       <% if @license.purchase.license_offer.kind == "personal" %>
         <dt>License</dt>
-        <dd class="mono">Personal #<%= @cert.present? ? @cert["unit_serial"] : @license.serial %> · unlimited personal, non-commercial prints</dd>
+        <dd class="mono">Personal · unlimited personal, non-commercial prints</dd>
       <% else %>
         <dt>Commercial unit</dt>
-        <dd class="mono">#<%= @cert.present? ? @cert["unit_serial"] : @license.serial %><%= " of #{@license.purchase.license_offer.max_units}" if @license.purchase.license_offer.max_units %> · one commercial print</dd>
+        <dd class="mono">#<%= @cert&.dig("unit_serial") || @license.serial %><%= " of #{@license.purchase.license_offer.max_units}" if @license.purchase.license_offer.max_units %> · one commercial print</dd>
       <% end %>
 
       <% if @cert.present? %>

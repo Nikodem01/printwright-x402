@@ -61,14 +61,16 @@
 
     <% if @license.purchase.sandbox? %>
       <p>
-        This locally simulates unit <strong>#<%= @license.serial %></strong> of
+        This locally simulates a license for
         <strong><%= @model.title %></strong> by <strong><%= @model.designer.display_name %></strong>.
         It grants no rights and certifies no payment or license.
       </p>
     <% else %>
       <p>
         <% if @license.purchase.license_offer.kind == "personal" %>
-          This certifies personal license <strong>#<%= @license.serial %></strong> for
+          <%# No serial on personal grants — a sale number would reveal the
+              designer's cumulative personal sales to anyone shown this page. %>
+          This certifies a personal license for
           <strong><%= @model.title %></strong>, granted by
           <strong><%= @model.designer.display_name %></strong>. It permits
           <strong>unlimited physical prints for personal, non-commercial use</strong>.

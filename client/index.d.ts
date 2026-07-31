@@ -65,7 +65,7 @@ export interface PurchaseOptions extends Partial<QuoteOptions> {
 export interface BatchItem {
   modelId: number;
   license?: "personal" | "commercial_unit" | string;
-  /** Licenses to buy on this line; each is its own certificate and serial. Defaults to 1. */
+  /** Licenses to buy on this line; each is its own certificate. Defaults to 1. */
   quantity?: number;
 }
 
@@ -91,7 +91,9 @@ export interface BatchPurchaseReceipt {
   transaction_url: string | null;
   sandbox: boolean;
   licenses: Array<{
-    model_id: number; kind: string; cert_id: string; serial: number;
+    model_id: number; kind: string; cert_id: string;
+    /** Present only for commercial_unit licenses; personal grants carry no sale number. */
+    serial?: number;
     max_units: number | null; remaining_units: number | null; share_card_url?: string;
     verify_url: string; files: Array<{ kind: string; url: string; expires_at?: string | null }>;
     receipt?: ReceiptCapability;
@@ -145,7 +147,8 @@ export interface PaymentQuote {
 
 export interface PurchaseReceipt {
   files: Array<{ kind: string; url: string; expires_at?: string | null; sandbox?: boolean }>;
-  license: { cert_id: string; serial: number; kind: string; max_units?: number | null; remaining_units?: number | null };
+  /** `serial` is present only for commercial_unit licenses; personal grants carry no sale number. */
+  license: { cert_id: string; serial?: number; kind: string; max_units?: number | null; remaining_units?: number | null };
   verify_url: string;
   share_card_url?: string;
   receipt?: ReceiptCapability;
@@ -162,6 +165,12 @@ export interface PurchaseReceipt {
 export interface ReceiptCapability {
   url: string;
   token: string;
+  files_url?: string;
+  download_url?: string;
+  /** One ZIP containing every printable file, the certificate PDF, and proof-bundle.json. */
+  package_url?: string;
+  expires_at?: string | null;
+  note?: string;
 }
 
 export interface CertificateProof {

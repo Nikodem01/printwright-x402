@@ -102,10 +102,14 @@ class ReceiptsAndLibraryTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "application/zip", response.media_type
     Zip::File.open_buffer(response.body) do |zip|
-      assert_equal [ "01-library.stl", "printwright-certificate-#{@license.cert_id}.pdf" ],
+      assert_equal [ "01-library.stl", "printwright-certificate-#{@license.cert_id}.pdf", "proof-bundle.json" ],
         zip.entries.map(&:name)
       assert_equal "solid library\nendsolid library\n", zip.read("01-library.stl")
       assert zip.read("printwright-certificate-#{@license.cert_id}.pdf").start_with?("%PDF")
+      # The exact machine-readable preimage: every hash in the PDF appendix is
+      # recomputable offline from this file plus the model bytes above.
+      bundle = JSON.parse(zip.read("proof-bundle.json"))
+      assert_equal Certificates::Bundle.for(@license.reload), bundle
     end
   end
 

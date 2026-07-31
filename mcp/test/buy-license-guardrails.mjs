@@ -34,7 +34,7 @@ before(async () => {
         return res.end(JSON.stringify({
           sandbox: true, warning: "SIMULATION ONLY — NO HEDERA FUNDS MOVE",
           files: [ { kind: "sandbox_receipt", sandbox: true } ],
-          license: { cert_id: "sandbox-pw-000001", serial: 1, kind: "personal" },
+          license: { cert_id: "sandbox-pw-000001", kind: "personal" },
           verify_url: `${BASE}/verify/sandbox-pw-000001`,
           transaction_id: "sandbox-tx-example", transaction_url: null,
           sandbox_url: `${BASE}/api/v1/sandbox/transactions/sandbox-tx-example`,

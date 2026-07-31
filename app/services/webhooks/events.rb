@@ -15,7 +15,9 @@ module Webhooks
             "cert_id" => license.cert_id,
             "model_id" => purchase.model3d.id,
             "license_type" => purchase.license_offer.kind,
-            "unit_serial" => license.serial,
+            # Serial only for per-unit grants; personal licenses carry no sale
+            # number anywhere, including designer-facing payloads.
+            **(purchase.license_offer.kind == "commercial_unit" ? { "unit_serial" => license.serial } : {}),
             "buyer_hint" => purchase.buyer_hint,
             "asset" => purchase.asset,
             "amount_base_units" => purchase.amount_base_units,

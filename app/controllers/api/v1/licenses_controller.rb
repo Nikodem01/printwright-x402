@@ -56,7 +56,7 @@ class Api::V1::LicensesController < Api::V1::BaseController
       use: use,
       qty: quantity,
       license_kind: policy[:kind],
-      unit_serial: license.serial,
+      **(policy[:kind] == "commercial_unit" ? { unit_serial: license.serial } : {}),
       **result,
       permissions: policy[:document],
       certificate_url: api_v1_certificate_url(license.cert_id),
