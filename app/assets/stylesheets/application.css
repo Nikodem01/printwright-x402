@@ -207,7 +207,7 @@ a { color: var(--action); text-underline-offset: 2px; }
   height: 100%;
   pointer-events: none;
 }
-body > *:not(:where(#ground-tex)) { position: relative; z-index: 1; }
+body > *:not(:where(#ground-tex, w3m-modal, appkit-modal)) { position: relative; z-index: 1; }
 
 /* ═══ typography ════════════════════════════════════════════════════════
    Width axis via font-stretch, weight via font-weight — never

@@ -8,7 +8,11 @@ await build({
   bundle: true,
   platform: "browser",
   format: "esm",
-  minify: true,
+  minifyIdentifiers: true,
+  minifyWhitespace: true,
+  // Reown's Lit templates rely on exact tagged-template expression ordering.
+  // esbuild's syntax minifier corrupts the wallet modal at runtime.
+  minifySyntax: false,
   alias: {
     "@hiero-ledger/sdk": new URL("node_modules/@hiero-ledger/sdk/lib/browser.js", import.meta.url).pathname
   },

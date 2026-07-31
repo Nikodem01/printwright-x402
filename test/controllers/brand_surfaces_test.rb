@@ -82,6 +82,12 @@ class BrandSurfacesTest < ActionDispatch::IntegrationTest
     assert_no_match(/<script[^>]+src=[^>]+hedera_wallet/, response.body)
   end
 
+  test "global page stacking does not push the wallet modal into document flow" do
+    css = Rails.root.join("app/assets/stylesheets/application.css").read
+
+    assert_includes css, "body > *:not(:where(#ground-tex, w3m-modal, appkit-modal))"
+  end
+
   test "generated brand images retain their contract dimensions" do
     assert_equal [ 1200, 630 ], png_dimensions("public/og-printwright.png")
     assert_equal [ 512, 512 ], png_dimensions("public/icon.png")
