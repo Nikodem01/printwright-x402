@@ -99,8 +99,11 @@ test:
   # must not have to supply anything. These are the fixed values the tests
   # assert against; individual cases override them with `with_printwright`.
   # A provider key in a developer's .env must never turn tests into real
-  # network calls — the Gemini paths are exercised via explicit stubs.
+  # network calls — the Gemini paths are exercised via explicit stubs. The
+  # same goes for the wallet: the suite asserts the honest unconfigured
+  # message, and a developer's WalletConnect id must not flip that.
   gemini_api_key: ~
+  walletconnect_project_id: ~
   x402_pay_to: "0.0.9584959"
   x402_facilitator_url: https://facilitator.test
   sidecar_url: http://localhost:4021

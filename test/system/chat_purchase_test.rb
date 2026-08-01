@@ -68,7 +68,7 @@ class ChatPurchaseTest < ApplicationSystemTestCase
     click_button "Approve and buy · 0.25 USDC"
 
     assert_selector ".badge-ok", text: "licensed"
-    assert_text "Personal license #1 — unlimited personal prints"
+    assert_text "Personal license — unlimited personal prints"
     assert_link "Download model + certificate (.zip)"
     assert_equal 1, TestWalletController.sign_calls
     assert_equal "delivered", Purchase.sole.status

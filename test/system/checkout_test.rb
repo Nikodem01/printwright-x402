@@ -51,7 +51,7 @@ class CheckoutTest < ApplicationSystemTestCase
     click_button "Buy license · 0.25 USDC"
 
     assert_selector ".badge-ok", text: "licensed"
-    assert_text "Personal license #1 — unlimited personal prints"
+    assert_text "Personal license — unlimited personal prints"
     assert_text "24 of 25 license slots now remain"
     assert_selector "img[alt^='Share card for pw-']"
     assert_selector "a", text: settled_tx
